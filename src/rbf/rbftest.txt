@@ -620,9 +620,9 @@ int RBFTest_9(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &size
 
     for(unsigned i = 0; i < recordDescriptor.size(); i++)
     {
-        cout << "Attribute Name: " << recordDescriptor[i].name << endl;
-        cout << "Attribute Type: " << (AttrType)recordDescriptor[i].type << endl;
-        cout << "Attribute Length: " << recordDescriptor[i].length << endl << endl;
+        cout << "Attribute Name: " << recordDescriptor.at(i).name << endl;
+        cout << "Attribute Type: " << (AttrType)recordDescriptor.at(i).type << endl;
+        cout << "Attribute Length: " << recordDescriptor.at(i).length << endl << endl;
     }
 
     // Insert 2000 records into file
