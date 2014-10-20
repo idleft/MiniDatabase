@@ -544,6 +544,12 @@ RC RecordBasedFileManager::deleteRecords(FileHandle &fileHandle)
 {
 	RC result = -1;
 
+	vector<short>* slotDirectory = directoryOfSlots[fileHandle.getFileName()];
+	slotDirectory->clear();
+
+	FILE* file = fileHandle.getFile();
+	fclose(file);
+	file = fopen(fileHandle.getFileName().c_str(),"wb+");
 
 	return result;
 }
