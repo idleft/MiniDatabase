@@ -557,6 +557,20 @@ RC RecordBasedFileManager::deleteRecords(FileHandle &fileHandle)
 RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid)
 {
 	RC result = -1;
+	short sizeOfRecord = 0;
+	// Read the page
+	void* pageData = malloc(PAGE_SIZE);
+	result = fileHandle.readPage(rid.pageNum,pageData);
+
+	if(result == -1)
+		return result;
+	char* endOfPage = pageData + PAGE_SIZE;
+
+	// modify slots info
+	DirectoryOfSlotsInfo* info = getDirectoryOfSlotsInfo(endOfPage);
+	Slot* slotInfo = goToSlot(endOfPage, rid.slotNum);
+	sizeOfRecord = slotInfo->end - slotInfo->end+1;
+	info->freeSpaceOffset +=
 
 	return result;
 }
