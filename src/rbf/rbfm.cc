@@ -538,3 +538,59 @@ DirectoryOfSlotsInfo* RecordBasedFileManager::goToDirectoryOfSlotsInfo(const cha
 	directoryInfo =(char*)directoryInfo - sizeof(DirectoryOfSlotsInfo);
 	return (DirectoryOfSlotsInfo*)directoryInfo;
 }
+
+
+RC deleteRecords(FileHandle &fileHandle)
+{
+	RC result = -1;
+
+	return result;
+}
+
+RC deleteRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid)
+{
+	RC result = -1;
+
+	return result;
+}
+
+RC updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid)
+{
+	RC result = -1;
+
+	return result;
+}
+
+RC readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data)
+{
+	RC result = -1;
+
+	return result;
+}
+
+RC reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber)
+{
+	RC result = -1;
+
+	return result;
+}
+
+RC scan(FileHandle &fileHandle,
+      const vector<Attribute> &recordDescriptor,
+      const string &conditionAttribute,
+      const CompOp compOp,                  // comparision type such as "<" and "="
+      const void *value,                    // used in the comparison
+      const vector<string> &attributeNames, // a list of projected attributes
+      RBFM_ScanIterator &rbfm_ScanIterator)
+{
+	RC result = -1;
+
+	return result;
+}
+
+RC reorganizeFile(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor)
+{
+	RC result = -1;
+
+	return result;
+}
