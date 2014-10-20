@@ -540,42 +540,43 @@ DirectoryOfSlotsInfo* RecordBasedFileManager::goToDirectoryOfSlotsInfo(const cha
 }
 
 
-RC deleteRecords(FileHandle &fileHandle)
+RC RecordBasedFileManager::deleteRecords(FileHandle &fileHandle)
+{
+	RC result = -1;
+
+
+	return result;
+}
+
+RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid)
 {
 	RC result = -1;
 
 	return result;
 }
 
-RC deleteRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid)
+RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid)
 {
 	RC result = -1;
 
 	return result;
 }
 
-RC updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid)
+RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data)
 {
 	RC result = -1;
 
 	return result;
 }
 
-RC readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data)
+RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber)
 {
 	RC result = -1;
 
 	return result;
 }
 
-RC reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber)
-{
-	RC result = -1;
-
-	return result;
-}
-
-RC scan(FileHandle &fileHandle,
+RC RecordBasedFileManager::scan(FileHandle &fileHandle,
       const vector<Attribute> &recordDescriptor,
       const string &conditionAttribute,
       const CompOp compOp,                  // comparision type such as "<" and "="
@@ -588,7 +589,7 @@ RC scan(FileHandle &fileHandle,
 	return result;
 }
 
-RC reorganizeFile(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor)
+RC RecordBasedFileManager::reorganizeFile(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor)
 {
 	RC result = -1;
 
