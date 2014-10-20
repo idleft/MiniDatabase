@@ -813,7 +813,7 @@ void TEST_RM_15(const string &tableName) {
     cout << "****Test case 15 passed****" << endl << endl;
 }
 
-void createTable(){
+void initializeTable(){
 	// Remove files that might be created by previous test run
 	remove("tbl_employee");
 	remove("tbl_employee2");
@@ -839,7 +839,7 @@ void createTable(){
 int main()
 {
 	// Create Tables
-	createTable();
+	initializeTable();
 
     cout << endl << "Test Insert/Read Tuple .." << endl;
 
