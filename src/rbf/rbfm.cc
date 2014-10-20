@@ -544,8 +544,25 @@ RC RecordBasedFileManager::deleteRecords(FileHandle &fileHandle)
 {
 	RC result = -1;
 
+	const char* fileName = fileHandle.getFileName().c_str();
 
-	return result;
+	result = pfm->closeFile( fileHandle );
+	if( result != 0 )
+		return result;
+
+	result = pfm->destroyFile( fileName );
+	if( result != 0 )
+		return result;
+
+	result = pfm->createFile( fileName );
+	if( result != 0 )
+		return result;
+
+	result = pfm->openFile( fileName, fileHandle );
+	if( result != 0 )
+		return result;
+
+	return 0;
 }
 
 RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid)
