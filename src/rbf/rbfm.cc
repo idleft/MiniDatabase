@@ -539,36 +539,60 @@ DirectoryOfSlotsInfo* RecordBasedFileManager::goToDirectoryOfSlotsInfo(const cha
 	return (DirectoryOfSlotsInfo*)directoryInfo;
 }
 
+RC RecordBasedFileManager::deleteRecords(FileHandle &fileHandle)
+{
+	RC result = -1;
 
-RC deleteRecords(FileHandle &fileHandle)
+	const char* fileName = fileHandle.getFileName().c_str();
+
+	result = pfm->closeFile( fileHandle );
+	if( result != 0 )
+		return result;
+
+	result = pfm->destroyFile( fileName );
+	if( result != 0 )
+		return result;
+
+	result = pfm->createFile( fileName );
+	if( result != 0 )
+		return result;
+
+	result = pfm->openFile( fileName, fileHandle );
+	if( result != 0 )
+		return result;
+
+	return 0;
+}
+
+RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid)
+{
+	RC result = -1;
+
+	if( fileHandle.getFile() == NULL )
+		return result;
+
+	if( directoryOfSlots.find(fileHandle.getFileName())
+			== directoryOfSlots.end() )
+		return result;
+
+	return result;
+}
+
+RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid)
 {
 	RC result = -1;
 
 	return result;
 }
 
-RC deleteRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid)
+RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data)
 {
 	RC result = -1;
 
 	return result;
 }
 
-RC updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid)
-{
-	RC result = -1;
-
-	return result;
-}
-
-RC readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data)
-{
-	RC result = -1;
-
-	return result;
-}
-
-RC reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber)
+RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber)
 {
 	RC result = -1;
 
