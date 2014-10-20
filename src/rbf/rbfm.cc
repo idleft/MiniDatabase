@@ -539,6 +539,7 @@ DirectoryOfSlotsInfo* RecordBasedFileManager::goToDirectoryOfSlotsInfo(const cha
 	return (DirectoryOfSlotsInfo*)directoryInfo;
 }
 
+
 RC RecordBasedFileManager::deleteRecords(FileHandle &fileHandle)
 {
 	RC result = -1;
@@ -568,13 +569,6 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 {
 	RC result = -1;
 
-	if( fileHandle.getFile() == NULL )
-		return result;
-
-	if( directoryOfSlots.find(fileHandle.getFileName())
-			== directoryOfSlots.end() )
-		return result;
-
 	return result;
 }
 
@@ -599,7 +593,7 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 	return result;
 }
 
-RC scan(FileHandle &fileHandle,
+RC RecordBasedFileManager::scan(FileHandle &fileHandle,
       const vector<Attribute> &recordDescriptor,
       const string &conditionAttribute,
       const CompOp compOp,                  // comparision type such as "<" and "="
@@ -612,7 +606,7 @@ RC scan(FileHandle &fileHandle,
 	return result;
 }
 
-RC reorganizeFile(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor)
+RC RecordBasedFileManager::reorganizeFile(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor)
 {
 	RC result = -1;
 
