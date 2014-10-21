@@ -2,4 +2,5 @@ Debug/
 .cproject
 .settings/
 .project
+./src/rm/mergeTest.cc
 
