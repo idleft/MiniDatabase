@@ -159,6 +159,22 @@ IMPORTANT, PLEASE READ: All methods below this comment (other than the construct
 
   RC reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber);
 
+  bool isRecordTombStone(const void* record, unsigned& pageNum, unsigned& slotNum) {
+	  if( *(short *)record == -1 ) {
+		  pageNum = *(unsigned *)((char*)record + sizeof(short));
+		  slotNum = *(unsigned *)((char*)record + sizeof(short) + sizeof(unsigned));
+		  return true;
+	  }
+
+	  return false;
+  }
+
+  void setRecordTombStone(char *record, unsigned pageNum, unsigned slotNum) {
+	  *(short *)record = -1;
+	  *(unsigned *)(record + sizeof(unsigned)) = pageNum;
+	  *(unsigned *)(record + sizeof(short) + sizeof(unsigned)) = slotNum;
+  }
+
   // scan returns an iterator to allow the caller to go through the results one by one. 
   RC scan(FileHandle &fileHandle,
       const vector<Attribute> &recordDescriptor,

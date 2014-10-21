@@ -569,6 +569,54 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 {
 	RC result = -1;
 
+	if( fileHandle.getFile() == NULL )
+			return result;
+
+	if( directoryOfSlots.find( fileHandle.getFileName() ) ==
+			directoryOfSlots.end() )
+		return result;
+
+	unsigned pageNum = rid.pageNum;
+	unsigned slotNum = rid.slotNum;
+
+	vector<short> *slotDirectory = directoryOfSlots[fileHandle.getFileName()];
+
+	char* page = (char*)malloc( PAGE_SIZE );
+
+	bool isTombStone = true;
+	while( isTombStone )
+	{
+		result = fileHandle.readPage( pageNum, page );
+		if( result != 0 )
+			return result;
+
+		const char* endOfPage = page + PAGE_SIZE;
+
+		Slot* slot = goToSlot( endOfPage, slotNum );
+		if( slot->begin < 0 )
+		{
+			result = -1;
+			break;
+		}
+
+		char* data = page + slot->begin;
+
+		isTombStone = isRecordTombStone( data, pageNum, slotNum );
+
+		// delete the record by setting offset to -1
+		slot->begin = -1 - slot->begin;
+
+		// increase free space
+		short sizeOfRecord = getSizeOfRecord( recordDescriptor, data );
+		(*slotDirectory)[pageNum] += sizeOfRecord;
+
+		result = fileHandle.writePage( pageNum, page );
+		if( result != 0 )
+			break;
+
+	}
+
+	free(page);
 	return result;
 }
 
