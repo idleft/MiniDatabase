@@ -17,10 +17,19 @@ RelationManager::RelationManager()
 
 RelationManager::~RelationManager()
 {
+	_rm = NULL;
 }
 
 RC RelationManager::createTable(const string &tableName, const vector<Attribute> &attrs)
 {
+	// check reserved table names
+
+	// tables
+
+	// indexes
+
+	// views
+
     return -1;
 }
 
