@@ -143,6 +143,9 @@ public:
 
   RC appendRecord(char *page, const void *record, short sizeOfRecord, unsigned slotNum);
 
+  RC shiftSlotInfo(void* pageData, short shiftOffset, short slotNum);
+
+
 /**************************************************************************************************************************************************************
 ***************************************************************************************************************************************************************
 IMPORTANT, PLEASE READ: All methods below this comment (other than the constructor and destructor) are NOT required to be implemented for part 1 of the project

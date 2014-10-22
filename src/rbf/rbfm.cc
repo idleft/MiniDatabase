@@ -620,17 +620,118 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 	return result;
 }
 
+RC RecordBasedFileManager::shiftSlotInfo(void* pageData, short shiftOffset, short slotNum){
+	char* endOfPage = (char *) pageData + PAGE_SIZE;
+	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
+	Slot* slot;
+	short slotN = dirInfo->numOfSlots;
+	for(int iter1 = slotNum+1; iter1<slotN; iter1++){
+		slot = goToSlot(endOfPage,iter1);
+		slot->begin+=shiftOffset;
+		slot->end+=shiftOffset;
+	}
+	return 0;
+}
+
 RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid)
 {
+	// Routine of update record.
+	// 1. Calculate the newRecordSize
+	// 2. If there are no space size change, update it at the place.
+	// 3. If there aren't enough space, call reorganize first and then try update.
+	// 4. If space still not enough, mark original as tombstone, then insert this record again.
+	// Can be simplified to two step. Enough just copy&shift, not enough reorganize
 	RC result = -1;
 
+	void * pageData = malloc(PAGE_SIZE);
+	char * endOfPage = (char*)pageData + PAGE_SIZE;
+	fileHandle.readPage(rid.pageNum,pageData);
+
+	Slot* slot = goToSlot(endOfPage,rid.slotNum);
+	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
+
+	short oldRecordSize = slot->end - slot->begin +1;
+	short newRecordSize = getSizeOfRecord(recordDescriptor, data);
+
+	if(oldRecordSize==newRecordSize){
+		// same size, update record
+		memcpy((char*) pageData + slot->begin,data,oldRecordSize);
+		result = 0;
+	}
+	else if (newRecordSize < oldRecordSize){
+		// smaller size, update record, shift data to head.
+		short shiftOffset = oldRecordSize - newRecordSize;
+
+		// update record
+		memcpy((char*) pageData+ slot->begin, data, newRecordSize);
+		//shiftData
+		void * cpCache = malloc(dirInfo->freeSpaceOffset-slot->end);
+		short shiftDataBlockSize = dirInfo->freeSpaceOffset - slot->end;
+		memcpy((char*) cpCache, (char*) pageData + slot->end, shiftDataBlockSize);
+		memcpy((char*) pageData + slot->begin + newRecordSize, cpCache, shiftDataBlockSize);
+		//update freespace Offset
+		dirInfo->freeSpaceOffset = dirInfo->freeSpaceOffset - shiftOffset;
+		// update slot
+		slot->end = slot->begin + newRecordSize;//Own
+		shiftSlotInfo(pageData, 0-shiftOffset, rid.slotNum);//Record before,shift to head
+		free(cpCache);
+		result = 0;
+	}
+	else
+	{
+		// bigger size, compare free space, reorganize, insert
+		short sizeDiff = newRecordSize - oldRecordSize;
+		short currentFreeSize = PAGE_SIZE - dirInfo->freeSpaceOffset;
+		if(sizeDiff >= currentFreeSize){
+			// even reorganized, the pointer position will not change, value changed
+			reorganizePage(fileHandle,recordDescriptor,rid.pageNum);
+			currentFreeSize = PAGE_SIZE - dirInfo->freeSpaceOffset;
+			if(sizeDiff >= currentFreeSize){
+				RID newRID;
+				deleteRecord(fileHandle,recordDescriptor,rid);
+				insertRecord(fileHandle,recordDescriptor,data,newRID);
+			}
+			else{
+				//shift&go
+
+				short shiftDataBlockSize = dirInfo->freeSpaceOffset - slot->end;
+				void * cpCache = malloc(shiftDataBlockSize);
+				// shift Data to end
+				memcpy(cpCache, (char*) pageData + newRecordSize, shiftDataBlockSize);
+				//update dirinfo
+				dirInfo->freeSpaceOffset +=sizeDiff;
+				// update slot
+				slot->end = slot->begin + newRecordSize;
+				shiftSlotInfo(pageData, sizeDiff, rid.slotNum); // shift to end
+				// update data
+				memcpy((char*) pageData+slot->begin, data, newRecordSize);
+				free(cpCache);
+				result = 0;
+			}
+		}
+		else{// can be further optimized with smaller size update
+			// shift data forward, minus freespace
+			short shiftDataBlockSize = dirInfo->freeSpaceOffset - slot->end;
+			void * cpCache = malloc(shiftDataBlockSize);
+			// shift Data to end
+			memcpy(cpCache, (char*) pageData + newRecordSize, shiftDataBlockSize);
+			//update dirinfo
+			dirInfo->freeSpaceOffset +=sizeDiff;
+			// update slot
+			slot->end = slot->begin + newRecordSize;
+			shiftSlotInfo(pageData, sizeDiff, rid.slotNum); // shift to end
+			// update data
+			memcpy((char*) pageData+slot->begin, data, newRecordSize);
+			free(cpCache);
+			result = 0;
+		}
+	}
 	return result;
 }
 
 RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data)
 {
 	RC result = -1;
-
 	return result;
 }
 
