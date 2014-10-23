@@ -9,6 +9,9 @@
 
 using namespace std;
 
+#define TABLE_CATALOG_FILE_NAME "tables.tbl"
+#define COLUMN_CATALOG_FILE_NAME "column.tbl"
+#define INDEX_CATALOG_FILE_NAME "index.tbl"
 
 # define RM_EOF (-1)  // end of a scan operator
 
@@ -67,6 +70,27 @@ public:
       const vector<string> &attributeNames, // a list of projected attributes
       RM_ScanIterator &rm_ScanIterator);
 
+  vector<Attribute> tableCatalog;
+  vector<Attribute> columnCatalog;
+  vector<Attribute> indexCatalog;
+
+  RC createTableCatalog();
+
+  RC createColumnCatalog();
+
+  RC createIndexCatalog();
+
+  RC loadCatalog();
+
+  RC insertTableEntry( int tableID, string tableName, string catFileName, FileHandle &fileHandle, int size, RID &rid );
+
+  RC insertColumnEntry(int tableID, string tableName, string columnName, AttrType columnType, AttrLength maxLength, FileHandle &fileHandle, RID& rid);
+
+  int getCatalogSize(vector<Attribute> catalog);
+
+  RC createCatalogFile(const string& tableName, const vector<Attribute>& attrVector);
+
+  int TABLE_ID;
 
 // Extra credit
 public:
@@ -77,13 +101,14 @@ public:
   RC reorganizeTable(const string &tableName);
 
 
-
 protected:
   RelationManager();
   ~RelationManager();
 
 private:
   static RelationManager *_rm;
+  RecordBasedFileManager *_rbfm;
+  PagedFileManager *_pfm;
 };
 
 #endif
