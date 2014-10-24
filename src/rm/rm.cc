@@ -20,7 +20,7 @@ RelationManager::RelationManager()
 	createColumnCatalog();
 	createIndexCatalog();
 
-	if( _pfm->fileExists( TABLE_CATALOG_FILE_NAME ) )
+	if( _pfm->fileExists( TABLE_CATALOG_FILE_NAME  ) )
 		loadCatalog();
 	else
 	{
@@ -222,8 +222,7 @@ RC RelationManager::createCatalogFile(const string& tableName, const vector<Attr
 	string catFileName = tableName + ".tbl";
 
 	// CREATE TABLE/INDEX FILE. BUT DO NOT CREATE COLUMN CATALOG FIRST.
-	if( catFileName.compare(TABLE_CATALOG_FILE_NAME) == 0
-			|| catFileName.compare(INDEX_CATALOG_FILE_NAME) == 0)
+	if( catFileName.compare(COLUMN_CATALOG_FILE_NAME) != 0 )
 	{
 		result = _rbfm->createFile( catFileName );
 		if( result != 0 )
@@ -231,7 +230,7 @@ RC RelationManager::createCatalogFile(const string& tableName, const vector<Attr
 	}
 
 	// TABLE CATALOG EXISTS. CREATE COLUMN CATALOG
-	if( catFileName.compare(TABLE_CATALOG_FILE_NAME) == 0 )
+	if( catFileName.compare( TABLE_CATALOG_FILE_NAME)  == 0 )
 	{
 		result =  _rbfm->createFile(COLUMN_CATALOG_FILE_NAME);
 		if( result != 0 )
@@ -276,7 +275,6 @@ RC RelationManager::insertTableEntry( int tableID, string tableName, string catF
 	RC result = -1;
 
 	int offset = 0;
-	int varCharLength = 0;
 
 	int catalogSize = getCatalogSize(tableCatalog);
 	char* data = (char*)malloc(catalogSize);
@@ -356,6 +354,8 @@ int RelationManager::getCatalogSize(vector<Attribute> catalog)
 	for(int i=0; i < catalog.size(); i++)
 	{
 		size += catalog[i].length;
+
+		cout << "i=" << i << " size=" << catalog.size() << endl;
 
 		if( catalog[i].type == TypeVarChar )
 			size +=  sizeof(int);

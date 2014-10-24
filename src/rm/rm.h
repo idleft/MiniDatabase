@@ -9,7 +9,7 @@
 
 using namespace std;
 
-#define TABLE_CATALOG_FILE_NAME "tables.tbl"
+#define TABLE_CATALOG_FILE_NAME "table.tbl"
 #define COLUMN_CATALOG_FILE_NAME "column.tbl"
 #define INDEX_CATALOG_FILE_NAME "index.tbl"
 
