@@ -34,6 +34,15 @@ RelationManager::RelationManager()
 RelationManager::~RelationManager()
 {
 	_rm = NULL;
+
+	map< string, map<int, RID>>:: iterator it;
+	for( it= tableRIDMap.begin(); it != tableRIDMap.end(); it++)
+		delete it->second;
+
+	map< int, map<int, RID>>:: iterator cit;
+	for( cit= columnRIDMap.begin(); cit != columnRIDMap.end(); cit++)
+			delete cit->second;
+
 }
 
 RC RelationManager::createTable(const string &tableName, const vector<Attribute> &attrs)
@@ -55,7 +64,61 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 
 RC RelationManager::deleteTable(const string &tableName)
 {
-    return -1;
+	RC result = -1;
+
+	FileHandle fileHandle;
+
+	map<int,RID> *tableRID = tableRIDMap[tableName];
+	int tableID =  tableRID->begin()->first;
+
+	// delete column
+	result =  _rbfm->openFile( COLUMN_CATALOG_FILE_NAME, fileHandle );
+	if( result != 0 )
+	{
+		_rbfm->closeFile( fileHandle );
+		return result;
+	}
+
+	map<int,RID> *columnRID = columnRIDMap[tableID];
+
+	RID rid;
+	map<int,RID>::iterator it;
+
+	for(it=(*columnRID).begin(); it != (*columnRID).end();++it)
+	{
+		rid = it->second;
+		result = _rbfm->deleteRecord( fileHandle, columnCatalog, rid );
+		if( result != 0 ) {
+			_rbfm->closeFile( fileHandle );
+			return result;
+		}
+
+	}
+
+	delete( columnRID );
+	columnRIDMap.erase( tableID );
+
+	result = _rbfm->closeFile( fileHandle );
+	if( result != 0 )
+		return result;
+
+	// delete table
+	result =  _rbfm->openFile( TABLE_CATALOG_FILE_NAME, fileHandle );
+	if( result != 0 )
+	{
+		_rbfm->closeFile( fileHandle );
+		return result;
+	}
+
+	rid =  tableRID->begin()->second;
+	result = _rbfm->deleteRecord( fileHandle, tableCatalog, rid );
+	if( result != 0 )
+		return result;
+
+	delete( tableRID );
+	tableRIDMap.erase( tableName );
+
+    return result;
 }
 
 RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &attrs)
@@ -291,6 +354,10 @@ RC RelationManager::createCatalogFile(const string& tableName, const vector<Attr
 	if( result != 0 )
 		return result;
 
+	map<int, RID> *tableRID = new map<int, RID>();
+	(*tableRID)[TABLE_ID] = rid;
+	tableRIDMap[tableName] = tableRID;
+
 	result = _rbfm->closeFile( fileHandle );
 	if( result != 0 )
 		return result;
@@ -300,10 +367,13 @@ RC RelationManager::createCatalogFile(const string& tableName, const vector<Attr
 	if( result != 0 )
 		return result;
 
+	map<int, RID> *columnRID = new map<int, RID>();
 	for(int i = 0; i < (int)attrVector.size(); i++)
 	{
 		result = insertColumnEntry( TABLE_ID, tableName, attrVector[i].name, attrVector[i].type, attrVector[i].length, fileHandle, rid);
+		(*columnRID)[i] = rid;
 	}
+	columnRIDMap[TABLE_ID] = columnRID;
 
 	result = _rbfm->closeFile( fileHandle );
 	if( result != 0 )
