@@ -95,12 +95,17 @@ RC PagedFileManager::openFile(const char *fileName, FileHandle &fileHandle)
 RC PagedFileManager::closeFile(FileHandle &fileHandle)
 {
 
+	RC result = -1;
+
 	if( fileHandle.getFile() == NULL )
 	{
 		return -1;
 	}
 
-	return fclose( fileHandle.getFile() );
+	result = fclose( fileHandle.getFile() );
+	fileHandle.clear();
+
+	return result;
 }
 
 bool PagedFileManager::fileExists(const char *filename)
@@ -202,6 +207,11 @@ std::string FileHandle::getFileName()
 	return this->fileName;
 }
 
+void FileHandle::clear()
+{
+	this->fileName.clear();
+	this->file = NULL;
+}
 
 
 

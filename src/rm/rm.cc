@@ -133,21 +133,25 @@ RC RelationManager::createTableCatalog()
 
 	attr.name = "tableID";
 	attr.type = TypeInt;
+	attr.length = sizeof(int);
 
 	tableCatalog.push_back(attr);
 
 	attr.name = "tableName";
 	attr.type = TypeVarChar;
+	attr.length = 256;
 
 	tableCatalog.push_back(attr);
 
 	attr.name = "fileName";
 	attr.type = TypeVarChar;
+	attr.length = 256;
 
 	tableCatalog.push_back(attr);
 
 	attr.name = "numOfColumns";
 	attr.type = TypeInt;
+	attr.length = sizeof(int);
 
 	tableCatalog.push_back(attr);
 
@@ -161,26 +165,31 @@ RC RelationManager::createColumnCatalog()
 	Attribute attr;
 	attr.name = "tableID";
 	attr.type = TypeInt;
+	attr.length = sizeof(int);
 
 	columnCatalog.push_back(attr);
 
 	attr.name = "tableName";
 	attr.type = TypeVarChar;
+	attr.length = 256;
 
 	columnCatalog.push_back(attr);
 
 	attr.name = "columnName";
 	attr.type = TypeVarChar;
+	attr.length = 256;
 
 	columnCatalog.push_back(attr);
 
 	attr.name = "columnType";
 	attr.type = TypeInt;
+	attr.length = sizeof(int);
 
 	columnCatalog.push_back(attr);
 
 	attr.name = "maxLength";
 	attr.type = TypeInt;
+	attr.length = sizeof(int);
 
 	columnCatalog.push_back(attr);
 
@@ -222,7 +231,7 @@ RC RelationManager::createCatalogFile(const string& tableName, const vector<Attr
 	string catFileName = tableName + ".tbl";
 
 	// CREATE TABLE/INDEX FILE. BUT DO NOT CREATE COLUMN CATALOG FIRST.
-	if( catFileName.compare(COLUMN_CATALOG_FILE_NAME) != 0 )
+	if( catFileName.compare( COLUMN_CATALOG_FILE_NAME ) != 0 )
 	{
 		result = _rbfm->createFile( catFileName );
 		if( result != 0 )
@@ -232,7 +241,7 @@ RC RelationManager::createCatalogFile(const string& tableName, const vector<Attr
 	// TABLE CATALOG EXISTS. CREATE COLUMN CATALOG
 	if( catFileName.compare( TABLE_CATALOG_FILE_NAME)  == 0 )
 	{
-		result =  _rbfm->createFile(COLUMN_CATALOG_FILE_NAME);
+		result =  _rbfm->createFile( COLUMN_CATALOG_FILE_NAME);
 		if( result != 0 )
 			return result;
 	}
@@ -347,20 +356,20 @@ RC RelationManager::insertColumnEntry(int tableID, string tableName, string colu
 	return result;
 }
 
-int RelationManager::getCatalogSize(vector<Attribute> catalog)
+unsigned RelationManager::getCatalogSize(vector<Attribute> catalog)
 {
-	int size = 0;
+	unsigned length = 0;
 
-	for(int i=0; i < catalog.size(); i++)
+	for(int i=0; i < (int)catalog.size(); i++)
 	{
-		size += catalog[i].length;
+		length += catalog[i].length;
 
-		cout << "i=" << i << " size=" << catalog.size() << endl;
+		cout << "i=" << i << " size=" << length << endl;
 
 		if( catalog[i].type == TypeVarChar )
-			size +=  sizeof(int);
+			length +=  sizeof(int);
 
 	}
 
-	return size;
+	return length;
 }

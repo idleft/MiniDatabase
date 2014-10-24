@@ -86,7 +86,7 @@ public:
 
   RC insertColumnEntry(int tableID, string tableName, string columnName, AttrType columnType, AttrLength maxLength, FileHandle &fileHandle, RID& rid);
 
-  int getCatalogSize(vector<Attribute> catalog);
+  unsigned getCatalogSize(vector<Attribute> catalog);
 
   RC createCatalogFile(const string& tableName, const vector<Attribute>& attrVector);
 

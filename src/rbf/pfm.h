@@ -56,6 +56,8 @@ public:
     FILE* getFile();
     std::string getFileName();
 
+    void clear();
+
 private:
     FILE *file;
     std::string fileName;
