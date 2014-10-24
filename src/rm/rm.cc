@@ -60,42 +60,77 @@ RC RelationManager::deleteTable(const string &tableName)
 
 RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &attrs)
 {
+	// fix the recursive call
+	if(tableAttributesCache.find(tableName) == tableAttributesCache.end()){
+		//	read table from system catalog
+		tableAttributesCache[tableName] = attrs;
+	}
+	else
+		attrs = tableAttributesCache[tableName];
     return -1;
 }
 
 RC RelationManager::insertTuple(const string &tableName, const void *data, RID &rid)
 {
-    return -1;
+    vector<Attribute> tableAttributes;
+    getAttributes(tableName, tableAttributes);
+    // Initialize fileHandle everytime?
+    _rbfm->insertRecord(fileHandle, tableAttributes, data, rid);
+    return 0;
 }
 
 RC RelationManager::deleteTuples(const string &tableName)
 {
-    return -1;
+	RC result = -1;
+	result = _rbfm->deleteRecords(fileHandle);
+    return result;
 }
+
+
 
 RC RelationManager::deleteTuple(const string &tableName, const RID &rid)
 {
-    return -1;
+	RC result = -1;
+	vector<Attribute> tableAttributes;
+	getAttributes(tableName, tableAttributes);
+	result = _rbfm->deleteRecord(fileHandle, tableAttributes, rid);
+    return result;
 }
 
 RC RelationManager::updateTuple(const string &tableName, const void *data, const RID &rid)
 {
-    return -1;
+	RC result = -1;
+	vector<Attribute> tableAttributes;
+	getAttributes(tableName, tableAttributes);
+	result = _rbfm->updateRecord(fileHandle, tableAttributes, data, rid);
+    return result;
 }
 
 RC RelationManager::readTuple(const string &tableName, const RID &rid, void *data)
 {
-    return -1;
+	RC result = -1;
+	vector<Attribute> tableAttributes;
+	getAttributes(tableName, tableAttributes);
+	result = _rbfm->readRecord(fileHandle, tableAttributes, rid, data);
+    return result;
 }
 
 RC RelationManager::readAttribute(const string &tableName, const RID &rid, const string &attributeName, void *data)
 {
-    return -1;
+	RC result = -1;
+	vector<Attribute> tableAttributes;
+	getAttributes(tableName, tableAttributes);
+	result = _rbfm->readAttribute(fileHandle, tableAttributes, rid, attributeName, data);
+    return result;
 }
 
 RC RelationManager::reorganizePage(const string &tableName, const unsigned pageNumber)
 {
-    return -1;
+	RC result = -1;
+	vector<Attribute> tableAttributes;
+	getAttributes(tableName, tableAttributes);
+	result = _rbfm->reorganizePage(fileHandle, tableAttributes, pageNumber);
+    return result;
 }
 
 RC RelationManager::scan(const string &tableName,

@@ -107,8 +107,10 @@ protected:
 
 private:
   static RelationManager *_rm;
+  map<string, vector<Attribute>> tableAttributesCache;
   RecordBasedFileManager *_rbfm;
   PagedFileManager *_pfm;
+  FileHandle fileHandle;
 };
 
 #endif
