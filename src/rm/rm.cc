@@ -328,19 +328,19 @@ RC RelationManager::insertTableEntry( int tableID, string tableName, string catF
 	offset += sizeof(int);
 
 	int varCharLen = tableName.length();
-	memcpy( (void*)data + offset, &varCharLen, sizeof(int));
+	memcpy( data + offset, &varCharLen, sizeof(int));
 	offset += sizeof(int);
-	memcpy( (void*)data + offset, &tableName, varCharLen );
+	memcpy( data + offset, &tableName, varCharLen );
 	offset += varCharLen;
 
 	varCharLen = catFileName.length();
-	memcpy( (void*)data + offset, &varCharLen, sizeof(int));
+	memcpy( data + offset, &varCharLen, sizeof(int));
 	offset += sizeof(int);
-	memcpy( (void*)data + offset, &catFileName, catFileName.length() );
+	memcpy( data + offset, &catFileName, catFileName.length() );
 	offset += varCharLen;
 
 	int numOfColumns = tableCatalog.size();
-	memcpy( (void*)data + offset, &numOfColumns, sizeof(int));
+	memcpy( data + offset, &numOfColumns, sizeof(int));
 	offset += sizeof(int);
 
 	result = _rbfm->insertRecord( fileHandle, tableCatalog, data, rid );
@@ -361,25 +361,25 @@ RC RelationManager::insertColumnEntry(int tableID, string tableName, string colu
 	char* data = (char*)malloc(catalogSize);
 
 	// [tableID][tableName][columnName][columnType][maxLength]
-	memcpy( (void*)data + offset, &tableID, sizeof(int));
+	memcpy( data + offset, &tableID, sizeof(int));
 	offset += sizeof(int);
 
 	int varCharLen = tableName.length();
-	memcpy( (void*)data + offset, &varCharLen, sizeof(int));
+	memcpy( data + offset, &varCharLen, sizeof(int));
 	offset += sizeof(int);
-	memcpy( (void*)data + offset, &tableName, varCharLen);
+	memcpy( data + offset, &tableName, varCharLen);
 	offset += varCharLen;
 
 	varCharLen = columnName.length();
-	memcpy( (void*)data + offset, &varCharLen, sizeof(int) );
+	memcpy( data + offset, &varCharLen, sizeof(int) );
 	offset += sizeof(int);
-	memcpy( (void*)data + offset, &columnName, varCharLen );
+	memcpy( data + offset, &columnName, varCharLen );
 	offset += varCharLen;
 
-	memcpy( (void*)data + offset, (int*)&columnType, sizeof(int) );
+	memcpy( data + offset, (int*)&columnType, sizeof(int) );
 	offset += sizeof(int);
 
-	memcpy( (void*)data + offset, &maxLength, sizeof(int));
+	memcpy( data + offset, &maxLength, sizeof(int));
 	offset += sizeof(int);
 
 	result = _rbfm->insertRecord( fileHandle, columnCatalog, data, rid );

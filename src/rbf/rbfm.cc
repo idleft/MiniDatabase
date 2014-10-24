@@ -175,7 +175,7 @@ RC RecordBasedFileManager::closeFile(FileHandle &fileHandle)
 	pfm->openFile( descFileName.c_str(), headerFileHandle );
 
 	char* page = (char*)malloc(PAGE_SIZE);
-	unsigned pageNo = 0;
+//	unsigned pageNo = 0;
 	while(headerFileHandle.getNumberOfPages() < numOfHeaderPages)
 	{
 		headerFileHandle.appendPage( page );
@@ -203,7 +203,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 
 	RC result = -1;
 	PageNum pageNum = 0;
-	PageNum pageNumToAddNewPage = 0;
+//	PageNum pageNumToAddNewPage = 0;
 
 	if( fileHandle.getFile() == NULL )
 		return result;
@@ -372,7 +372,7 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
 {
 	int offset  = 0;
 
-	printf("recordDescriptor.size() = %d\n", recordDescriptor.size());
+	//printf("recordDescriptor.size() = %d\n", recordDescriptor.size());
 	for (unsigned i = 0; i < recordDescriptor.size(); ++i)
 	{
 		Attribute attr = recordDescriptor.at(i);
@@ -735,10 +735,10 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
 	RC result = -1;
 	void *pageData = malloc(PAGE_SIZE);
 	fileHandle.readPage(rid.pageNum, pageData);
-	Slot *slot = goToSlot(pageData+PAGE_SIZE, rid.slotNum);
-	void *recordPointer = slot->begin;
+	Slot *slot = goToSlot((char*)pageData+PAGE_SIZE, rid.slotNum);
+	char *recordPointer = (char *)pageData + slot->begin;
 	// if attribute not found return -1
-	for(vector<Attribute>::iterator &iter1 = recordDescriptor.begin(); iter1!=recordDescriptor.end(); iter1++){
+	for(vector<Attribute>::const_iterator iter1 = recordDescriptor.begin(); iter1!=recordDescriptor.end(); iter1++){
 		if(iter1->name == attributeName){
 			result = 0;
 			if(iter1->type == TypeVarChar){
@@ -777,7 +777,7 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 	RC result = -1;
 	unsigned pageN = pageNumber;
 	void* pageData = malloc(PAGE_SIZE);
-	char* endOfPage = pageData + PAGE_SIZE;
+	char* endOfPage = (char *)pageData + PAGE_SIZE;
 	Slot* slot;
 	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
 
