@@ -732,6 +732,27 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data)
 {
 	RC result = -1;
+	void *pageData = malloc(PAGE_SIZE);
+	fileHandle.readPage(rid.pageNum, pageData);
+	Slot *slot = goToSlot(pageData+PAGE_SIZE, rid.slotNum);
+	void *recordPointer = slot->begin;
+	// if attribute not found return -1
+	for(vector<Attribute>::iterator &iter1 = recordDescriptor.begin(); iter1!=recordDescriptor.end(); iter1++){
+		if(iter1->name == attributeName){
+			result = 0;
+			if(iter1->type == TypeVarChar){
+				int length = *((int *)recordPointer);
+				memcpy(data, recordPointer+sizeof(int), length);
+			}
+			else if (iter1->type == TypeReal){
+				*((float *)data) = *((float *)recordPointer);
+			}
+			else{
+				*((int *)data) = *((int *)recordPointer);
+			}
+		}
+		recordPointer+=sizeof(short);
+	}
 	return result;
 }
 
@@ -739,7 +760,6 @@ RC RecordBasedFileManager::shiftDataBlock(void* pageData, short slotId, Director
 	//Pros: shift the datablock more than once
 	short shiftDataBlockSize = dirInfo->freeSpaceOffset - slot->end;
 	short shiftOffSet = slot->end - slot->begin - 2*sizeof(unsigned);
-	void * cpCache = malloc(shiftDataBlockSize);
 	// shift Data to end
 	memmove((char*) pageData + slot->begin + 2*sizeof(unsigned), (char*) pageData + slot->end, shiftDataBlockSize);
 	//update dirinfo
