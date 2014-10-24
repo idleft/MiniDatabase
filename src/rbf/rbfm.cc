@@ -608,8 +608,7 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 
 		// increase free space
 		short sizeOfRecord = getSizeOfRecord( recordDescriptor, data );
-		(*slotDirectory)[pageNum] += sizeOfRecord;
-
+		(*slotDirectory)[pageNum] += sizeOfRecord;// increase multiple times?
 		result = fileHandle.writePage( pageNum, page );
 		if( result != 0 )
 			break;
@@ -710,11 +709,12 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 			}
 		}
 		else{// can be further optimized with smaller size update
-			// shift data forward, minus freespace
+			// shift data forward,  freespace decrease
 			short shiftDataBlockSize = dirInfo->freeSpaceOffset - slot->end;
 			void * cpCache = malloc(shiftDataBlockSize);
 			// shift Data to end
-			memcpy(cpCache, (char*) pageData + newRecordSize, shiftDataBlockSize);
+			memcpy(cpCache, (char*) pageData + oldRecordSize, shiftDataBlockSize);
+			memcpy((char *) pageData + newRecordSize, cpCache, shiftDataBlockSize);
 			//update dirinfo
 			dirInfo->freeSpaceOffset +=sizeDiff;
 			// update slot
@@ -735,10 +735,39 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
 	return result;
 }
 
+RC RecordBasedFileManager::shiftDataBlock(void* pageData, short slotId, DirectoryOfSlotsInfo* dirInfo, Slot* slot){
+	//Pros: shift the datablock more than once
+	short shiftDataBlockSize = dirInfo->freeSpaceOffset - slot->end;
+	short shiftOffSet = slot->end - slot->begin - 2*sizeof(unsigned);
+	void * cpCache = malloc(shiftDataBlockSize);
+	// shift Data to end
+	memmove((char*) pageData + slot->begin + 2*sizeof(unsigned), (char*) pageData + slot->end, shiftDataBlockSize);
+	//update dirinfo
+	dirInfo->freeSpaceOffset  = dirInfo->freeSpaceOffset + shiftOffSet;
+	// delete slot info
+	slot->end = slot->begin+2*sizeof(unsigned);// # to be fixed, currently only reserve pointer to another record
+	// shift slot forwards
+	shiftSlotInfo(pageData, shiftOffSet, slotId);
+	return 0;
+}
+
 RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber)
 {
 	RC result = -1;
+	unsigned pageN = pageNumber;
+	void* pageData = malloc(PAGE_SIZE);
+	char* endOfPage = pageData + PAGE_SIZE;
+	Slot* slot;
+	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
 
+	fileHandle.readPage(pageN, pageData);
+	for( unsigned iter1=0; iter1<dirInfo->numOfSlots; iter1++){
+		if(isRecordTombStone(pageData, pageN, iter1)){
+			// shift data behind
+			slot = goToSlot(pageData, iter1);
+			shiftDataBlock(pageData, iter1, dirInfo, slot);
+		}
+	}
 	return result;
 }
 

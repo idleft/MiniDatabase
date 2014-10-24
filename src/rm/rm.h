@@ -84,6 +84,9 @@ protected:
 
 private:
   static RelationManager *_rm;
+  RecordBasedFileManager *rbfm;
+  FileHandle fileHandle;
+  map<string, vector<Attribute>> tableAttributesCache;
 };
 
 #endif
