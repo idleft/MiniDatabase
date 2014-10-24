@@ -47,7 +47,6 @@ RC RelationManager::insertTuple(const string &tableName, const void *data, RID &
     getAttributes(tableName, tableAttributes);
     // Initialize fileHandle everytime?
     rbfm->insertRecord(fileHandle, tableAttributes, data, rid);
-
     return 0;
 }
 

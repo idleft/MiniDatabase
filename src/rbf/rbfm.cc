@@ -726,6 +726,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 			result = 0;
 		}
 	}
+	free(pageData);
 	return result;
 }
 
@@ -788,6 +789,7 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 			shiftDataBlock(pageData, iter1, dirInfo, slot);
 		}
 	}
+	free(pageData);
 	return result;
 }
 
