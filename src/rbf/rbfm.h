@@ -166,8 +166,8 @@ IMPORTANT, PLEASE READ: All methods below this comment (other than the construct
 
   bool isRecordTombStone(const void* record, unsigned& pageNum, unsigned& slotNum) {
 	  if( *(short *)record == -1 ) {
-		  pageNum = *(unsigned *)((char*)record + sizeof(short));
-		  slotNum = *(unsigned *)((char*)record + sizeof(short) + sizeof(unsigned));
+		  pageNum = *(unsigned *)((char*)record + sizeof(unsigned));
+		  slotNum = *(unsigned *)((char*)record + sizeof(unsigned) + sizeof(unsigned));
 		  return true;
 	  }
 
