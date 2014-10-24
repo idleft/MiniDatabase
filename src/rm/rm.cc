@@ -300,7 +300,7 @@ RC RelationManager::createCatalogFile(const string& tableName, const vector<Attr
 	if( result != 0 )
 		return result;
 
-	for(int i = 0; i < attrVector.size(); i++)
+	for(int i = 0; i < (int)attrVector.size(); i++)
 	{
 		result = insertColumnEntry( TABLE_ID, tableName, attrVector[i].name, attrVector[i].type, attrVector[i].length, fileHandle, rid);
 	}
