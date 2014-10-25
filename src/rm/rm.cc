@@ -35,13 +35,15 @@ RelationManager::~RelationManager()
 {
 	_rm = NULL;
 
-	map< string, map<int, RID>>:: iterator it;
-	for( it= tableRIDMap.begin(); it != tableRIDMap.end(); it++)
-		delete it->second;
+	map< string, map<int, RID> >:: iterator it;
+//	for( it= tableRIDMap.begin(); it != tableRIDMap.end(); it++)
+//		delete it->second;
+	tableRIDMap.clear();
 
-	map< int, map<int, RID>>:: iterator cit;
-	for( cit= columnRIDMap.begin(); cit != columnRIDMap.end(); cit++)
-			delete cit->second;
+	map< int, map<int, RID> >:: iterator cit;
+//	for( cit= columnRIDMap.begin(); cit != columnRIDMap.end(); cit++)
+//			delete cit->second;
+	columnRIDMap.clear();
 
 }
 
@@ -68,7 +70,7 @@ RC RelationManager::deleteTable(const string &tableName)
 
 	FileHandle fileHandle;
 
-	map<int,RID> *tableRID = tableRIDMap[tableName];
+	map<int,RID> *tableRID = &tableRIDMap[tableName];
 	int tableID =  tableRID->begin()->first;
 
 	// delete column
@@ -79,7 +81,7 @@ RC RelationManager::deleteTable(const string &tableName)
 		return result;
 	}
 
-	map<int,RID> *columnRID = columnRIDMap[tableID];
+	map<int,RID> *columnRID = &columnRIDMap[tableID];
 
 	RID rid;
 	map<int,RID>::iterator it;
@@ -356,7 +358,8 @@ RC RelationManager::createCatalogFile(const string& tableName, const vector<Attr
 
 	map<int, RID> *tableRID = new map<int, RID>();
 	(*tableRID)[TABLE_ID] = rid;
-	tableRIDMap[tableName] = tableRID;
+
+	tableRIDMap[tableName] = *tableRID; // modified to fix the pointer to object
 
 	result = _rbfm->closeFile( fileHandle );
 	if( result != 0 )
@@ -370,10 +373,10 @@ RC RelationManager::createCatalogFile(const string& tableName, const vector<Attr
 	map<int, RID> *columnRID = new map<int, RID>();
 	for(int i = 0; i < (int)attrVector.size(); i++)
 	{
-		result = insertColumnEntry( TABLE_ID, tableName, attrVector[i].name, attrVector[i].type, attrVector[i].length, fileHandle, rid);
+		result = insertColumnEntry( TABLE_ID, tableName, attrVector.at(i).name, attrVector.at(i).type, attrVector.at(i).length, fileHandle, rid);
 		(*columnRID)[i] = rid;
 	}
-	columnRIDMap[TABLE_ID] = columnRID;
+	columnRIDMap[TABLE_ID] = *columnRID; // same with line362
 
 	result = _rbfm->closeFile( fileHandle );
 	if( result != 0 )
@@ -467,11 +470,11 @@ unsigned RelationManager::getCatalogSize(vector<Attribute> catalog)
 
 	for(int i=0; i < (int)catalog.size(); i++)
 	{
-		length += catalog[i].length;
+		length += catalog.at(i).length;
 
 		cout << "i=" << i << " size=" << length << endl;
 
-		if( catalog[i].type == TypeVarChar )
+		if( catalog.at(i).type == TypeVarChar )
 			length +=  sizeof(int);
 
 	}

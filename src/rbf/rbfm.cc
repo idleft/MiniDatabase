@@ -641,7 +641,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 	void * pageData = malloc(PAGE_SIZE);
 	char * endOfPage = (char*)pageData + PAGE_SIZE;
 	fileHandle.readPage(rid.pageNum,pageData);
-	vector<short> &freeSpace = directoryOfSlots(fileHandle.fileName);
+	vector<short> *freeSpace = directoryOfSlots[fileHandle.getFileName()];
 
 	Slot* slot = goToSlot(endOfPage,rid.slotNum);
 	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
@@ -657,18 +657,18 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 		result = 0;
 	}
 	else{ // not equal, see if shift needed, if so shift first, then compare size
-		if (sizeDiff > freeSpace[rid.pageNum])
+		if (sizeDiff > (*freeSpace)[rid.pageNum])
 			reorganizePage(fileHandle, recordDescriptor, rid.pageNum);
-		if(newRecordSize < oldRecordSize||(newRecordSize > oldRecordSize&&(sizeDiff > freeSpace[rid.pageNum]))){
+		if(newRecordSize < oldRecordSize||(newRecordSize > oldRecordSize&&(sizeDiff > (*freeSpace)[rid.pageNum]))){
 			short shiftDataBlockSize = dirInfo->freeSpaceOffset - slot->end;
-			memmove(pageData + slot->end + sizeDiff, pageData + slot->end, shiftDataBlockSize);
+			memmove((char*)pageData + slot->end + sizeDiff, (char*)pageData + slot->end, shiftDataBlockSize);
 			// shift all slot behind
 			shiftSlotInfo(pageData, sizeDiff,rid.slotNum);
 			//update free space
 			dirInfo->freeSpaceOffset -= sizeDiff;
 			slot->end += sizeDiff;
 			//update record
-			memcpy(pageData + slot->begin, data, newRecordSize);
+			memcpy((char *)pageData + slot->begin, data, newRecordSize);
 			result = 0;
 		}
 		else{// not enough space, set tombstone, add point to new record
@@ -713,7 +713,7 @@ RC RecordBasedFileManager::shrinkTombstoneRecord(void* pageData, short slotId){
 
 	// the tombstone size is 3*short
 	char* endOfPage = (char*) pageData + PAGE_SIZE;
-	Slot* slot = goToSlot(pageData+PAGE_SIZE, slotId);
+	Slot* slot = goToSlot((char*)pageData+PAGE_SIZE, slotId);
 	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
 	short dataBlockBehindSize = dirInfo->freeSpaceOffset - slot->end;
 	short recordSize = slot->end - slot->begin;
@@ -721,7 +721,7 @@ RC RecordBasedFileManager::shrinkTombstoneRecord(void* pageData, short slotId){
 	// move data
 	memmove((char*) pageData + slot->begin + 3*sizeof(short), (char*) pageData + slot->end,dataBlockBehindSize);
 	// update freespace
-	dirInfo->freeSpaceOffset += recordSize;
+	dirInfo->freeSpaceOffset += (recordSize - 3*sizeof(short));
 	// update slot behind
 	shiftSlotInfo(pageData, shiftOffset, slotId);
 	// update current slot
@@ -731,8 +731,7 @@ RC RecordBasedFileManager::shrinkTombstoneRecord(void* pageData, short slotId){
 
 bool RecordBasedFileManager::checkTombStone(void* pageData, int pageId, int slotId){
 	bool result = false;
-	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo((char*)pageData+PAGE_SIZE);
-	Slot* slot = goToSlot(pageData+PAGE_SIZE, slotId);
+	Slot* slot = goToSlot((char*)pageData+PAGE_SIZE, slotId);
 	void* recordPos = (char*) pageData+slot->begin;
 	if(*(short*)recordPos == -1)
 		result = true;
@@ -747,8 +746,6 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 	unsigned pageN = pageNumber;
 	void* pageData = malloc(PAGE_SIZE);
 	char* endOfPage = (char *)pageData + PAGE_SIZE;
-	Slot* slot;
-	short shiftOffset = 0;
 	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
 	short slotNum = dirInfo->numOfSlots;
 
