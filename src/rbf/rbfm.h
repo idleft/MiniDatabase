@@ -145,7 +145,10 @@ public:
 
   RC shiftSlotInfo(void* pageData, short shiftOffset, short slotNum);
 
-  RC shiftDataBlock(void* pageData, short slotId, DirectoryOfSlotsInfo* dirInfo, Slot* slot);
+  RC shrinkTombstoneRecord(void* pageData, short slotId);
+
+  bool checkTombStone(void* data, int pageId, int slotId);
+
 
 
 /**************************************************************************************************************************************************************

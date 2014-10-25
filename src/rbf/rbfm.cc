@@ -620,11 +620,12 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 }
 
 RC RecordBasedFileManager::shiftSlotInfo(void* pageData, short shiftOffset, short slotNum){
+	// shift all slot behind with offset, not include
 	char* endOfPage = (char *) pageData + PAGE_SIZE;
 	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
 	Slot* slot;
 	short slotN = dirInfo->numOfSlots;
-	for(int iter1 = slotNum+1; iter1<slotN; iter1++){
+	for(int iter1 = slotNum+1; iter1<=slotN; iter1++){
 		slot = goToSlot(endOfPage,iter1);
 		slot->begin+=shiftOffset;
 		slot->end+=shiftOffset;
@@ -635,95 +636,46 @@ RC RecordBasedFileManager::shiftSlotInfo(void* pageData, short shiftOffset, shor
 RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid)
 {
 	// Routine of update record.
-	// 1. Calculate the newRecordSize
-	// 2. If there are no space size change, update it at the place.
-	// 3. If there aren't enough space, call reorganize first and then try update.
-	// 4. If space still not enough, mark original as tombstone, then insert this record again.
-	// Can be simplified to two step. Enough just copy&shift, not enough reorganize
 	RC result = -1;
 
 	void * pageData = malloc(PAGE_SIZE);
 	char * endOfPage = (char*)pageData + PAGE_SIZE;
 	fileHandle.readPage(rid.pageNum,pageData);
+	vector<short> &freeSpace = directoryOfSlots(fileHandle.fileName);
 
 	Slot* slot = goToSlot(endOfPage,rid.slotNum);
 	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
 
-	short oldRecordSize = slot->end - slot->begin +1;
+	short oldRecordSize = slot->end - slot->begin;
 	short newRecordSize = getSizeOfRecord(recordDescriptor, data);
+	short sizeDiff = newRecordSize - oldRecordSize;
+	//short currentFree = dirInfo->freeSpaceOffset;
 
 	if(oldRecordSize==newRecordSize){
 		// same size, update record
 		memcpy((char*) pageData + slot->begin,data,oldRecordSize);
 		result = 0;
 	}
-	else if (newRecordSize < oldRecordSize){
-		// smaller size, update record, shift data to head.
-		short shiftOffset = oldRecordSize - newRecordSize;
-
-		// update record
-		memcpy((char*) pageData+ slot->begin, data, newRecordSize);
-		//shiftData
-		void * cpCache = malloc(dirInfo->freeSpaceOffset-slot->end);
-		short shiftDataBlockSize = dirInfo->freeSpaceOffset - slot->end;
-		memcpy((char*) cpCache, (char*) pageData + slot->end, shiftDataBlockSize);
-		memcpy((char*) pageData + slot->begin + newRecordSize, cpCache, shiftDataBlockSize);
-		//update freespace Offset
-		dirInfo->freeSpaceOffset = dirInfo->freeSpaceOffset - shiftOffset;
-		// update slot
-		slot->end = slot->begin + newRecordSize;//Own
-		shiftSlotInfo(pageData, 0-shiftOffset, rid.slotNum);//Record before,shift to head
-		free(cpCache);
-		result = 0;
-	}
-	else
-	{
-		// bigger size, compare free space, reorganize, insert
-		short sizeDiff = newRecordSize - oldRecordSize;
-		short currentFreeSize = PAGE_SIZE - dirInfo->freeSpaceOffset;
-		if(sizeDiff >= currentFreeSize){
-			// even reorganized, the pointer position will not change, value changed
-			reorganizePage(fileHandle,recordDescriptor,rid.pageNum);
-			currentFreeSize = PAGE_SIZE - dirInfo->freeSpaceOffset;
-			if(sizeDiff >= currentFreeSize){
-				RID newRID;
-				deleteRecord(fileHandle,recordDescriptor,rid);
-				insertRecord(fileHandle,recordDescriptor,data,newRID);
-			}
-			else{
-				//shift&go
-
-				short shiftDataBlockSize = dirInfo->freeSpaceOffset - slot->end;
-				void * cpCache = malloc(shiftDataBlockSize);
-				// shift Data to end
-				memcpy(cpCache, (char*) pageData + newRecordSize, shiftDataBlockSize);
-				//update dirinfo
-				dirInfo->freeSpaceOffset +=sizeDiff;
-				// update slot
-				slot->end = slot->begin + newRecordSize;
-				shiftSlotInfo(pageData, sizeDiff, rid.slotNum); // shift to end
-				// update data
-				memcpy((char*) pageData+slot->begin, data, newRecordSize);
-				free(cpCache);
-				result = 0;
-			}
-		}
-		else{// can be further optimized with smaller size update
-			// shift data forward,  freespace decrease
+	else{ // not equal, see if shift needed, if so shift first, then compare size
+		if (sizeDiff > freeSpace[rid.pageNum])
+			reorganizePage(fileHandle, recordDescriptor, rid.pageNum);
+		if(newRecordSize < oldRecordSize||(newRecordSize > oldRecordSize&&(sizeDiff > freeSpace[rid.pageNum]))){
 			short shiftDataBlockSize = dirInfo->freeSpaceOffset - slot->end;
-			void * cpCache = malloc(shiftDataBlockSize);
-			// shift Data to end
-			memcpy(cpCache, (char*) pageData + oldRecordSize, shiftDataBlockSize);
-			memcpy((char *) pageData + newRecordSize, cpCache, shiftDataBlockSize);
-			//update dirinfo
-			dirInfo->freeSpaceOffset +=sizeDiff;
-			// update slot
-			slot->end = slot->begin + newRecordSize;
-			shiftSlotInfo(pageData, sizeDiff, rid.slotNum); // shift to end
-			// update data
-			memcpy((char*) pageData+slot->begin, data, newRecordSize);
-			free(cpCache);
+			memmove(pageData + slot->end + sizeDiff, pageData + slot->end, shiftDataBlockSize);
+			// shift all slot behind
+			shiftSlotInfo(pageData, sizeDiff,rid.slotNum);
+			//update free space
+			dirInfo->freeSpaceOffset -= sizeDiff;
+			slot->end += sizeDiff;
+			//update record
+			memcpy(pageData + slot->begin, data, newRecordSize);
 			result = 0;
+		}
+		else{// not enough space, set tombstone, add point to new record
+			RID newRid;
+			insertRecord(fileHandle, recordDescriptor, data, newRid);
+			setRecordTombStone((char*)pageData+slot->begin, newRid.pageNum, newRid.slotNum);
+
 		}
 	}
 	free(pageData);
@@ -757,19 +709,36 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
 	return result;
 }
 
-RC RecordBasedFileManager::shiftDataBlock(void* pageData, short slotId, DirectoryOfSlotsInfo* dirInfo, Slot* slot){
-	//Pros: shift the datablock more than once
-	short shiftDataBlockSize = dirInfo->freeSpaceOffset - slot->end;
-	short shiftOffSet = slot->end - slot->begin - 2*sizeof(unsigned);
-	// shift Data to end
-	memmove((char*) pageData + slot->begin + 2*sizeof(unsigned), (char*) pageData + slot->end, shiftDataBlockSize);
-	//update dirinfo
-	dirInfo->freeSpaceOffset  = dirInfo->freeSpaceOffset + shiftOffSet;
-	// delete slot info
-	slot->end = slot->begin+2*sizeof(unsigned);// # to be fixed, currently only reserve pointer to another record
-	// shift slot forwards
-	shiftSlotInfo(pageData, shiftOffSet, slotId);
+RC RecordBasedFileManager::shrinkTombstoneRecord(void* pageData, short slotId){
+
+	// the tombstone size is 3*short
+	char* endOfPage = (char*) pageData + PAGE_SIZE;
+	Slot* slot = goToSlot(pageData+PAGE_SIZE, slotId);
+	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
+	short dataBlockBehindSize = dirInfo->freeSpaceOffset - slot->end;
+	short recordSize = slot->end - slot->begin;
+	short shiftOffset = 3*sizeof(short) - recordSize;
+	// move data
+	memmove((char*) pageData + slot->begin + 3*sizeof(short), (char*) pageData + slot->end,dataBlockBehindSize);
+	// update freespace
+	dirInfo->freeSpaceOffset += recordSize;
+	// update slot behind
+	shiftSlotInfo(pageData, shiftOffset, slotId);
+	// update current slot
+	slot->end = slot->begin + 3*sizeof(short);
 	return 0;
+}
+
+bool RecordBasedFileManager::checkTombStone(void* pageData, int pageId, int slotId){
+	bool result = false;
+	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo((char*)pageData+PAGE_SIZE);
+	Slot* slot = goToSlot(pageData+PAGE_SIZE, slotId);
+	void* recordPos = (char*) pageData+slot->begin;
+	if(*(short*)recordPos == -1)
+		result = true;
+	else
+		result = false;
+	return result;
 }
 
 RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber)
@@ -779,14 +748,15 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 	void* pageData = malloc(PAGE_SIZE);
 	char* endOfPage = (char *)pageData + PAGE_SIZE;
 	Slot* slot;
+	short shiftOffset = 0;
 	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
+	short slotNum = dirInfo->numOfSlots;
 
 	fileHandle.readPage(pageN, pageData);
-	for( unsigned iter1=0; iter1<dirInfo->numOfSlots; iter1++){
-		if(isRecordTombStone(pageData, pageN, iter1)){
-			// shift data behind
-			slot = goToSlot(pageData, iter1);
-			shiftDataBlock(pageData, iter1, dirInfo, slot);
+
+	for( unsigned iter1=1; iter1<= slotNum; iter1++){
+		if(checkTombStone(pageData, pageN, iter1)){
+			shrinkTombstoneRecord(pageData, iter1);
 		}
 	}
 	free(pageData);
