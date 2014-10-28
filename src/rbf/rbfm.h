@@ -77,9 +77,19 @@ public:
   RBFM_ScanIterator() {};
   ~RBFM_ScanIterator() {};
 
+  RC initialize(FileHandle &fileHandle,
+		  const vector<Attribute> &recordDescriptor,
+		  const string &conditionAttribute,
+		  const CompOp compOp,
+		  const void *value,
+		  const vector<string> &attributeNames);
+
   // "data" follows the same format as RecordBasedFileManager::insertRecord()
   RC getNextRecord(RID &rid, void *data) { return RBFM_EOF; };
   RC close() { return -1; };
+
+private:
+  FileHandle fileHandle;
 };
 
 
