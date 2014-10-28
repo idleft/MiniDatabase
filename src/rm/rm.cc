@@ -320,7 +320,30 @@ RC RelationManager::loadCatalog()
 {
 	RC result = -1;
 
-	return result;
+	RM_ScanIterator	scanIterator;
+
+	RID rid;
+	void* data = malloc(MAX_SIZE_OF_CATALOG_RECORD);
+
+	// load table catalog
+	while( scanIterator.getNextTuple( rid, data) != RM_EOF )
+	{
+
+	}
+
+	// load column catalog
+	while( scanIterator.getNextTuple( rid, data) != RM_EOF )
+	{
+
+	}
+
+	// load index catalog
+	while( scanIterator.getNextTuple( rid, data) != RM_EOF )
+	{
+
+	}
+
+	return 0;
 }
 
 RC RelationManager::createCatalogFile(const string& tableName, const vector<Attribute>& attrVector)

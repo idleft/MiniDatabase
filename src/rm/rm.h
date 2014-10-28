@@ -15,6 +15,8 @@ using namespace std;
 
 # define RM_EOF (-1)  // end of a scan operator
 
+#define MAX_SIZE_OF_CATALOG_RECORD	1024
+
 // RM_ScanIterator is an iteratr to go through tuples
 // The way to use it is like the following:
 //  RM_ScanIterator rmScanIterator;
