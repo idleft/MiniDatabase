@@ -90,6 +90,14 @@ public:
 
 private:
   FileHandle fileHandle;
+  RecordBasedFileManager _rbfm;
+  unsigned pageNum,slotNum,totalPageNum,totalSlotNum;
+  char* pageData;
+  char* endOfPage;
+  string conditionAttribute;
+  vector<Attribute> recordDescriptor;
+  Slot* slot;
+  DirectoryOfSlotsInfo* dirInfo;
 };
 
 

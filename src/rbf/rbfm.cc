@@ -791,23 +791,35 @@ RC RBFM_ScanIterator::initialize(FileHandle &fileHandle,
 	RC result = -1;
 
 	this->fileHandle = fileHandle;
-	unsigned pageNum = 0;
-	unsigned slotNum = 0;
+	this->recordDescriptor = recordDescriptor;
+	this->conditionAttribute = conditionAttribute;
 
-	char* page = (char*) malloc( PAGE_SIZE );
-
-	result = fileHandle.readPage( pageNum, page );
-	if( result != 0 )
+	totalPageNum = fileHandle.getNumberOfPages();
+	if(totalPageNum <=0)
 		return result;
 
-	char* endOfPage = page + PAGE_SIZE;
+	pageData = (char*) malloc( PAGE_SIZE );
+	endOfPage = pageData + PAGE_SIZE;
 
+	result = fileHandle.readPage( pageNum, pageData );
+
+	dirInfo = _rbfm.goToDirectoryOfSlotsInfo(endOfPage); // EXTREMLLY not safe
+	totalSlotNum = dirInfo->numOfSlots;
+
+	if( result != 0 )
+		return result;
 }
-/*
+
 RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 {
 	RC result= -1;
 
+	while(pageNum<totalPageNum&&result){
+		slot = _rbfm.goToSlot(endOfPage, slotNum);
+		data = malloc(slot->end - slot->begin);
+		_rbfm.readAttribute(fileHandle, recordDescriptor, rid, conditionAttribute, data);
+	}
+/*
 	do {
 		slotNum++;
 
@@ -828,5 +840,6 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 
 
 	} while( !result );
+	*/
 }
-*/
+
