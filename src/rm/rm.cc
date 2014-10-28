@@ -640,8 +640,6 @@ RC RM_ScanIterator::initialize(vector<Attribute> recordDescriptor,
 	      const void *value,
 	      const vector<string> &attributeNames)
 {
-	RC result = -1;
-
 	RBFM_ScanIterator rbfm_it;
 
 	return _rbfm->scan(fileHandle, recordDescriptor, conditionAttribute, compOp, value, attributeNames, rbfm_it);
