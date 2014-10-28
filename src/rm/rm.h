@@ -86,7 +86,7 @@ public:
 
   RC insertTableEntry( int tableID, string tableName, string catFileName, FileHandle &fileHandle, int size, RID &rid );
 
-  RC insertColumnEntry(int tableID, string tableName, string columnName, AttrType columnType, AttrLength maxLength, FileHandle &fileHandle, RID& rid);
+  RC insertColumnEntry(int tableID, string tableName, int columnStart, string columnName, AttrType columnType, AttrLength maxLength, FileHandle &fileHandle, RID& rid);
 
   unsigned getCatalogSize(vector<Attribute> catalog);
 

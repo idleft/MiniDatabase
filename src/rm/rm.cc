@@ -275,6 +275,12 @@ RC RelationManager::createColumnCatalog()
 
 	columnCatalog.push_back(attr);
 
+	attr.name = "columnStart";
+	attr.type = TypeInt;
+	attr.length = 4;
+
+	columnCatalog.push_back(attr);
+
 	attr.name = "columnName";
 	attr.type = TypeVarChar;
 	attr.length = 256;
@@ -333,9 +339,8 @@ RC RelationManager::loadCatalog()
 	int offset = 0;
 
 	// load table catalog
-
-	attributeNames.push_back(tableCatalog[0].name);
-	attributeNames.push_back(tableCatalog[1].name);
+	attributeNames.push_back(tableCatalog[0].name);	// tableID
+	attributeNames.push_back(tableCatalog[1].name);	// tableName
 
 	scan( "table", tableCatalog[0].name, NO_OP, NULL, attributeNames, scanIterator);
 
@@ -360,16 +365,50 @@ RC RelationManager::loadCatalog()
 	}
 
 	// load column catalog
-	while( scanIterator.getNextTuple( rid, data) != RM_EOF )
+	attributeNames.clear();
+
+	attributeNames.push_back(columnCatalog[0].name);	// tableID
+	attributeNames.push_back(columnCatalog[2].name);	// columnStart
+
+	scan( "column", columnCatalog[0].name, NO_OP, NULL, attributeNames, scanIterator);
+
+	int columnStart = 0;
+
+	while( scanIterator.getNextTuple( rid, data ) != RM_EOF )
 	{
+		// [tableID][tableName][columnStart][columnName][columnType][maxLength]
+		memcpy( &tableID, data,  sizeof(int));
+		offset += sizeof(int);
+
+		memcpy( &columnStart, data+offset,  sizeof(int));
+		offset += sizeof(int);
+
+		// tableID already exists in the column map
+		if( columnRIDMap.find(tableID) != columnRIDMap.end() )
+		{
+			// Handle later
+		}
+		else
+		{
+			map<int, RID> *columnRID = new map<int, RID>();
+			(*columnRID)[columnStart] = rid;
+
+			columnRIDMap[tableID] = *columnRID;
+		}
+
+		data = start;
 
 	}
+
+	scanIterator.close();
 
 	// load index catalog
+	/*
 	while( scanIterator.getNextTuple( rid, data) != RM_EOF )
 	{
 
 	}
+	*/
 
 	return 0;
 }
@@ -424,7 +463,7 @@ RC RelationManager::createCatalogFile(const string& tableName, const vector<Attr
 	map<int, RID> *columnRID = new map<int, RID>();
 	for(int i = 0; i < (int)attrVector.size(); i++)
 	{
-		result = insertColumnEntry( TABLE_ID, tableName, attrVector.at(i).name, attrVector.at(i).type, attrVector.at(i).length, fileHandle, rid);
+		result = insertColumnEntry( TABLE_ID, tableName, i+1, attrVector.at(i).name, attrVector.at(i).type, attrVector.at(i).length, fileHandle, rid);
 		(*columnRID)[i] = rid;
 	}
 	columnRIDMap[TABLE_ID] = *columnRID; // same with line362
@@ -434,6 +473,8 @@ RC RelationManager::createCatalogFile(const string& tableName, const vector<Attr
 		return result;
 
 	TABLE_ID += 1;
+
+	// INSERT INDEX CATALOG ENTRIES
 
 	return result;
 }
@@ -476,7 +517,7 @@ RC RelationManager::insertTableEntry( int tableID, string tableName, string catF
 	return result;
 }
 
-RC RelationManager::insertColumnEntry(int tableID, string tableName, string columnName, AttrType columnType, AttrLength maxLength, FileHandle &fileHandle, RID& rid)
+RC RelationManager::insertColumnEntry(int tableID, string tableName, int columnStart, string columnName, AttrType columnType, AttrLength maxLength, FileHandle &fileHandle, RID& rid)
 {
 	RC result = -1;
 	int offset = 0;
@@ -493,6 +534,9 @@ RC RelationManager::insertColumnEntry(int tableID, string tableName, string colu
 	offset += sizeof(int);
 	memcpy( data + offset, &tableName, varCharLen);
 	offset += varCharLen;
+
+	memcpy( data + offset, &columnStart, sizeof(int));
+	offset += sizeof(int);
 
 	varCharLen = columnName.length();
 	memcpy( data + offset, &varCharLen, sizeof(int) );
