@@ -321,14 +321,42 @@ RC RelationManager::loadCatalog()
 	RC result = -1;
 
 	RM_ScanIterator	scanIterator;
+	vector<string> attributeNames;
 
 	RID rid;
-	void* data = malloc(MAX_SIZE_OF_CATALOG_RECORD);
+	char* data = (char*)malloc(MAX_SIZE_OF_CATALOG_RECORD);
+	char* start = data;
+
+	int tableID = 0;
+	string tableName;
+
+	int offset = 0;
 
 	// load table catalog
+
+	attributeNames.push_back(tableCatalog[0].name);
+	attributeNames.push_back(tableCatalog[1].name);
+
+	scan( "table", tableCatalog[0].name, NO_OP, NULL, attributeNames, scanIterator);
+
 	while( scanIterator.getNextTuple( rid, data) != RM_EOF )
 	{
+		// [tableID][tableName][catFileName][numOfColums]
+		memcpy( &tableID, data,  sizeof(int));
+		offset += sizeof(int);
 
+		int tableNameLen = 0;
+		memcpy( &tableNameLen, data+offset, sizeof(int));
+		offset += sizeof(int);
+
+		memcpy( &tableName, data+ offset, tableNameLen);
+		offset += tableNameLen;
+
+		map<int, RID> *tableRID = new map<int, RID>();
+		(*tableRID)[tableID] = rid;
+
+		tableRIDMap[tableName] = *tableRID;
+		data = start;
 	}
 
 	// load column catalog
