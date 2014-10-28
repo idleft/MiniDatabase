@@ -768,9 +768,7 @@ RC RecordBasedFileManager::scan(FileHandle &fileHandle,
       const vector<string> &attributeNames, // a list of projected attributes
       RBFM_ScanIterator &rbfm_ScanIterator)
 {
-	RC result = -1;
-
-	return result;
+	return rbfm_ScanIterator.initialize(fileHandle, recordDescriptor, conditionAttribute, compOp, value, attributeNames);
 }
 
 RC RecordBasedFileManager::reorganizeFile(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor)
@@ -779,3 +777,55 @@ RC RecordBasedFileManager::reorganizeFile(FileHandle &fileHandle, const vector<A
 
 	return result;
 }
+
+
+RC RBFM_ScanIterator::initialize(FileHandle &fileHandle,
+		  const vector<Attribute> &recordDescriptor,
+		  const string &conditionAttribute,
+		  const CompOp compOp,
+		  const void *value,
+		  const vector<string> &attributeNames)
+{
+
+	RC result = -1;
+
+	this->fileHandle = fileHandle;
+	unsigned pageNum = 0;
+	unsigned slotNum = 0;
+
+	char* page = (char*) malloc( PAGE_SIZE );
+
+	result = fileHandle.readPage( pageNum, page );
+	if( result != 0 )
+		return result;
+
+	char* endOfPage = page + PAGE_SIZE;
+
+}
+/*
+RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
+{
+	RC result= -1;
+
+	do {
+		slotNum++;
+
+		rid.slotNum = slotNum;
+		rid.pageNum = pageNum;
+
+		slot = (Slot*)(endOfPage - sizeof(DirectoryOfSlots) - slotNum*sizeof(Slot));
+
+		if( slot->begin < 0 )
+			continue;
+
+		record = page + slot->begin;
+
+		// handle Tombstone here
+
+		beginOfRecord = (short*)record +
+				endOfRecord =
+
+
+	} while( !result );
+}
+*/
