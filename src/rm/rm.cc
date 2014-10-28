@@ -123,16 +123,47 @@ RC RelationManager::deleteTable(const string &tableName)
     return result;
 }
 
+RC RelationManager::colDescriptorToAttri(void* data, Attribute &colAttri){
+	int offset = sizeof(int); //skip the tableID
+	int varLen = 0;
+	memcpy(&varLen, (char*) data + offset, sizeof(int));
+	offset = offset + sizeof(int) + sizeof(char)*varLen;// skip tableName
+
+	memcpy(&varLen, (char*) data + offset, sizeof(int));
+	memcpy(&colAttri.name,(char*)data+offset, varLen); // store columnName
+	offset = offset + sizeof(int) + sizeof(char)*varLen;
+
+	memcpy(&colAttri.type,(char*)data+offset, sizeof(int)); // store columnType
+	offset = offset + sizeof(int);
+
+	memcpy(&colAttri.length, (char*) data+offset, sizeof(int)); //store colMaxLength
+
+	return 0;
+}
+
 RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &attrs)
 {
-	// fix the recursive call
-	if(tableAttributesCache.find(tableName) == tableAttributesCache.end()){
-		//	read table from system catalog
-		tableAttributesCache[tableName] = attrs;
+	FileHandle filehandle;
+
+	_rbfm->openFile(COLUMN_CATALOG_FILE_NAME, fileHandle);
+	int colCatalogSize = getCatalogSize(columnCatalog);
+
+	map<int, RID>* tableIdSet = &tableRIDMap[tableName];
+	for(map<int, RID>::iterator iter1 = tableIdSet->begin(); iter1!=tableIdSet->end(); iter1++){
+		int tableId = iter1->first; // only require tableId
+		map<int, RID> *attrMap = &columnRIDMap[tableId];
+		for(map<int, RID>::iterator iter2 = attrMap->begin(); iter2 != attrMap->end(); iter2++){
+			Attribute colAttri;
+			RID attrRid = iter2->second;
+			void* colDescriptor = malloc(colCatalogSize);
+			_rbfm->readRecord(fileHandle, columnCatalog, attrRid, colDescriptor);
+			colDescriptorToAttri(colDescriptor, colAttri);
+			attrs.push_back(colAttri);
+		}
 	}
-	else
-		attrs = tableAttributesCache[tableName];
-    return -1;
+
+	_rbfm->closeFile(fileHandle);
+	return 0;
 }
 
 RC RelationManager::insertTuple(const string &tableName, const void *data, RID &rid)
@@ -365,10 +396,10 @@ RC RelationManager::loadCatalog()
 	int offset = 0;
 
 	// load table catalog
-	attributeNames.push_back(tableCatalog[0].name);	// tableID
-	attributeNames.push_back(tableCatalog[1].name);	// tableName
+	attributeNames.push_back(tableCatalog.at(0).name);	// tableID
+	attributeNames.push_back(tableCatalog.at(1).name);	// tableName
 
-	scan( "table", tableCatalog[0].name, NO_OP, NULL, attributeNames, scanIterator);
+	scan( "table", tableCatalog.at(0).name, NO_OP, NULL, attributeNames, scanIterator);
 
 	while( scanIterator.getNextTuple( rid, data) != RM_EOF )
 	{
@@ -393,10 +424,10 @@ RC RelationManager::loadCatalog()
 	// load column catalog
 	attributeNames.clear();
 
-	attributeNames.push_back(columnCatalog[0].name);	// tableID
-	attributeNames.push_back(columnCatalog[2].name);	// columnStart
+	attributeNames.push_back(columnCatalog.at(0).name);	// tableID
+	attributeNames.push_back(columnCatalog.at(2).name);	// columnStart
 
-	scan( "column", columnCatalog[0].name, NO_OP, NULL, attributeNames, scanIterator);
+	scan( "column", columnCatalog.at(2).name, NO_OP, NULL, attributeNames, scanIterator);
 
 	int columnStart = 0;
 
