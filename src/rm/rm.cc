@@ -205,6 +205,32 @@ RC RelationManager::scan(const string &tableName,
       const vector<string> &attributeNames,
       RM_ScanIterator &rm_ScanIterator)
 {
+	RC result = -1;
+
+	string fileName =  tableName + ".tbl";
+
+	result = _rbfm->openFile( fileName, rm_ScanIterator.fileHandle );
+	if( result != -1 )
+		return result;
+
+	if( tableName.compare(TABLE_CATALOG_FILE_NAME) == 0 )
+	{
+		return rm_ScanIterator.initialize(tableCatalog, conditionAttribute, compOp, value, attributeNames);
+	}
+	else if( tableName.compare(COLUMN_CATALOG_FILE_NAME) == 0 )
+	{
+		return rm_ScanIterator.initialize(columnCatalog, conditionAttribute, compOp, value, attributeNames);
+	}
+	else
+	{
+		vector<Attribute>	catalogAttributes;
+		result = getAttributes( fileName, catalogAttributes);
+		if( result != 0 )
+			return result;
+
+		return rm_ScanIterator.initialize(catalogAttributes, conditionAttribute, compOp, value, attributeNames);
+	}
+
     return -1;
 }
 
@@ -567,7 +593,7 @@ unsigned RelationManager::getCatalogSize(vector<Attribute> catalog)
 	{
 		length += catalog.at(i).length;
 
-		cout << "i=" << i << " size=" << length << endl;
+//		cout << "i=" << i << " size=" << length << endl;
 
 		if( catalog.at(i).type == TypeVarChar )
 			length +=  sizeof(int);
@@ -575,4 +601,17 @@ unsigned RelationManager::getCatalogSize(vector<Attribute> catalog)
 	}
 
 	return length;
+}
+
+RC RM_ScanIterator::initialize(vector<Attribute> recordDescriptor,
+		  const string &conditionAttribute,
+	      const CompOp compOp,
+	      const void *value,
+	      const vector<string> &attributeNames)
+{
+	RC result = -1;
+
+	RBFM_ScanIterator rbfm_it;
+
+	return _rbfm->scan(fileHandle, recordDescriptor, conditionAttribute, compOp, value, attributeNames, rbfm_it);
 }
