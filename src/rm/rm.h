@@ -92,6 +92,8 @@ public:
 
   RC createCatalogFile(const string& tableName, const vector<Attribute>& attrVector);
 
+  RC colDescriptorToAttri(void* data, Attribute &colAttri);
+
   int TABLE_ID;
 
 // Extra credit
