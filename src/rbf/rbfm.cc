@@ -43,6 +43,7 @@ RC RecordBasedFileManager::createFile(const string &fileName)
 		result = pfm->openFile( (fileName+"_desc").c_str(), descFileHandle );
 	}
 
+
 	if( result == 0 )
 	{
 		char * page = (char*)malloc(PAGE_SIZE);
