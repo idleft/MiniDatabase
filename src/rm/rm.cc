@@ -127,12 +127,12 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 {
 	// fix the recursive call
 	// should read the table info from columnCatalog and return
-	if(tableAttributesCache.find(tableName) == tableAttributesCache.end()){
-		return -1;
-	}
-	else
+	short res = -1;
+	if(tableAttributesCache.find(tableName) != tableAttributesCache.end()){
 		attrs = tableAttributesCache[tableName];
-    return -1;
+		res = 0;
+	}
+	return -1;
 }
 
 RC RelationManager::insertTuple(const string &tableName, const void *data, RID &rid)
