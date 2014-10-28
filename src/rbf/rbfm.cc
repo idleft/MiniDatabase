@@ -787,7 +787,7 @@ RC RBFM_ScanIterator::initialize(FileHandle &fileHandle,
 		  const void *value,
 		  const vector<string> &attributeNames)
 {
-
+/*
 	RC result = -1;
 
 	this->fileHandle = fileHandle;
@@ -803,15 +803,18 @@ RC RBFM_ScanIterator::initialize(FileHandle &fileHandle,
 
 	result = fileHandle.readPage( pageNum, pageData );
 
-	dirInfo = _rbfm.goToDirectoryOfSlotsInfo(endOfPage); // EXTREMLLY not safe
+	//dirInfo = this->goToDirectoryOfSlotsInfo(endOfPage); // EXTREMLLY not safe
 	totalSlotNum = dirInfo->numOfSlots;
 
 	if( result != 0 )
 		return result;
+		*/
+	return -1;
 }
 
 RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 {
+	/*
 	RC result= -1;
 
 	while(pageNum<totalPageNum&&result){
@@ -819,7 +822,6 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 		data = malloc(slot->end - slot->begin);
 		_rbfm.readAttribute(fileHandle, recordDescriptor, rid, conditionAttribute, data);
 	}
-/*
 	do {
 		slotNum++;
 
@@ -841,5 +843,6 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 
 	} while( !result );
 	*/
+	return -1;
 }
 

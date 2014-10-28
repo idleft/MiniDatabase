@@ -85,12 +85,11 @@ public:
 		  const vector<string> &attributeNames);
 
   // "data" follows the same format as RecordBasedFileManager::insertRecord()
-  RC getNextRecord(RID &rid, void *data) { return RBFM_EOF; };
+  RC getNextRecord(RID &rid, void *data);
   RC close() { return -1; };
 
 private:
   FileHandle fileHandle;
-  RecordBasedFileManager _rbfm;
   unsigned pageNum,slotNum,totalPageNum,totalSlotNum;
   char* pageData;
   char* endOfPage;
