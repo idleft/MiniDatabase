@@ -213,6 +213,7 @@ void createTable(const string &tableName)
     attrs.push_back(attr);
 
     RC rc = rm->createTable(tableName, attrs);
+    printf("%d\n",rc);
     assert(rc == success);
     cout << "****Table Created: " << tableName << " ****" << endl << endl;
 }

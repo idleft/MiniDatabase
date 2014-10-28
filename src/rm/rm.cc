@@ -126,9 +126,9 @@ RC RelationManager::deleteTable(const string &tableName)
 RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &attrs)
 {
 	// fix the recursive call
+	// should read the table info from columnCatalog and return
 	if(tableAttributesCache.find(tableName) == tableAttributesCache.end()){
-		//	read table from system catalog
-		tableAttributesCache[tableName] = attrs;
+		return -1;
 	}
 	else
 		attrs = tableAttributesCache[tableName];
