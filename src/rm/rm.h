@@ -31,7 +31,7 @@ public:
   RM_ScanIterator() { _rbfm = RecordBasedFileManager::instance(); };
   ~RM_ScanIterator() {};
 
-  RC iterate(vector<Attribute> catalogAttribute,
+  RC initialize(vector<Attribute> catalogAttribute,
 		  const string &conditionAttribute,
 	      const CompOp compOp,
 	      const void *value,

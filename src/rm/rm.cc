@@ -215,11 +215,11 @@ RC RelationManager::scan(const string &tableName,
 
 	if( tableName.compare(TABLE_CATALOG_FILE_NAME) == 0 )
 	{
-		return rm_ScanIterator.iterate(tableCatalog, conditionAttribute, compOp, value, attributeNames);
+		return rm_ScanIterator.initialize(tableCatalog, conditionAttribute, compOp, value, attributeNames);
 	}
 	else if( tableName.compare(COLUMN_CATALOG_FILE_NAME) == 0 )
 	{
-		return rm_ScanIterator.iterate(columnCatalog, conditionAttribute, compOp, value, attributeNames);
+		return rm_ScanIterator.initialize(columnCatalog, conditionAttribute, compOp, value, attributeNames);
 	}
 	else
 	{
@@ -228,7 +228,7 @@ RC RelationManager::scan(const string &tableName,
 		if( result != 0 )
 			return result;
 
-		return rm_ScanIterator.iterate(catalogAttributes, conditionAttribute, compOp, value, attributeNames);
+		return rm_ScanIterator.initialize(catalogAttributes, conditionAttribute, compOp, value, attributeNames);
 	}
 
     return -1;
@@ -603,7 +603,7 @@ unsigned RelationManager::getCatalogSize(vector<Attribute> catalog)
 	return length;
 }
 
-RC RM_ScanIterator::iterate(vector<Attribute> recordDescriptor,
+RC RM_ScanIterator::initialize(vector<Attribute> recordDescriptor,
 		  const string &conditionAttribute,
 	      const CompOp compOp,
 	      const void *value,
