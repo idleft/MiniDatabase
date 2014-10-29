@@ -816,23 +816,23 @@ RC RBFM_ScanIterator::initialize(FileHandle &fileHandle,
 
 bool RBFM_ScanIterator::checkCondition(void* data, string &attrName, vector<Attribute> &recordDescriptor){
 	bool result = false;
-	AttrType attrType = -1;
+	AttrType attrType;
 	int flag = -1;
 	short fieldOffset = 0;
 	int varLen = 0;
 	// Find the right type and position of compare field
 	for(vector<Attribute>::iterator iter1 = recordDescriptor.begin(); result&&iter1!=recordDescriptor.end();iter1++){
-		if(*iter1.name == attrName){
-			attrType = *iter1.AttrType;
+		if(iter1->name == attrName){
+			attrType = iter1->type;
 			flag = 0;
 			break;
 		}
 		else{
-			if(*iter1.AttrType == TypeVarChar){
+			if(iter1->type == TypeVarChar){
 				varLen = *(int *)data;
 				fieldOffset +=(sizeof(int)+varLen);
 			}
-			else if(*iter1.AttrType == TypeInt)
+			else if(iter1->type == TypeInt)
 				fieldOffset += sizeof(int);
 			else
 				fieldOffset += sizeof(float);
@@ -842,7 +842,7 @@ bool RBFM_ScanIterator::checkCondition(void* data, string &attrName, vector<Attr
 		return false;
 	// Read field value and compare
 	if(attrType == TypeInt){
-		int fieldValue = *(int *)(data+fieldOffset);
+		int fieldValue = *(int *)((char *)data+fieldOffset);
 		int targetValue = *(int *)targetPointer;
 		switch(compOp){
 			case EQ_OP :  result = (fieldValue == targetValue); break;
@@ -855,7 +855,7 @@ bool RBFM_ScanIterator::checkCondition(void* data, string &attrName, vector<Attr
 		}
 	}
 	else if (attrType == TypeReal){
-		int fieldValue = *(int *)(data+fieldOffset);
+		int fieldValue = *(int *)((char *)data+fieldOffset);
 		int targetValue = *(int *)targetPointer;
 		switch(compOp){
 			case EQ_OP :  result = (fieldValue == targetValue); break;
@@ -870,9 +870,9 @@ bool RBFM_ScanIterator::checkCondition(void* data, string &attrName, vector<Attr
 	else{
 		char* fieldValue;
 		char* targetValue = (char *) targetPointer;
-		varLen = *(int*)(data+fieldOffset);
-		fieldValue = malloc(varLen);
-		memcpy(fieldValue, data+fieldOffset+sizeof(int), varLen);
+		varLen = *(int*)((char *)data+fieldOffset);
+		fieldValue = (char *)malloc(varLen);
+		memcpy(fieldValue, (char *)data+fieldOffset+sizeof(int), varLen);
 		int strCmpRes = strcmp(fieldValue, targetValue);
 		switch(compOp){
 			case EQ_OP :  result = (strCmpRes == 0); break;

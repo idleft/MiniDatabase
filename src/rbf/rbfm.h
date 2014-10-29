@@ -70,7 +70,7 @@ The scan iterator is NOT required to be implemented for part 1 of the project
 //    process the data;
 //  }
 //  rbfmScanIterator.close();
-
+class RecordBasedFileManager;
 
 class RBFM_ScanIterator {
 public:
@@ -96,7 +96,7 @@ private:
   unsigned pageNum,slotNum,totalPageNum,totalSlotNum;
   char* pageData;
   char* endOfPage;
-  void* targetPointer;
+  const void* targetPointer;
   CompOp compOp;
   string conditionAttrName;
   vector<Attribute> recordDescriptor;
