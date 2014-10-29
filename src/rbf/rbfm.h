@@ -87,16 +87,22 @@ public:
   // "data" follows the same format as RecordBasedFileManager::insertRecord()
   RC getNextRecord(RID &rid, void *data);
   RC close() { return -1; };
+  bool checkCondition(void* data, string &attrName, vector<Attribute> &targetAttr);
+  RC inrecreaseIteratorPos();
+
 
 private:
   FileHandle fileHandle;
   unsigned pageNum,slotNum,totalPageNum,totalSlotNum;
   char* pageData;
   char* endOfPage;
-  string conditionAttribute;
+  void* targetPointer;
+  CompOp compOp;
+  string conditionAttrName;
   vector<Attribute> recordDescriptor;
   Slot* slot;
   DirectoryOfSlotsInfo* dirInfo;
+  RecordBasedFileManager* _rbfm;
 };
 
 

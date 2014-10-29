@@ -787,12 +787,14 @@ RC RBFM_ScanIterator::initialize(FileHandle &fileHandle,
 		  const void *value,
 		  const vector<string> &attributeNames)
 {
-/*
+
 	RC result = -1;
 
 	this->fileHandle = fileHandle;
 	this->recordDescriptor = recordDescriptor;
-	this->conditionAttribute = conditionAttribute;
+	this->conditionAttrName = conditionAttribute;
+	this->targetPointer = value;
+	this->compOp = compOp;
 
 	totalPageNum = fileHandle.getNumberOfPages();
 	if(totalPageNum <=0)
@@ -803,46 +805,120 @@ RC RBFM_ScanIterator::initialize(FileHandle &fileHandle,
 
 	result = fileHandle.readPage( pageNum, pageData );
 
-	//dirInfo = this->goToDirectoryOfSlotsInfo(endOfPage); // EXTREMLLY not safe
+	dirInfo = _rbfm->goToDirectoryOfSlotsInfo(endOfPage); // EXTREMLLY not safe
 	totalSlotNum = dirInfo->numOfSlots;
 
 	if( result != 0 )
 		return result;
-		*/
+
 	return -1;
+}
+
+bool RBFM_ScanIterator::checkCondition(void* data, string &attrName, vector<Attribute> &recordDescriptor){
+	bool result = false;
+	AttrType attrType = -1;
+	int flag = -1;
+	short fieldOffset = 0;
+	int varLen = 0;
+	// Find the right type and position of compare field
+	for(vector<Attribute>::iterator iter1 = recordDescriptor.begin(); result&&iter1!=recordDescriptor.end();iter1++){
+		if(*iter1.name == attrName){
+			attrType = *iter1.AttrType;
+			flag = 0;
+			break;
+		}
+		else{
+			if(*iter1.AttrType == TypeVarChar){
+				varLen = *(int *)data;
+				fieldOffset +=(sizeof(int)+varLen);
+			}
+			else if(*iter1.AttrType == TypeInt)
+				fieldOffset += sizeof(int);
+			else
+				fieldOffset += sizeof(float);
+		}
+	}
+	if(flag == -1) // if field not found, return false
+		return false;
+	// Read field value and compare
+	if(attrType == TypeInt){
+		int fieldValue = *(int *)(data+fieldOffset);
+		int targetValue = *(int *)targetPointer;
+		switch(compOp){
+			case EQ_OP :  result = (fieldValue == targetValue); break;
+			case LT_OP :  result = (fieldValue < targetValue); break;    // <
+			case GT_OP :  result = (fieldValue > targetValue); break;   // >
+			case LE_OP :  result = (fieldValue <= targetValue); break;   // <=
+			case GE_OP :  result = (fieldValue >= targetValue); break;   // >=
+			case NE_OP :  result = (fieldValue != targetValue); break;   // !=
+			case NO_OP :  result = true; break;
+		}
+	}
+	else if (attrType == TypeReal){
+		int fieldValue = *(int *)(data+fieldOffset);
+		int targetValue = *(int *)targetPointer;
+		switch(compOp){
+			case EQ_OP :  result = (fieldValue == targetValue); break;
+			case LT_OP :  result = (fieldValue < targetValue); break;    // <
+			case GT_OP :  result = (fieldValue > targetValue); break;   // >
+			case LE_OP :  result = (fieldValue <= targetValue); break;   // <=
+			case GE_OP :  result = (fieldValue >= targetValue); break;   // >=
+			case NE_OP :  result = (fieldValue != targetValue); break;   // !=
+			case NO_OP :  result = true; break;
+		}
+	}
+	else{
+		char* fieldValue;
+		char* targetValue = (char *) targetPointer;
+		varLen = *(int*)(data+fieldOffset);
+		fieldValue = malloc(varLen);
+		memcpy(fieldValue, data+fieldOffset+sizeof(int), varLen);
+		int strCmpRes = strcmp(fieldValue, targetValue);
+		switch(compOp){
+			case EQ_OP :  result = (strCmpRes == 0); break;
+			case LT_OP :  result = (strCmpRes < 0 ); break;    // <
+			case GT_OP :  result = (strCmpRes > 0); break;   // >
+			case LE_OP :  result = (strCmpRes <= 0); break;   // <=
+			case GE_OP :  result = (strCmpRes >= 0); break;   // >=
+			case NE_OP :  result = (strCmpRes != 0); break;   // !=
+			case NO_OP :  result = true; break;
+		}
+		free(fieldValue);
+	}
+	return result;
+}
+
+RC  RBFM_ScanIterator::inrecreaseIteratorPos(){
+	slotNum += 1;
+	if(slotNum>dirInfo->numOfSlots){
+		pageNum +=1;
+		slotNum = 1;
+	}
+	return 0;
 }
 
 RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 {
-	/*
+
 	RC result= -1;
+	RC tombStoneChk = -1;
 
 	while(pageNum<totalPageNum&&result){
-		slot = _rbfm.goToSlot(endOfPage, slotNum);
-		data = malloc(slot->end - slot->begin);
-		_rbfm.readAttribute(fileHandle, recordDescriptor, rid, conditionAttribute, data);
-	}
-	do {
-		slotNum++;
-
-		rid.slotNum = slotNum;
 		rid.pageNum = pageNum;
+		rid.slotNum = slotNum;
 
-		slot = (Slot*)(endOfPage - sizeof(DirectoryOfSlots) - slotNum*sizeof(Slot));
-
-		if( slot->begin < 0 )
+		// read the record out
+		slot = _rbfm->goToSlot(endOfPage, slotNum);
+		data = malloc(slot->end - slot->begin);
+		tombStoneChk = _rbfm->readRecord(fileHandle, recordDescriptor, rid, data);
+		inrecreaseIteratorPos();
+		if(tombStoneChk == -1)
 			continue;
-
-		record = page + slot->begin;
-
-		// handle Tombstone here
-
-		beginOfRecord = (short*)record +
-				endOfRecord =
-
-
-	} while( !result );
-	*/
-	return -1;
+		// see the condition
+		if(checkCondition(data, conditionAttrName, recordDescriptor)){
+			result = 0;
+		}
+	}
+	return result;
 }
 
