@@ -20,14 +20,14 @@ RelationManager::RelationManager()
 	createColumnCatalog();
 	createIndexCatalog();
 
-	if( _pfm->fileExists( TABLE_CATALOG_FILE_NAME  ) )
-		loadCatalog();
-	else
-	{
+//	if( _pfm->fileExists( TABLE_CATALOG_FILE_NAME  ) )
+//		loadCatalog();
+//	else
+//	{
 		createCatalogFile( "table", tableCatalog );
 		createCatalogFile( "column", columnCatalog );
 		createCatalogFile( "index", indexCatalog );
-	}
+//	}
 
 }
 
@@ -125,16 +125,27 @@ RC RelationManager::deleteTable(const string &tableName)
 
 RC RelationManager::colDescriptorToAttri(void* data, Attribute &colAttri){
 	int offset = sizeof(int); //skip the tableID
-	int varLen = 0;
+	int varLen = 0,columnStart;
 	memcpy(&varLen, (char*) data + offset, sizeof(int));
 	offset = offset + sizeof(int) + sizeof(char)*varLen;// skip tableName
 
+	memcpy(&columnStart, (char*) data + offset, sizeof(int));
+	offset += sizeof(int);
+
 	memcpy(&varLen, (char*) data + offset, sizeof(int));
-	memcpy(&colAttri.name,(char*)data+offset, varLen); // store columnName
-	offset = offset + sizeof(int) + sizeof(char)*varLen;
+	offset += sizeof(int);
+
+	char * nameChar = (char *)malloc(varLen+1);
+	memset(nameChar,0,varLen+1);
+	memcpy(nameChar, (char*)data+offset, varLen); // store columnName
+	colAttri.name = string((char *)nameChar);
+	printf("name : %s \n", nameChar);
+	cout<<"Read attribute name: "<<colAttri.name<<endl;
+	free(nameChar);
+	offset = offset + sizeof(char)*varLen;
 
 	memcpy(&colAttri.type,(char*)data+offset, sizeof(int)); // store columnType
-	offset = offset + sizeof(int);
+	offset = offset + sizeof(AttrType);
 
 	memcpy(&colAttri.length, (char*) data+offset, sizeof(int)); //store colMaxLength
 
@@ -145,10 +156,12 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 {
 	FileHandle filehandle;
 
+	cout<<"Get attribute for table: "<<tableName<<endl;
 	_rbfm->openFile(COLUMN_CATALOG_FILE_NAME, fileHandle);
 	int colCatalogSize = getCatalogSize(columnCatalog);
 
 	map<int, RID>* tableIdSet = &tableRIDMap[tableName];
+	printf("Table RID map size: %d  Table id set: %d\n",tableRIDMap.size(),tableIdSet->size());
 	for(map<int, RID>::iterator iter1 = tableIdSet->begin(); iter1!=tableIdSet->end(); iter1++){
 		int tableId = iter1->first; // only require tableId
 		map<int, RID> *attrMap = &columnRIDMap[tableId];
@@ -476,7 +489,7 @@ RC RelationManager::createCatalogFile(const string& tableName, const vector<Attr
 	FileHandle fileHandle;
 
 	string catFileName = tableName + ".tbl";
-
+cout<<"Creating "<<catFileName<<endl;
 	// CREATE TABLE/INDEX FILE. BUT DO NOT CREATE COLUMN CATALOG FIRST.
 	if( catFileName.compare( COLUMN_CATALOG_FILE_NAME ) != 0 )
 	{
@@ -507,6 +520,7 @@ RC RelationManager::createCatalogFile(const string& tableName, const vector<Attr
 	(*tableRID)[TABLE_ID] = rid;
 
 	tableRIDMap[tableName] = *tableRID; // modified to fix the pointer to object
+	cout<<"For table name :"<<tableName<<" Size: "<< tableRIDMap[tableName].size() << endl;
 
 	result = _rbfm->closeFile( fileHandle );
 	if( result != 0 )
@@ -520,6 +534,7 @@ RC RelationManager::createCatalogFile(const string& tableName, const vector<Attr
 	map<int, RID> *columnRID = new map<int, RID>();
 	for(int i = 0; i < (int)attrVector.size(); i++)
 	{
+		cout<<"Insert attr "<<attrVector.at(i).name<<endl;
 		result = insertColumnEntry( TABLE_ID, tableName, i+1, attrVector.at(i).name, attrVector.at(i).type, attrVector.at(i).length, fileHandle, rid);
 		(*columnRID)[i] = rid;
 	}
@@ -581,6 +596,7 @@ RC RelationManager::insertColumnEntry(int tableID, string tableName, int columnS
 
 	int catalogSize = getCatalogSize(columnCatalog);
 	char* data = (char*)malloc(catalogSize);
+	char* nameChar;
 
 	// [tableID][tableName][columnName][columnType][maxLength]
 	memcpy( data + offset, &tableID, sizeof(int));
@@ -589,7 +605,10 @@ RC RelationManager::insertColumnEntry(int tableID, string tableName, int columnS
 	int varCharLen = tableName.length();
 	memcpy( data + offset, &varCharLen, sizeof(int));
 	offset += sizeof(int);
-	memcpy( data + offset, &tableName, varCharLen);
+	nameChar = (char*)malloc(varCharLen);
+	strcpy(nameChar,tableName.c_str());
+	memcpy( data + offset, nameChar, varCharLen);
+	free(nameChar);
 	offset += varCharLen;
 
 	memcpy( data + offset, &columnStart, sizeof(int));
@@ -598,7 +617,10 @@ RC RelationManager::insertColumnEntry(int tableID, string tableName, int columnS
 	varCharLen = columnName.length();
 	memcpy( data + offset, &varCharLen, sizeof(int) );
 	offset += sizeof(int);
-	memcpy( data + offset, &columnName, varCharLen );
+	nameChar = (char*)malloc(varCharLen);
+	strcpy(nameChar,columnName.c_str());
+	memcpy( data + offset, nameChar, varCharLen);
+	free(nameChar);
 	offset += varCharLen;
 
 	memcpy( data + offset, (int*)&columnType, sizeof(int) );
