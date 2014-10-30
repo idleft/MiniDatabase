@@ -154,6 +154,8 @@ RC RelationManager::colDescriptorToAttri(void* data, Attribute &colAttri){
 
 RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &attrs)
 {
+	RC result = -1;
+
 	FileHandle filehandle;
 
 	cout<<"Get attribute for table: "<<tableName<<endl;
@@ -169,9 +171,17 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 			Attribute colAttri;
 			RID attrRid = iter2->second;
 			void* colDescriptor = malloc(colCatalogSize);
-			_rbfm->readRecord(fileHandle, columnCatalog, attrRid, colDescriptor);
-			colDescriptorToAttri(colDescriptor, colAttri);
-			attrs.push_back(colAttri);
+			result = _rbfm->readRecord(fileHandle, columnCatalog, attrRid, colDescriptor);
+			if( result != 0 )
+				return result;
+
+			result = colDescriptorToAttri(colDescriptor, colAttri);
+			if( result != 0 )
+				return result;
+
+			cout << colAttri.length << "," << colAttri.name << "," << colAttri.type << endl;
+
+			attrs.push_back( colAttri );
 		}
 	}
 
@@ -331,7 +341,7 @@ RC RelationManager::createTableCatalog()
 
 RC RelationManager::createColumnCatalog()
 {
-	// [tableID][tableName][columnName][columnType][maxLength]
+	// [tableID][tableName][columnStart][columnName][columnType][maxLength]
 	Attribute attr;
 	attr.name = "tableID";
 	attr.type = TypeInt;
