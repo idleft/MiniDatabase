@@ -143,6 +143,8 @@ RC RelationManager::colDescriptorToAttri(void* data, Attribute &colAttri){
 
 RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &attrs)
 {
+	RC result = -1;
+
 	FileHandle filehandle;
 
 	_rbfm->openFile(COLUMN_CATALOG_FILE_NAME, fileHandle);
@@ -156,9 +158,15 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 			Attribute colAttri;
 			RID attrRid = iter2->second;
 			void* colDescriptor = malloc(colCatalogSize);
-			_rbfm->readRecord(fileHandle, columnCatalog, attrRid, colDescriptor);
-			colDescriptorToAttri(colDescriptor, colAttri);
-			attrs.push_back(colAttri);
+			result = _rbfm->readRecord(fileHandle, columnCatalog, attrRid, colDescriptor);
+			if( result != 0 )
+				return result;
+
+			result = colDescriptorToAttri(colDescriptor, colAttri);
+			if( result != 0 )
+				return result;
+
+			attrs.push_back( colAttri );
 		}
 	}
 
