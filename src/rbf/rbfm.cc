@@ -653,12 +653,15 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 
 	short oldRecordSize = slot->end - slot->begin;
 	short newRecordSize = getSizeOfRecord(recordDescriptor, data);
+	void *newRecordData = malloc(newRecordSize);
 	short sizeDiff = newRecordSize - oldRecordSize;
 	//short currentFree = dirInfo->freeSpaceOffset;
 
 	if(oldRecordSize==newRecordSize){
 		// same size, update record
-		memcpy((char*) pageData + slot->begin,data,oldRecordSize);
+		dataToRecord(data, recordDescriptor, newRecordData);
+		memcpy((char*) pageData + slot->begin,newRecordData,oldRecordSize);
+		result = fileHandle.writePage( rid.pageNum, pageData );
 		result = 0;
 	}
 	else{ // not equal, see if shift needed, if so shift first, then compare size
