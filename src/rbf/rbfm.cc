@@ -690,7 +690,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 	return result;
 }
 
-RC RecordBasedFileManager::getEstimatedRecordDataSize(vector<Attribute>){
+RC RecordBasedFileManager::getEstimatedRecordDataSize(vector<Attribute> recordDesciptor){
 	return 30;
 }
 
