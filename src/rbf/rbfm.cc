@@ -690,30 +690,14 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 	return result;
 }
 
+RC RecordBasedFileManager::getEstimatedRecordDataSize(vector<Attribute>){
+	return 30;
+}
+
 RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data)
 {
 	RC result = -1;
-	void *pageData = malloc(PAGE_SIZE);
-	fileHandle.readPage(rid.pageNum, pageData);
-	Slot *slot = goToSlot((char*)pageData+PAGE_SIZE, rid.slotNum);
-	char *recordPointer = (char *)pageData + slot->begin;
-	// if attribute not found return -1
-	for(vector<Attribute>::const_iterator iter1 = recordDescriptor.begin(); iter1!=recordDescriptor.end(); iter1++){
-		if(iter1->name == attributeName){
-			result = 0;
-			if(iter1->type == TypeVarChar){
-				int length = *((int *)recordPointer);
-				memcpy(data, recordPointer+sizeof(int), length);
-			}
-			else if (iter1->type == TypeReal){
-				*((float *)data) = *((float *)recordPointer);
-			}
-			else{
-				*((int *)data) = *((int *)recordPointer);
-			}
-		}
-		recordPointer+=sizeof(short);
-	}
+	//void* recordData = malloc()
 	return result;
 }
 

@@ -172,6 +172,7 @@ public:
 
   bool checkTombStone(void* data, int pageId, int slotId);
 
+  RC RecordBasedFileManager::getEstimatedRecordDataSize(vector<Attribute>);
 
 
 /**************************************************************************************************************************************************************

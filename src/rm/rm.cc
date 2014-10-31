@@ -139,8 +139,7 @@ RC RelationManager::colDescriptorToAttri(void* data, Attribute &colAttri){
 	memset(nameChar,0,varLen+1);
 	memcpy(nameChar, (char*)data+offset, varLen); // store columnName
 	colAttri.name = string((char *)nameChar);
-	printf("name : %s \n", nameChar);
-	cout<<"Read attribute name: "<<colAttri.name<<endl;
+//	cout<<"Read attribute name: "<<colAttri.name<<endl;
 	free(nameChar);
 	offset = offset + sizeof(char)*varLen;
 
@@ -158,7 +157,7 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 
 	FileHandle fileHandle;
 
-	cout<<"Get attribute for table: "<<tableName<<endl;
+//	cout<<"Get attribute for table: "<<tableName<<endl;
 	_rbfm->openFile(COLUMN_CATALOG_FILE_NAME, fileHandle);
 	int colCatalogSize = getCatalogSize(columnCatalog);
 
