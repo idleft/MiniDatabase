@@ -163,7 +163,7 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 	int colCatalogSize = getCatalogSize(columnCatalog);
 
 	map<int, RID>* tableIdSet = &tableRIDMap[tableName];
-	printf("Table RID map size: %d  Table id set: %d\n",tableRIDMap.size(),tableIdSet->size());
+//	printf("Table RID map size: %d  Table id set: %d\n",tableRIDMap.size(),tableIdSet->size());
 	for(map<int, RID>::iterator iter1 = tableIdSet->begin(); iter1!=tableIdSet->end(); iter1++){
 		int tableId = iter1->first; // only require tableId
 		map<int, RID> *attrMap = &columnRIDMap[tableId];
@@ -179,7 +179,7 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 			if( result != 0 )
 				return result;
 
-			cout << colAttri.length << "," << colAttri.name << "," << colAttri.type << endl;
+//			cout << colAttri.length << "," << colAttri.name << "," << colAttri.type << endl;
 
 			attrs.push_back( colAttri );
 		}
@@ -523,7 +523,7 @@ RC RelationManager::createCatalogFile(const string& tableName, const vector<Attr
 	FileHandle fileHandle;
 
 	string catFileName = tableName + ".tbl";
-cout<<"Creating "<<catFileName<<endl;
+	cout<<"Creating "<<catFileName<<endl;
 	// CREATE TABLE/INDEX FILE. BUT DO NOT CREATE COLUMN CATALOG FIRST.
 	if( catFileName.compare( COLUMN_CATALOG_FILE_NAME ) != 0 )
 	{

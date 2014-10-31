@@ -156,7 +156,7 @@ RC RecordBasedFileManager::closeFile(FileHandle &fileHandle)
 	if( fileHandle.getFile() == NULL )
 		return result;
 
-	cout << fileHandle.getFileName() << endl;
+//	cout << fileHandle.getFileName() << endl;
 
 	if( directoryOfSlots.find( fileHandle.getFileName() ) == directoryOfSlots.end() )
 		return result;
@@ -205,7 +205,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 	RC result = -1;
 	PageNum pageNum = 0;
 //	PageNum pageNumToAddNewPage = 0;
-	cout<<"##FileName##"+fileHandle.getFileName()<<endl;
+//	cout<<"##FileName##"+fileHandle.getFileName()<<endl;
 	if( fileHandle.getFile() == NULL )
 		return result;
 
@@ -330,7 +330,7 @@ RC RecordBasedFileManager::newPageForRecord(const void* record, void * page, int
 
 RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data) {
 
-	RC result = 0;
+	RC result = -1;
 
 	if( fileHandle.getFile() == NULL )
 		return -1;
@@ -343,17 +343,19 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 	// find page
 	result = fileHandle.readPage(pageNum, page);
 	if( result != 0 )
-		return result;
+		return -1;
 
 	// reach to the end of Page
 	const char* endOfPage = page + PAGE_SIZE;
 
 	// find slot
 	Slot* slot = goToSlot(endOfPage, slotNum);
-	if( slot->begin < 0 )
-		return result;
+	//if( slot->begin < 0 )
+	//	return result;
 
 	char* beginOfRecord = page + slot->begin;
+	if(*(short*)beginOfRecord<0)
+		return -1;
 
 	short lengthOfRecord = slot->end - slot->begin;
 	void* record = malloc(lengthOfRecord);
@@ -594,7 +596,7 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 		const char* endOfPage = page + PAGE_SIZE;
 
 		Slot* slot = goToSlot( endOfPage, slotNum );
-		if( slot->begin < 0 )
+		if( slot->begin < 0 )//?
 		{
 			result = -1;
 			break;
@@ -605,11 +607,13 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 		isTombStone = isRecordTombStone( data, pageNum, slotNum );
 
 		// delete the record by setting offset to -1
-		slot->begin = -1 - slot->begin;
+		// Delete not by set offset to -1, is set the first byte of data
+		//slot->begin = -1 - slot->begin;
+		*(short*) data = short(-1);
 
-		// increase free space
-		short sizeOfRecord = getSizeOfRecord( recordDescriptor, data );
-		(*slotDirectory)[pageNum] += sizeOfRecord;// increase multiple times?
+		// increase free space # WE do not increase the freespace until we reorgnize page
+//		short sizeOfRecord = getSizeOfRecord( recordDescriptor, data );
+//		(*slotDirectory)[pageNum] += sizeOfRecord;// increase multiple times?
 		result = fileHandle.writePage( pageNum, page );
 		if( result != 0 )
 			break;
