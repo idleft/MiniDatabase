@@ -13,9 +13,9 @@ void TEST_RM_0(const string &tableName)
 
     for(unsigned i = 0; i < attrs.size(); i++)
     {
-        cout << "Attribute Name: " << attrs.at(i).name << endl;
-        cout << "Attribute Type: " << (AttrType)attrs.at(i).type << endl;
-        cout << "Attribute Length: " << attrs.at(i).length << endl << endl;
+        cout << "Attribute Name: " << attrs[i].name << endl;
+        cout << "Attribute Type: " << (AttrType)attrs[i].type << endl;
+        cout << "Attribute Length: " << attrs[i].length << endl << endl;
     }
     cout<<"** Test Case 0 passed"<<endl;
     return;
