@@ -251,10 +251,6 @@ void RM_TEST_EXTRA_3(const string &tableName)
         printTuple(returnedData, tupleSize);
     }
 
-    // Delete the table
-    rc = rm->deleteTable(tableName);
-    assert(rc == success);
-
     free(tuple);
     free(returnedData);
 
@@ -270,7 +266,6 @@ int main()
     
     // Extra Credits
     cout << "Test Extra Credit 3 .." << endl;
-    remove("tbl_employee300");
     // Reorganize Table
     createTable("tbl_employee300");  
     RM_TEST_EXTRA_3("tbl_employee300");

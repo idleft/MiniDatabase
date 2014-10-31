@@ -2,12 +2,6 @@
 
 int main()
 {
-    // Remove files that might be created by previous test run
-	remove("tbl_employee");
-	remove("tbl_employee2");
-	remove("tbl_employee3");
-	remove("tbl_employee4");
-
     // Basic Functions
     cout << endl << "Create Tables ..." << endl;
 

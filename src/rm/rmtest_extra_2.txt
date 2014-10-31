@@ -201,6 +201,15 @@ void createTable(const string &tableName)
     cout << "****Table Created: " << tableName << " ****" << endl << endl;
 }
 
+// delete an employee table
+void deleteTable(const string &tableName)
+{
+    cout << "****Delete Table " << tableName << " ****" << endl;
+
+  RC rc = rm->deleteTable(tableName);
+    assert(rc == success);
+    cout << "****Table Deleted: " << tableName << " ****" << endl << endl;
+}
 
 void RM_TEST_EXTRA_2(const string &tableName, const int nameLength, const string &name, const int age, const int height, const int salary, const int ssn)
 {
@@ -258,7 +267,6 @@ int main()
     
     // Extra Credits
     cout << "Test Extra Credit 2 .." << endl;
-    remove("tbl_employee200");
     // Add Attributes
     createTable("tbl_employee200");
     RM_TEST_EXTRA_2("tbl_employee200", 6, name2, 22, 180, 6000, 999);
