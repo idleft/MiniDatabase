@@ -172,7 +172,7 @@ public:
 
   bool checkTombStone(void* data, int pageId, int slotId);
 
-  RC getEstimatedRecordDataSize(vector<Attribute> recordDesciptor);
+  int getEstimatedRecordDataSize(vector<Attribute> recordDesciptor);
 
 
 /**************************************************************************************************************************************************************

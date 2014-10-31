@@ -690,14 +690,44 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 	return result;
 }
 
-RC RecordBasedFileManager::getEstimatedRecordDataSize(vector<Attribute> recordDesciptor){
-	return 30;
+int RecordBasedFileManager::getEstimatedRecordDataSize(vector<Attribute> recordDesciptor){
+	int res = 0;
+	for(int iter1 = 0; iter1<recordDesciptor.size(); iter1++)
+		res+=recordDesciptor.at(iter1).length;
+	return res;
 }
 
 RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data)
 {
 	RC result = -1;
-	//void* recordData = malloc()
+	int estimateRecordLen = getEstimatedRecordDataSize(recordDescriptor);
+	int fieldPointer = 0;
+	void* recordData = malloc(estimateRecordLen);
+	readRecord(fileHandle, recordDescriptor,rid,recordData);
+	for(int iter1 = 0; iter1<recordDescriptor.size(); iter1++){
+		if(recordDescriptor.at(iter1).name == attributeName){
+			result = 0;
+			if(recordDescriptor.at(iter1).type == TypeInt)
+				memcpy(data, (char *)recordData+fieldPointer, sizeof(int));
+			else if(recordDescriptor.at(iter1).type == TypeReal)
+				memcpy(data, (char *)recordData+fieldPointer, sizeof(float));
+			else{
+				int varLen = *(int *)((char*)recordData + fieldPointer);
+				memcpy(data, (char *)recordData+fieldPointer+sizeof(int), varLen);
+			}
+		}
+		else{
+			if(recordDescriptor.at(iter1).type == TypeInt)
+				fieldPointer += sizeof(int);
+			else if(recordDescriptor.at(iter1).type == TypeReal)
+				fieldPointer +=sizeof(float);
+			else{
+				int varLen = *(int *)((char*)recordData + fieldPointer);
+				fieldPointer +=(varLen + sizeof(int));
+			}
+		}
+	}
+	free(recordData);
 	return result;
 }
 
