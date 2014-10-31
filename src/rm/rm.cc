@@ -630,7 +630,6 @@ RC RelationManager::insertColumnEntry(int tableID, string tableName, int columnS
 
 	int catalogSize = getCatalogSize(columnCatalog);
 	char* data = (char*)malloc(catalogSize);
-	char* nameChar;
 
 	// [tableID][tableName][columnName][columnType][maxLength]
 	memcpy( data + offset, &tableID, sizeof(int));
@@ -639,10 +638,9 @@ RC RelationManager::insertColumnEntry(int tableID, string tableName, int columnS
 	int varCharLen = tableName.length();
 	memcpy( data + offset, &varCharLen, sizeof(int));
 	offset += sizeof(int);
-	nameChar = (char*)malloc(varCharLen);
-	strcpy(nameChar,tableName.c_str());
-	memcpy( data + offset, nameChar, varCharLen);
-	free(nameChar);
+	const char *cstrTable = &tableName[0];
+	memcpy( data + offset, cstrTable, varCharLen);
+	cout << "tableName:" << cstrTable << endl;
 	offset += varCharLen;
 
 	memcpy( data + offset, &columnStart, sizeof(int));
@@ -651,10 +649,9 @@ RC RelationManager::insertColumnEntry(int tableID, string tableName, int columnS
 	varCharLen = columnName.length();
 	memcpy( data + offset, &varCharLen, sizeof(int) );
 	offset += sizeof(int);
-	nameChar = (char*)malloc(varCharLen);
-	strcpy(nameChar,columnName.c_str());
-	memcpy( data + offset, nameChar, varCharLen);
-	free(nameChar);
+	const char *cstrColumn = &columnName[0];
+	memcpy( data + offset, cstrColumn, varCharLen);
+	cout << "columnName:" << cstrColumn << endl;
 	offset += varCharLen;
 
 	memcpy( data + offset, (int*)&columnType, sizeof(int) );
