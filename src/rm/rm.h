@@ -125,7 +125,6 @@ private:
   map< string, vector<Attribute> > tableAttributesCache;
   RecordBasedFileManager *_rbfm;
   PagedFileManager *_pfm;
-  FileHandle fileHandle;
 
   map< string, map<int,RID> > tableRIDMap;
   map< int, map<int,RID> > columnRIDMap;

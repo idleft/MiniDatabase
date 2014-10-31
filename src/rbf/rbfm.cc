@@ -205,7 +205,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 	RC result = -1;
 	PageNum pageNum = 0;
 //	PageNum pageNumToAddNewPage = 0;
-
+	cout<<"##FileName##"+fileHandle.getFileName()<<endl;
 	if( fileHandle.getFile() == NULL )
 		return result;
 

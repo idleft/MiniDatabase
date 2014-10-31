@@ -156,7 +156,7 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 {
 	RC result = -1;
 
-	FileHandle filehandle;
+	FileHandle fileHandle;
 
 	cout<<"Get attribute for table: "<<tableName<<endl;
 	_rbfm->openFile(COLUMN_CATALOG_FILE_NAME, fileHandle);
@@ -191,17 +191,23 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 
 RC RelationManager::insertTuple(const string &tableName, const void *data, RID &rid)
 {
+	FileHandle fileHandle;
     vector<Attribute> tableAttributes;
     getAttributes(tableName, tableAttributes);
     // Initialize fileHandle everytime?
+    _rbfm->openFile(tableName+".tbl",fileHandle);
     _rbfm->insertRecord(fileHandle, tableAttributes, data, rid);
+    _rbfm->closeFile(fileHandle);
     return 0;
 }
 
 RC RelationManager::deleteTuples(const string &tableName)
 {
+	FileHandle fileHandle;
 	RC result = -1;
+    _rbfm->openFile(tableName+".tbl",fileHandle);
 	result = _rbfm->deleteRecords(fileHandle);
+    _rbfm->closeFile(fileHandle);
     return result;
 }
 
@@ -209,46 +215,63 @@ RC RelationManager::deleteTuples(const string &tableName)
 
 RC RelationManager::deleteTuple(const string &tableName, const RID &rid)
 {
+	FileHandle fileHandle;
 	RC result = -1;
 	vector<Attribute> tableAttributes;
+    _rbfm->openFile(tableName+".tbl",fileHandle);
 	getAttributes(tableName, tableAttributes);
 	result = _rbfm->deleteRecord(fileHandle, tableAttributes, rid);
+    _rbfm->closeFile(fileHandle);
     return result;
 }
 
 RC RelationManager::updateTuple(const string &tableName, const void *data, const RID &rid)
 {
+	FileHandle fileHandle;
 	RC result = -1;
 	vector<Attribute> tableAttributes;
+    _rbfm->openFile(tableName+".tbl",fileHandle);
 	getAttributes(tableName, tableAttributes);
 	result = _rbfm->updateRecord(fileHandle, tableAttributes, data, rid);
+    _rbfm->closeFile(fileHandle);
     return result;
 }
 
 RC RelationManager::readTuple(const string &tableName, const RID &rid, void *data)
 {
+	FileHandle fileHandle;
 	RC result = -1;
 	vector<Attribute> tableAttributes;
+    result = _rbfm->openFile(tableName+".tbl",fileHandle);
+    if(result !=0)
+    	return -1;
 	getAttributes(tableName, tableAttributes);
 	result = _rbfm->readRecord(fileHandle, tableAttributes, rid, data);
+    _rbfm->closeFile(fileHandle);
     return result;
 }
 
 RC RelationManager::readAttribute(const string &tableName, const RID &rid, const string &attributeName, void *data)
 {
+	FileHandle fileHandle;
 	RC result = -1;
 	vector<Attribute> tableAttributes;
+    _rbfm->openFile(tableName+".tbl",fileHandle);
 	getAttributes(tableName, tableAttributes);
 	result = _rbfm->readAttribute(fileHandle, tableAttributes, rid, attributeName, data);
+    _rbfm->closeFile(fileHandle);
     return result;
 }
 
 RC RelationManager::reorganizePage(const string &tableName, const unsigned pageNumber)
 {
+	FileHandle fileHandle;
 	RC result = -1;
 	vector<Attribute> tableAttributes;
+    _rbfm->openFile(tableName+".tbl",fileHandle);
 	getAttributes(tableName, tableAttributes);
 	result = _rbfm->reorganizePage(fileHandle, tableAttributes, pageNumber);
+    _rbfm->closeFile(fileHandle);
     return result;
 }
 
@@ -259,6 +282,7 @@ RC RelationManager::scan(const string &tableName,
       const vector<string> &attributeNames,
       RM_ScanIterator &rm_ScanIterator)
 {
+	FileHandle fileHandle;
 	RC result = -1;
 
 	string fileName =  tableName + ".tbl";
