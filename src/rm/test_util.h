@@ -16,6 +16,7 @@
 
 using namespace std;
 
+RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 RelationManager *rm = RelationManager::instance();
 const int success = 0;
 
