@@ -222,6 +222,8 @@ public:
 
   RC reorganizeFile(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor);
 
+  map<string, vector<short>*> directoryOfSlots;	// <fileName, recordPointer>
+
 
 protected:
   RecordBasedFileManager();
@@ -230,7 +232,6 @@ protected:
 private:
   PagedFileManager * pfm;
   static RecordBasedFileManager *_rbf_manager;
-  map<string, vector<short>*> directoryOfSlots;	// <fileName, recordPointer>
   DirectoryOfSlotsInfo	directoryOfSlotsInfo;	// # of slots
 };
 

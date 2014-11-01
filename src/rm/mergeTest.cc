@@ -264,6 +264,7 @@ void TEST_RM_6(const string &tableName, const int nameLength, const string &name
     // 2. Delete Table **
     // 3. Read Tuple
     cout << "****In Test Case 6****" << endl;
+    RecordBasedFileManager *_rbfm;
    
     RID rid; 
     int tupleSize = 0;
@@ -272,12 +273,14 @@ void TEST_RM_6(const string &tableName, const int nameLength, const string &name
     void *returnedData1 = malloc(100);
    
     // Test Insert Tuple
+
     prepareTuple(nameLength, name, age, height, salary, tuple, &tupleSize);
     RC rc = rm->insertTuple(tableName, tuple, rid);
     assert(rc == success);
 
     // Test Read Tuple 
     rc = rm->readTuple(tableName, rid, returnedData);
+    printTuple(returnedData, tupleSize);
     assert(rc == success);
 
     // Test Delete Table
@@ -846,26 +849,26 @@ int main()
 	cout << endl << "Test Get Attributes .." << endl;
 
 	// Get Attributes
-	TEST_RM_0("tbl_employee");
-
-    // Insert/Read Tuple
-    TEST_RM_1("tbl_employee", 6, "Peters", 24, 170.1, 5000);
-
-    // Delete Tuple
-    TEST_RM_2("tbl_employee", 6, "Victor", 22, 180.2, 6000);
-
-    // Update Tuple
-    TEST_RM_3("tbl_employee", 6, "Thomas", 28, 187.3, 4000);
-
-    cout << endl << "Test Read Attributes .." << endl;
-
-    // Read Attributes
-    TEST_RM_4("tbl_employee", 6, "Veekay", 27, 171.4, 9000);
+//	TEST_RM_0("tbl_employee");
 //
-    cout << endl << "Test Delete Tuples .." << endl;
+//    // Insert/Read Tuple
+//    TEST_RM_1("tbl_employee", 6, "Peters", 24, 170.1, 5000);
 //
-//    // Delete Tuples
-    TEST_RM_5("tbl_employee", 6, "Dillon", 29, 172.5, 7000);
+//    // Delete Tuple
+//    TEST_RM_2("tbl_employee", 6, "Victor", 22, 180.2, 6000);
+//
+//    // Update Tuple
+//    TEST_RM_3("tbl_employee", 6, "Thomas", 28, 187.3, 4000);
+//
+//    cout << endl << "Test Read Attributes .." << endl;
+//
+//    // Read Attributes
+//    TEST_RM_4("tbl_employee", 6, "Veekay", 27, 171.4, 9000);
+////
+//    cout << endl << "Test Delete Tuples .." << endl;
+////
+////    // Delete Tuples
+//    TEST_RM_5("tbl_employee", 6, "Dillon", 29, 172.5, 7000);
 
     cout << endl << "Test Delete Table .." << endl;
 //

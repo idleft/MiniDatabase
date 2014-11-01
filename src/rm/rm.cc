@@ -208,6 +208,7 @@ RC RelationManager::deleteTuples(const string &tableName)
     _rbfm->openFile(tableName+".tbl",fileHandle);
 	result = _rbfm->deleteRecords(fileHandle);
     _rbfm->closeFile(fileHandle);
+
     return result;
 }
 

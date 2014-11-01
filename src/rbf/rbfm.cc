@@ -206,7 +206,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 	PageNum pageNum = 0;
 //	PageNum pageNumToAddNewPage = 0;
 //	cout<<"##FileName##"+fileHandle.getFileName()<<endl;
-	if( fileHandle.getFile() == NULL )
+	if( fileHandle.getFile() == NULL ) //IERROR Run case 6, sisgtrp
 		return result;
 
 	if( directoryOfSlots.find(fileHandle.getFileName())
@@ -221,10 +221,15 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 
 	vector<short> *slotDirectory = directoryOfSlots[fileHandle.getFileName()];
 
+	if(slotDirectory==NULL)
+		cout<<"yes"<<endl;
+	else
+		cout<<"no"<<endl;
+
 	char *page = (char*)malloc(PAGE_SIZE);
 
 	// find first blank slot
-	for(; pageNum < slotDirectory->size(); pageNum++ )
+	for(; slotDirectory!=NULL && pageNum < slotDirectory->size(); pageNum++ )
 	{
 		if( (sizeOfRecord +  sizeof(Slot)) <= (*slotDirectory)[pageNum] )
 		{
@@ -273,12 +278,15 @@ RC RecordBasedFileManager::appendPageWithRecord(FileHandle &fileHandle, const vo
 	void * page = malloc(PAGE_SIZE);
 
 	newPageForRecord(record, page, sizeOfRecord);
-
+	string filename = fileHandle.getFileName();
 	RC result = fileHandle.appendPage( page );
 	if( result == 0 )
 	{
 		vector<short>* freeSpace = directoryOfSlots[fileHandle.getFileName()];
 		freeSpace->push_back( PAGE_SIZE - sizeOfRecord - sizeof(directoryOfSlotsInfo) - sizeof(Slot)*2);
+//		for(int iter1 = 0; iter1<freeSpace->size(); iter1++)
+//			cout <<"size: "<< freeSpace->at(iter1) << endl;
+
 	}
 
 	free(page);
@@ -565,8 +573,17 @@ RC RecordBasedFileManager::deleteRecords(FileHandle &fileHandle)
 	if( result != 0 )
 		return result;
 
-	directoryOfSlots.erase(fileHandle.getFileName());
+	directoryOfSlots[fileHandle.getFileName()]->clear();
+	//directoryOfSlots.erase(fileHandle.getFileName());
+	//directoryOfSlots[fileHandle.getFileName()]->push_back(4096);
 
+	cout<<"After delete: "<<directoryOfSlots.size()<<endl;//" "
+	if(directoryOfSlots[fileHandle.getFileName()]==NULL)
+		cout<<"Yes"<<endl;
+	else
+		cout<<"No"<<endl;
+//	for(map<string, vector<short>*>::iterator iter1 = directoryOfSlots.begin(); iter1!=directoryOfSlots.end();iter1++)
+//		cout<<iter1->first<<endl;
 	return 0;
 }
 
