@@ -190,14 +190,15 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 
 RC RelationManager::insertTuple(const string &tableName, const void *data, RID &rid)
 {
+	RC result = -1;
 	FileHandle fileHandle;
     vector<Attribute> tableAttributes;
     getAttributes(tableName, tableAttributes);
     // Initialize fileHandle everytime?
     _rbfm->openFile(tableName+".tbl",fileHandle);
-    _rbfm->insertRecord(fileHandle, tableAttributes, data, rid);
+    result = _rbfm->insertRecord(fileHandle, tableAttributes, data, rid);
     _rbfm->closeFile(fileHandle);
-    return 0;
+    return result;
 }
 
 RC RelationManager::deleteTuples(const string &tableName)

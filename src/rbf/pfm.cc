@@ -148,6 +148,7 @@ RC FileHandle::readPage(PageNum pageNum, void *data)
 
 RC FileHandle::writePage(PageNum pageNum, const void *data)
 {
+	int tmpPgNum = getNumberOfPages();
 	if( pageNum >= getNumberOfPages() )
 		return -1;
 

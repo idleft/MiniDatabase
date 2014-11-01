@@ -565,6 +565,8 @@ RC RecordBasedFileManager::deleteRecords(FileHandle &fileHandle)
 	if( result != 0 )
 		return result;
 
+	directoryOfSlots.erase(fileHandle.getFileName());
+
 	return 0;
 }
 
