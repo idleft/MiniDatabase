@@ -44,6 +44,7 @@ public:
   FileHandle	fileHandle;
 
 private:
+  RBFM_ScanIterator	rbfm_scanIterator;
   RecordBasedFileManager *_rbfm;
 };
 
