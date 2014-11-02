@@ -24,19 +24,16 @@ PagedFileManager::~PagedFileManager()
 
 RC PagedFileManager::createFile(const char *fileName)
 {
-	printf("fileName =%s\n", fileName);
-
 	if( fileName != NULL )
 	{
 		FILE* file;
 
 		file = fopen( fileName, "rb");
-		// get rid of existed file
-//		if( file != NULL )
-//		{
-//			fclose( file );
-//			return -1;
-//		}
+		if( file != NULL )
+		{
+			fclose( file );
+			return -1;
+		}
 
 		file = fopen( fileName, "wb");
 		if( file != NULL )
@@ -148,11 +145,10 @@ RC FileHandle::readPage(PageNum pageNum, void *data)
 
 RC FileHandle::writePage(PageNum pageNum, const void *data)
 {
-	int tmpPgNum = getNumberOfPages();
-	if( pageNum >= getNumberOfPages() )
-		return -1;
-
 	if( file == NULL )
+			return -1;
+
+	if( pageNum >= getNumberOfPages() )
 		return -1;
 
 	if( fseek(file, pageNum * PAGE_SIZE, SEEK_SET) != 0 )
