@@ -156,7 +156,7 @@ RC RecordBasedFileManager::closeFile(FileHandle &fileHandle)
 	if( fileHandle.getFile() == NULL )
 		return result;
 
-//	cout << fileHandle.getFileName() << endl;
+	cout << fileHandle.getFileName() << endl;
 
 	if( directoryOfSlots.find( fileHandle.getFileName() ) == directoryOfSlots.end() )
 		return result;
@@ -204,7 +204,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 
 	RC result = -1;
 	PageNum pageNum = 0;
-//	PageNum pageNumToAddNewPage = 0;
+
 //	cout<<"##FileName##"+fileHandle.getFileName()<<endl;
 	if( fileHandle.getFile() == NULL ) //IERROR Run case 6, sisgtrp
 		return result;
@@ -229,7 +229,8 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 	char *page = (char*)malloc(PAGE_SIZE);
 
 	// find first blank slot
-	for(; slotDirectory!=NULL && pageNum < slotDirectory->size(); pageNum++ )
+//	for(; slotDirectory!=NULL && pageNum < slotDirectory->size(); pageNum++ )
+	for(; pageNum < slotDirectory->size(); pageNum++ )
 	{
 		if( (sizeOfRecord +  sizeof(Slot)) <= (*slotDirectory)[pageNum] )
 		{
@@ -245,12 +246,16 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 
 			(*slotDirectory)[pageNum] -= sizeOfRecord + sizeof(Slot);
 
+			cout<<"insertRecord pageNum=" << pageNum << endl;
+
 			result = fileHandle.writePage(pageNum, page);
 			if( result == 0 )
 			{
 				rid.pageNum = pageNum;
 				rid.slotNum = slotNum;
 			}
+
+			cout<<"insertRecord writePage=" << result << endl;
 
 			free(record);
 			free(page);
@@ -555,24 +560,38 @@ RC RecordBasedFileManager::deleteRecords(FileHandle &fileHandle)
 {
 	RC result = -1;
 
-	const char* fileName = fileHandle.getFileName().c_str();
+	cout << "deleteRecords: fileHandle.getFileName()=" << fileHandle.getFileName() << endl;
+
+	string fileName = fileHandle.getFileName();
+
+	const char* cfileName = fileName.c_str();
+
+	cout << "fileName:" << cfileName << endl;
 
 	result = pfm->closeFile( fileHandle );
 	if( result != 0 )
 		return result;
 
-	result = pfm->destroyFile( fileName );
+	cout << "deleteRecords: closeFile:" << result << endl;
+
+	result = pfm->destroyFile( cfileName );
 	if( result != 0 )
 		return result;
 
-	result = pfm->createFile( fileName );
+	cout << "deleteRecords: destroyFile:" << result << endl;
+
+	result = pfm->createFile( cfileName );
 	if( result != 0 )
 		return result;
 
-	result = pfm->openFile( fileName, fileHandle );
+	cout << "deleteRecords: createFile:" << result << endl;
+
+	result = pfm->openFile( cfileName, fileHandle );
 	if( result != 0 )
 		return result;
 
+	cout << "deleteRecords: openFile:" << result << endl;
+/*
 	directoryOfSlots[fileHandle.getFileName()]->clear();
 	//directoryOfSlots.erase(fileHandle.getFileName());
 	//directoryOfSlots[fileHandle.getFileName()]->push_back(4096);
@@ -583,7 +602,7 @@ RC RecordBasedFileManager::deleteRecords(FileHandle &fileHandle)
 	else
 		cout<<"No"<<endl;
 //	for(map<string, vector<short>*>::iterator iter1 = directoryOfSlots.begin(); iter1!=directoryOfSlots.end();iter1++)
-//		cout<<iter1->first<<endl;
+//		cout<<iter1->first<<endl; */
 	return 0;
 }
 
@@ -784,10 +803,21 @@ bool RecordBasedFileManager::checkTombStone(void* pageData, int pageId, int slot
 RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const unsigned pageNumber)
 {
 	RC result = -1;
+
+	if( fileHandle.getFile() == NULL )
+		return result;
+
+	if( directoryOfSlots.find(fileHandle.getFileName()) == directoryOfSlots.end() )
+		return result;
+
 	unsigned pageN = pageNumber;
+
 	void* pageData = malloc(PAGE_SIZE);
+
 	char* endOfPage = (char *)pageData + PAGE_SIZE;
+
 	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
+
 	short slotNum = dirInfo->numOfSlots;
 
 	fileHandle.readPage(pageN, pageData);
@@ -797,7 +827,9 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 			shrinkTombstoneRecord(pageData, iter1);
 		}
 	}
+
 	free(pageData);
+
 	return result;
 }
 
