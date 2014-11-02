@@ -751,15 +751,6 @@ unsigned RelationManager::getCatalogSize(vector<Attribute> catalog)
 	return length;
 }
 
-RC RM_ScanIterator::initialize(vector<Attribute> catalogAttribute,
-		  const string &conditionAttribute,
-	      const CompOp compOp,
-	      const void *value,
-	      const vector<string> &attributeNames)
-{
-
-}
-
 // "data" follows the same format as RelationManager::insertTuple()
 RC RM_ScanIterator::getNextTuple(RID &rid, void *data)
 {
@@ -778,7 +769,10 @@ RC RM_ScanIterator::initialize(vector<Attribute> recordDescriptor,
 	      const void *value,
 	      const vector<string> &attributeNames)
 {
+	return _rbfm_scanIterator.initialize(fileHandle, recordDescriptor, conditionAttribute, compOp, value, attributeNames);
+/*
 	RBFM_ScanIterator rbfm_it;
 
 	return _rbfm->scan(fileHandle, recordDescriptor, conditionAttribute, compOp, value, attributeNames, rbfm_it);
+*/
 }
