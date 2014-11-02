@@ -763,7 +763,7 @@ RC RM_ScanIterator::initialize(vector<Attribute> catalogAttribute,
 // "data" follows the same format as RelationManager::insertTuple()
 RC RM_ScanIterator::getNextTuple(RID &rid, void *data)
 {
-	return -1;
+	return _rbfm_scanIterator.getNextRecord(rid, data);
 };
 
 RC RM_ScanIterator::close()
