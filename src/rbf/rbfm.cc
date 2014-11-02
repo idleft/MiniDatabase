@@ -353,6 +353,8 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 	if( result != 0 )
 		return -1;
 
+//	cout << "readRecord readPage" << result << endl;
+
 	// reach to the end of Page
 	const char* endOfPage = page + PAGE_SIZE;
 
@@ -361,17 +363,27 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 	//if( slot->begin < 0 )
 	//	return result;
 
+//	cout << "readRecord goToSlot" << endl;
+
 	char* beginOfRecord = page + slot->begin;
-	if(*(short*)beginOfRecord<0)
+	if( (short*)beginOfRecord < 0 )
 		return -1;
+
+//	cout << "readRecord beginOfRecord" << endl;
 
 	short lengthOfRecord = slot->end - slot->begin;
 	void* record = malloc(lengthOfRecord);
 
+//	cout << "readRecord lengthOfRecord=" << lengthOfRecord << endl;
+
 	// read record
 	memcpy( record, beginOfRecord, lengthOfRecord);
 
+//	cout << "readRecord memcpy=" << lengthOfRecord << endl;
+
 	result = recordToData(record, recordDescriptor, data);
+
+//	cout << "readRecord recordToData=" << result << endl;
 
 	free(record);
 	free(page);
