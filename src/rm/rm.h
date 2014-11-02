@@ -126,8 +126,8 @@ private:
   RecordBasedFileManager *_rbfm;
   PagedFileManager *_pfm;
 
-  map< string, map<int,RID> > tableRIDMap;
-  map< int, map<int,RID> > columnRIDMap;
+  map< string, map<int,RID> *> tableRIDMap;
+  map< int, map<int,RID> *> columnRIDMap;
 
 };
 

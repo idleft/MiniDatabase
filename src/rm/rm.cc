@@ -70,7 +70,7 @@ RC RelationManager::deleteTable(const string &tableName)
 
 	FileHandle fileHandle;
 
-	map<int,RID> *tableRID = &tableRIDMap[tableName];
+	map<int,RID> *tableRID = tableRIDMap[tableName];
 	int tableID =  tableRID->begin()->first;
 
 	// delete column
@@ -81,7 +81,7 @@ RC RelationManager::deleteTable(const string &tableName)
 		return result;
 	}
 
-	map<int,RID> *columnRID = &columnRIDMap[tableID];
+	map<int,RID> *columnRID = columnRIDMap[tableID];
 
 	RID rid;
 	map<int,RID>::iterator it;
@@ -161,11 +161,11 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 	_rbfm->openFile(COLUMN_CATALOG_FILE_NAME, fileHandle);
 	int colCatalogSize = getCatalogSize(columnCatalog);
 
-	map<int, RID>* tableIdSet = &tableRIDMap[tableName];
+	map<int, RID>* tableIdSet = tableRIDMap[tableName];
 //	printf("Table RID map size: %d  Table id set: %d\n",tableRIDMap.size(),tableIdSet->size());
 	for(map<int, RID>::iterator iter1 = tableIdSet->begin(); iter1!=tableIdSet->end(); iter1++){
 		int tableId = iter1->first; // only require tableId
-		map<int, RID> *attrMap = &columnRIDMap[tableId];
+		map<int, RID> *attrMap = columnRIDMap[tableId];
 		for(map<int, RID>::iterator iter2 = attrMap->begin(); iter2 != attrMap->end(); iter2++){
 			Attribute colAttri;
 			RID attrRid = iter2->second;
@@ -178,7 +178,7 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 			if( result != 0 )
 				return result;
 
-//			cout << colAttri.length << "," << colAttri.name << "," << colAttri.type << endl;
+			cout << colAttri.length << "," << colAttri.name << "," << colAttri.type << endl;
 
 			attrs.push_back( colAttri );
 		}
@@ -193,11 +193,32 @@ RC RelationManager::insertTuple(const string &tableName, const void *data, RID &
 	RC result = -1;
 	FileHandle fileHandle;
     vector<Attribute> tableAttributes;
-    getAttributes(tableName, tableAttributes);
-    // Initialize fileHandle everytime?
-    _rbfm->openFile(tableName+".tbl",fileHandle);
+
+    result = getAttributes(tableName, tableAttributes);
+    if( result != 0 )
+    	return result;
+
+//    cout << "insertTuple: getAttributes" << result << endl;
+
+    result = _rbfm->openFile(tableName+".tbl",fileHandle);
+    if( result != 0 )
+    	return result;
+
+//    cout << "insertTuple: openFile" << result << endl;
+
     result = _rbfm->insertRecord(fileHandle, tableAttributes, data, rid);
-    _rbfm->closeFile(fileHandle);
+    if( result != 0 )
+    {
+//    	 cout << "insertTuple: insertRecord" << result << endl;
+    	_rbfm->closeFile(fileHandle);
+//    	 cout << "insertTuple: closeFile"<< result << endl;
+    	return result;
+    }
+
+    result = _rbfm->closeFile(fileHandle);
+
+//    cout << "insertTuple: closeFile" << result << endl;
+
     return result;
 }
 
@@ -205,9 +226,25 @@ RC RelationManager::deleteTuples(const string &tableName)
 {
 	FileHandle fileHandle;
 	RC result = -1;
-    _rbfm->openFile(tableName+".tbl",fileHandle);
+
+    result = _rbfm->openFile(tableName+".tbl",fileHandle);
+    if( result != 0 )
+    	return -1;
+
+//    cout << "deleteTuples: openFile" << result << endl;
+
 	result = _rbfm->deleteRecords(fileHandle);
-    _rbfm->closeFile(fileHandle);
+	if( result != 0 )
+	{
+		_rbfm->closeFile( fileHandle );
+		return -1;
+	}
+
+//	 cout << "deleteTuples: deleteRecords" << result << endl;
+
+	result = _rbfm->closeFile(fileHandle);
+
+//	 cout << "deleteTuples: closeFile" << result << endl;
 
     return result;
 }
@@ -243,12 +280,27 @@ RC RelationManager::readTuple(const string &tableName, const RID &rid, void *dat
 	FileHandle fileHandle;
 	RC result = -1;
 	vector<Attribute> tableAttributes;
+
+	if(tableRIDMap.find(tableName) == tableRIDMap.end())
+	{
+		return result;
+	}
+
     result = _rbfm->openFile(tableName+".tbl",fileHandle);
     if(result !=0)
+    	return result;
+
+    result = getAttributes(tableName, tableAttributes);
+    if( result != 0 )
+    	return result;
+
+    result = _rbfm->readRecord(fileHandle, tableAttributes, rid, data);
+    if( result != 0 )
+    {
+    	_rbfm->closeFile(fileHandle);
     	return -1;
-	getAttributes(tableName, tableAttributes);
-	result = _rbfm->readRecord(fileHandle, tableAttributes, rid, data);
-    _rbfm->closeFile(fileHandle);
+    }
+    result = _rbfm->closeFile(fileHandle);
     return result;
 }
 
@@ -270,9 +322,16 @@ RC RelationManager::reorganizePage(const string &tableName, const unsigned pageN
 	RC result = -1;
 	vector<Attribute> tableAttributes;
     _rbfm->openFile(tableName+".tbl",fileHandle);
-	getAttributes(tableName, tableAttributes);
+
+	result = getAttributes(tableName, tableAttributes);
+	if( result != 0 )
+		return result;
+
 	result = _rbfm->reorganizePage(fileHandle, tableAttributes, pageNumber);
-    _rbfm->closeFile(fileHandle);
+	if( result != 0 )
+		return result;
+
+	result = _rbfm->closeFile(fileHandle);
     return result;
 }
 
@@ -465,7 +524,7 @@ RC RelationManager::loadCatalog()
 		map<int, RID> *tableRID = new map<int, RID>();
 		(*tableRID)[tableID] = rid;
 
-		tableRIDMap[tableName] = *tableRID;
+		tableRIDMap[tableName] = tableRID;
 		data = start;
 	}
 
@@ -498,7 +557,7 @@ RC RelationManager::loadCatalog()
 			map<int, RID> *columnRID = new map<int, RID>();
 			(*columnRID)[columnStart] = rid;
 
-			columnRIDMap[tableID] = *columnRID;
+			columnRIDMap[tableID] = columnRID;
 		}
 
 		data = start;
@@ -554,8 +613,8 @@ RC RelationManager::createCatalogFile(const string& tableName, const vector<Attr
 	map<int, RID> *tableRID = new map<int, RID>();
 	(*tableRID)[TABLE_ID] = rid;
 
-	tableRIDMap[tableName] = *tableRID; // modified to fix the pointer to object
-	cout<<"For table name :"<<tableName<<" Size: "<< tableRIDMap[tableName].size() << endl;
+	tableRIDMap[tableName] = tableRID; // modified to fix the pointer to object
+	cout<<"For table name :"<<tableName<<" Size: "<< tableRIDMap[tableName]->size() << endl;
 
 	result = _rbfm->closeFile( fileHandle );
 	if( result != 0 )
@@ -573,7 +632,7 @@ RC RelationManager::createCatalogFile(const string& tableName, const vector<Attr
 		result = insertColumnEntry( TABLE_ID, tableName, i+1, attrVector.at(i).name, attrVector.at(i).type, attrVector.at(i).length, fileHandle, rid);
 		(*columnRID)[i] = rid;
 	}
-	columnRIDMap[TABLE_ID] = *columnRID; // same with line362
+	columnRIDMap[TABLE_ID] = columnRID; // same with line362
 
 	result = _rbfm->closeFile( fileHandle );
 	if( result != 0 )
