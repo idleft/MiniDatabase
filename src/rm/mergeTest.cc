@@ -890,8 +890,8 @@ int main()
 //     // Simple Scan
 //    TEST_RM_8_B("tbl_employee3");
 //
-    cout << endl << "Test Insert Tuple .." << endl;
-
+//    cout << endl << "Test Insert Tuple .." << endl;
+//
     vector<RID> rids;
     vector<int> sizes;
 
@@ -921,7 +921,7 @@ int main()
     TEST_RM_11("tbl_employee4", rids, sizes);
 //
     cout << endl << "Test Delete Tuple .." << endl;
-//
+
 //    rids.clear();
 //    sizes.clear();
 //    //vector<RID> rids;
@@ -931,7 +931,7 @@ int main()
 //
 //    TEST_RM_12("tbl_employee4", rids);
 
-    cout << endl << "Test Simple Scan .." << endl;
+//    cout << endl << "Test Simple Scan .." << endl;
 //
 //       // Scan
 //    TEST_RM_13("tbl_employee4");
