@@ -38,8 +38,8 @@ public:
 	      const vector<string> &attributeNames);
 
   // "data" follows the same format as RelationManager::insertTuple()
-  RC getNextTuple(RID &rid, void *data) { return -1; };
-  RC close() { return _rbfm->closeFile( fileHandle ); };
+  RC getNextTuple(RID &rid, void *data);
+  RC close();
 
   FileHandle	fileHandle;
 
