@@ -28,12 +28,12 @@ RC PagedFileManager::createFile(const char *fileName)
 	{
 		FILE* file;
 
-		file = fopen( fileName, "rb");
-		if( file != NULL )
-		{
-			fclose( file );
-			return -1;
-		}
+//		file = fopen( fileName, "rb");
+//		if( file != NULL )
+//		{
+//			fclose( file );
+//			return -1;
+//		}
 
 		file = fopen( fileName, "wb");
 		if( file != NULL )

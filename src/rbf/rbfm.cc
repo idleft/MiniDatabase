@@ -830,7 +830,7 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 
 	free(pageData);
 
-	return result;
+	return 0;
 }
 
 RC RecordBasedFileManager::scan(FileHandle &fileHandle,

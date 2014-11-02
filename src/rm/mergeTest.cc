@@ -864,7 +864,7 @@ int main()
 //    cout << endl << "Test Read Attributes .." << endl;
 //
 //    // Read Attributes
-//    TEST_RM_4("tbl_employee", 6, "Veekay", 27, 171.4, 9000);
+    TEST_RM_4("tbl_employee", 6, "Veekay", 27, 171.4, 9000);
 //
 //   cout << endl << "Test Delete Tuples .." << endl;
 //
@@ -876,7 +876,7 @@ int main()
 //    // Delete Table
 //    TEST_RM_6("tbl_employee", 6, "Martin", 26, 173.6, 8000);
 //
-//    cout << endl << "Test Reorganize Page .." << endl;
+    cout << endl << "Test Reorganize Page .." << endl;
 //    // Reorganize Page
     TEST_RM_7("tbl_employee2");
 //
