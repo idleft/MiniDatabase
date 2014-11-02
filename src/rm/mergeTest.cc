@@ -276,6 +276,7 @@ void TEST_RM_6(const string &tableName, const int nameLength, const string &name
 
     prepareTuple(nameLength, name, age, height, salary, tuple, &tupleSize);
     RC rc = rm->insertTuple(tableName, tuple, rid);
+    cout << "insertTuple" << rc << endl;	// EUNJEONG.SHIN
     assert(rc == success);
 
     // Test Read Tuple 
@@ -864,20 +865,20 @@ int main()
 //
 //    // Read Attributes
 //    TEST_RM_4("tbl_employee", 6, "Veekay", 27, 171.4, 9000);
-////
-//    cout << endl << "Test Delete Tuples .." << endl;
-////
-////    // Delete Tuples
+//
+//   cout << endl << "Test Delete Tuples .." << endl;
+//
+//    // Delete Tuples
 //    TEST_RM_5("tbl_employee", 6, "Dillon", 29, 172.5, 7000);
 
-    cout << endl << "Test Delete Table .." << endl;
+//    cout << endl << "Test Delete Table .." << endl;
 //
 //    // Delete Table
-    TEST_RM_6("tbl_employee", 6, "Martin", 26, 173.6, 8000);
+//    TEST_RM_6("tbl_employee", 6, "Martin", 26, 173.6, 8000);
 //
 //    cout << endl << "Test Reorganize Page .." << endl;
 //    // Reorganize Page
-//    TEST_RM_7("tbl_employee2");
+    TEST_RM_7("tbl_employee2");
 //
 //    cout << endl << "Test Simple Scan .." << endl;
 //
