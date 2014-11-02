@@ -612,6 +612,7 @@ void TEST_RM_11(const string &tableName, vector<RID> &rids, vector<int> &sizes)
         RID rid = rids[i];
 
         prepareLargeTuple(i+10, tuple, &size);
+        cout<<"record"<<i<<endl;
         rc = rm->updateTuple(tableName, tuple, rid);
         assert(rc == success);
 
@@ -864,7 +865,7 @@ int main()
 //    cout << endl << "Test Read Attributes .." << endl;
 //
 //    // Read Attributes
-    TEST_RM_4("tbl_employee", 6, "Veekay", 27, 171.4, 9000);
+//    TEST_RM_4("tbl_employee", 6, "Veekay", 27, 171.4, 9000);
 //
 //   cout << endl << "Test Delete Tuples .." << endl;
 //
@@ -876,9 +877,9 @@ int main()
 //    // Delete Table
 //    TEST_RM_6("tbl_employee", 6, "Martin", 26, 173.6, 8000);
 //
-    cout << endl << "Test Reorganize Page .." << endl;
+//    cout << endl << "Test Reorganize Page .." << endl;
 //    // Reorganize Page
-    TEST_RM_7("tbl_employee2");
+//    TEST_RM_7("tbl_employee2");
 //
 //    cout << endl << "Test Simple Scan .." << endl;
 //
@@ -889,37 +890,37 @@ int main()
 //     // Simple Scan
 //    TEST_RM_8_B("tbl_employee3");
 //
-//    cout << endl << "Test Insert Tuple .." << endl;
+    cout << endl << "Test Insert Tuple .." << endl;
+
+    vector<RID> rids;
+    vector<int> sizes;
+
+	// Insert Tuple
+    TEST_RM_9("tbl_employee4", rids, sizes);
+
+    cout << endl << "Test Read Tuple .." << endl;
+
+    rids.clear();
+    sizes.clear();
+
+    //vector<RID> rids;
+    //vector<int> sizes;
+
+	// Read Tuple
+    TEST_RM_10("tbl_employee4", rids, sizes);
 //
+    cout << endl << "Test Update Tuple .." << endl;
+
+    rids.clear();
+	sizes.clear();
+
 //    vector<RID> rids;
 //    vector<int> sizes;
+
+//	  Update Tuple
+    TEST_RM_11("tbl_employee4", rids, sizes);
 //
-//	// Insert Tuple
-//    TEST_RM_9("tbl_employee4", rids, sizes);
-//
-//    cout << endl << "Test Read Tuple .." << endl;
-//
-//    rids.clear();
-//    sizes.clear();
-//
-//    //vector<RID> rids;
-//    //vector<int> sizes;
-//
-//	// Read Tuple
-//    TEST_RM_10("tbl_employee4", rids, sizes);
-//
-//    cout << endl << "Test Update Tuple .." << endl;
-//
-//    rids.clear();
-//	sizes.clear();
-//
-//    //vector<RID> rids;
-//    //vector<int> sizes;
-//
-//	 // Update Tuple
-//    TEST_RM_11("tbl_employee4", rids, sizes);
-//
-//    cout << endl << "Test Delete Tuple .." << endl;
+    cout << endl << "Test Delete Tuple .." << endl;
 //
 //    rids.clear();
 //    sizes.clear();
@@ -929,8 +930,8 @@ int main()
 //	// Delete Tuple
 //
 //    TEST_RM_12("tbl_employee4", rids);
-//
-//    cout << endl << "Test Simple Scan .." << endl;
+
+    cout << endl << "Test Simple Scan .." << endl;
 //
 //       // Scan
 //    TEST_RM_13("tbl_employee4");

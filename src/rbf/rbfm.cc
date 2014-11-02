@@ -156,7 +156,7 @@ RC RecordBasedFileManager::closeFile(FileHandle &fileHandle)
 	if( fileHandle.getFile() == NULL )
 		return result;
 
-	cout << fileHandle.getFileName() << endl;
+//	cout << fileHandle.getFileName() << endl;
 
 	if( directoryOfSlots.find( fileHandle.getFileName() ) == directoryOfSlots.end() )
 		return result;
@@ -221,11 +221,6 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 
 	vector<short> *slotDirectory = directoryOfSlots[fileHandle.getFileName()];
 
-	if(slotDirectory==NULL)
-		cout<<"yes"<<endl;
-	else
-		cout<<"no"<<endl;
-
 	char *page = (char*)malloc(PAGE_SIZE);
 
 	// find first blank slot
@@ -246,7 +241,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 
 			(*slotDirectory)[pageNum] -= sizeOfRecord + sizeof(Slot);
 
-			cout<<"insertRecord pageNum=" << pageNum << endl;
+//			cout<<"insertRecord pageNum=" << pageNum << endl;
 
 			result = fileHandle.writePage(pageNum, page);
 			if( result == 0 )
@@ -255,7 +250,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 				rid.slotNum = slotNum;
 			}
 
-			cout<<"insertRecord writePage=" << result << endl;
+//			cout<<"insertRecord writePage=" << result << endl;
 
 			free(record);
 			free(page);
@@ -680,21 +675,24 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 {
 	// Routine of update record.
 	RC result = -1;
-
+	cout<<2.1<<endl;
 	void * pageData = malloc(PAGE_SIZE);
 	char * endOfPage = (char*)pageData + PAGE_SIZE;
 	fileHandle.readPage(rid.pageNum,pageData);
 	vector<short> *freeSpace = directoryOfSlots[fileHandle.getFileName()];
 
+	cout<<2.2<<endl;
 	Slot* slot = goToSlot(endOfPage,rid.slotNum);
 	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
 
+	cout<<2.3<<endl;
 	short oldRecordSize = slot->end - slot->begin;
 	short newRecordSize = getSizeOfRecord(recordDescriptor, data);
 	void *newRecordData = malloc(newRecordSize);
 	short sizeDiff = newRecordSize - oldRecordSize;
 	//short currentFree = dirInfo->freeSpaceOffset;
 
+	cout<<2.4<<endl;
 	if(oldRecordSize==newRecordSize){
 		// same size, update record
 		dataToRecord(data, recordDescriptor, newRecordData);
@@ -703,6 +701,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 		result = 0;
 	}
 	else{ // not equal, see if shift needed, if so shift first, then compare size
+
 		if (sizeDiff > (*freeSpace)[rid.pageNum])
 			reorganizePage(fileHandle, recordDescriptor, rid.pageNum);
 		if(newRecordSize < oldRecordSize||(newRecordSize > oldRecordSize&&(sizeDiff > (*freeSpace)[rid.pageNum]))){
@@ -724,6 +723,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 
 		}
 	}
+	cout<<2.5<<endl;
 	free(pageData);
 	return result;
 }

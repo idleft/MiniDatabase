@@ -178,7 +178,7 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 			if( result != 0 )
 				return result;
 
-			cout << colAttri.length << "," << colAttri.name << "," << colAttri.type << endl;
+//			cout << colAttri.length << "," << colAttri.name << "," << colAttri.type << endl;
 
 			attrs.push_back( colAttri );
 		}
@@ -269,9 +269,13 @@ RC RelationManager::updateTuple(const string &tableName, const void *data, const
 	RC result = -1;
 	vector<Attribute> tableAttributes;
     _rbfm->openFile(tableName+".tbl",fileHandle);
+    cout<<1<<endl;
 	getAttributes(tableName, tableAttributes);
+    cout<<2<<endl;
 	result = _rbfm->updateRecord(fileHandle, tableAttributes, data, rid);
+    cout<<3<<endl;
     _rbfm->closeFile(fileHandle);
+    cout<<4<<endl;
     return result;
 }
 
@@ -348,7 +352,7 @@ RC RelationManager::scan(const string &tableName,
 	string fileName =  tableName + ".tbl";
 
 	result = _rbfm->openFile( fileName, rm_ScanIterator.fileHandle );
-	if( result != -1 )
+	if( result == -1 )
 		return result;
 
 	if( tableName.compare(TABLE_CATALOG_FILE_NAME) == 0 )
@@ -614,7 +618,7 @@ RC RelationManager::createCatalogFile(const string& tableName, const vector<Attr
 	(*tableRID)[TABLE_ID] = rid;
 
 	tableRIDMap[tableName] = tableRID; // modified to fix the pointer to object
-	cout<<"For table name :"<<tableName<<" Size: "<< tableRIDMap[tableName]->size() << endl;
+//	cout<<"For table name :"<<tableName<<" Size: "<< tableRIDMap[tableName]->size() << endl;
 
 	result = _rbfm->closeFile( fileHandle );
 	if( result != 0 )
@@ -628,7 +632,7 @@ RC RelationManager::createCatalogFile(const string& tableName, const vector<Attr
 	map<int, RID> *columnRID = new map<int, RID>();
 	for(int i = 0; i < (int)attrVector.size(); i++)
 	{
-		cout<<"Insert attr "<<attrVector.at(i).name<<endl;
+//		cout<<"Insert attr "<<attrVector.at(i).name<<endl;
 		result = insertColumnEntry( TABLE_ID, tableName, i+1, attrVector.at(i).name, attrVector.at(i).type, attrVector.at(i).length, fileHandle, rid);
 		(*columnRID)[i] = rid;
 	}
@@ -700,7 +704,7 @@ RC RelationManager::insertColumnEntry(int tableID, string tableName, int columnS
 	offset += sizeof(int);
 	const char *cstrTable = &tableName[0];
 	memcpy( data + offset, cstrTable, varCharLen);
-	cout << "tableName:" << cstrTable << endl;
+//	cout << "tableName:" << cstrTable << endl;
 	offset += varCharLen;
 
 	memcpy( data + offset, &columnStart, sizeof(int));
@@ -711,7 +715,7 @@ RC RelationManager::insertColumnEntry(int tableID, string tableName, int columnS
 	offset += sizeof(int);
 	const char *cstrColumn = &columnName[0];
 	memcpy( data + offset, cstrColumn, varCharLen);
-	cout << "columnName:" << cstrColumn << endl;
+//	cout << "columnName:" << cstrColumn << endl;
 	offset += varCharLen;
 
 	memcpy( data + offset, (int*)&columnType, sizeof(int) );
