@@ -311,13 +311,13 @@ RC RelationManager::updateTuple(const string &tableName, const void *data, const
 	RC result = -1;
 	vector<Attribute> tableAttributes;
     _rbfm->openFile(tableName+".tbl",fileHandle);
-    cout<<1<<endl;
+//    cout<<1<<endl;
 	getAttributes(tableName, tableAttributes);
-    cout<<2<<endl;
+//    cout<<2<<endl;
 	result = _rbfm->updateRecord(fileHandle, tableAttributes, data, rid);
-    cout<<3<<endl;
+//    cout<<3<<endl;
     _rbfm->closeFile(fileHandle);
-    cout<<4<<endl;
+//    cout<<4<<endl;
     return result;
 }
 

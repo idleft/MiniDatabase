@@ -133,7 +133,7 @@ void TEST_RM_3(const string &tableName, const int nameLength, const string &name
     cout << "Original RID slot = " << rid.slotNum << endl;
 
     // Test Update Tuple
-    prepareTuple(6, "Newman", age, height, 100, updatedTuple, &updatedTupleSize);
+    prepareTuple(8, "Newmannn", age, height, 100, updatedTuple, &updatedTupleSize);
     rc = rm->updateTuple(tableName, updatedTuple, rid);
     assert(rc == success);
     cout << "Updated RID slot = " << rid.slotNum << endl;
@@ -840,7 +840,46 @@ void initializeTable(){
     // Create Table tbl_employee4
     createLargeTable("tbl_employee4");
 }
+void TEST_RM_16(const string &tableName)
+{
+    cout << "****In Test Case 16****" << endl;
 
+    // Get Catalog Attributes
+    vector<Attribute> attrs;
+    RC rc = rm->getAttributes(tableName, attrs);
+    assert(rc == success);
+
+    // print attribute name
+    cout << "Catalog schema: (";
+    for(unsigned i = 0; i < attrs.size(); i++)
+    {
+        if (i < attrs.size() - 1) cout << attrs[i].name << ", ";
+        else cout << attrs[i].name << ")" << endl << endl;
+    }
+
+    RID rid;
+    void *returnedData = malloc(100);
+
+    // Set up the iterator
+    RM_ScanIterator rmsi;
+    vector<string> projected_attrs;
+    for (int i = 0; i < attrs.size(); i++){
+      projected_attrs.push_back(attrs[i].name);
+    }
+
+    rc = rm->scan(tableName, "", NO_OP, NULL, projected_attrs, rmsi);
+    assert(rc == success);
+
+    while(rmsi.getNextTuple(rid, returnedData) != RM_EOF)
+    {
+        rbfm->printRecord(attrs, returnedData);
+    }
+    rmsi.close();
+
+    free(returnedData);
+    cout<<"** Test case 16 is over"<<endl;
+    return;
+}
 int main()
 {
 	// Create Tables
@@ -852,33 +891,33 @@ int main()
 
 	// Get Attributes
 //	TEST_RM_0("tbl_employee");
-//
-//    // Insert/Read Tuple
+
+    // Insert/Read Tuple
 //    TEST_RM_1("tbl_employee", 6, "Peters", 24, 170.1, 5000);
 //
 //    // Delete Tuple
 //    TEST_RM_2("tbl_employee", 6, "Victor", 22, 180.2, 6000);
 //
 //    // Update Tuple
-//    TEST_RM_3("tbl_employee", 6, "Thomas", 28, 187.3, 4000);
+    TEST_RM_3("tbl_employee", 6, "Thomas", 28, 187.3, 4000);
 //
 //    cout << endl << "Test Read Attributes .." << endl;
 //
-//    // Read Attributes
+////    // Read Attributes
 //    TEST_RM_4("tbl_employee", 6, "Veekay", 27, 171.4, 9000);
 //
 //   cout << endl << "Test Delete Tuples .." << endl;
 //
 //    // Delete Tuples
 //    TEST_RM_5("tbl_employee", 6, "Dillon", 29, 172.5, 7000);
-
+//
 //    cout << endl << "Test Delete Table .." << endl;
 //
 //    // Delete Table
 //    TEST_RM_6("tbl_employee", 6, "Martin", 26, 173.6, 8000);
-//
+////
 //    cout << endl << "Test Reorganize Page .." << endl;
-//    // Reorganize Page
+////    // Reorganize Page
 //    TEST_RM_7("tbl_employee2");
 //
 //    cout << endl << "Test Simple Scan .." << endl;
@@ -891,40 +930,40 @@ int main()
 //    TEST_RM_8_B("tbl_employee3");
 //
 //    cout << endl << "Test Insert Tuple .." << endl;
-
+//
     vector<RID> rids;
     vector<int> sizes;
-
+//
 	// Insert Tuple
-    TEST_RM_9("tbl_employee4", rids, sizes);
-
-    cout << endl << "Test Read Tuple .." << endl;
-
-    rids.clear();
-    sizes.clear();
+//    TEST_RM_9("tbl_employee4", rids, sizes);
+//
+//    cout << endl << "Test Read Tuple .." << endl;
+//
+//    rids.clear();
+//    sizes.clear();
 //
 //    //vector<RID> rids;
 //    //vector<int> sizes;
 //
 //	// Read Tuple
-    TEST_RM_10("tbl_employee4", rids, sizes);
+//    TEST_RM_10("tbl_employee4", rids, sizes);
+////
+//    cout << endl << "Test Update Tuple .." << endl;
 //
-    cout << endl << "Test Update Tuple .." << endl;
-//
-    rids.clear();
-	sizes.clear();
+//    rids.clear();
+//	sizes.clear();
 
 //    vector<RID> rids;
 //    vector<int> sizes;
 
 //	  Update Tuple
-    TEST_RM_11("tbl_employee4", rids, sizes);
-//
-    cout << endl << "Test Delete Tuple .." << endl;
-
+//    TEST_RM_11("tbl_employee4", rids, sizes);
+//////
+////    cout << endl << "Test Delete Tuple .." << endl;
+////
 //    rids.clear();
 //    sizes.clear();
-//    //vector<RID> rids;
+    //vector<RID> rids;
 //    //vector<int> sizes;
 //
 //	// Delete Tuple
@@ -947,6 +986,13 @@ int main()
 //	// Scan with conditions
 //    createTable("tbl_b_employee4");
 //    TEST_RM_15("tbl_b_employee4");
+    // NOTE: your Tables table must be called "Tables"
+//    string catalog_table_name = "Tables";
+//
+//    cout << endl << "Test Catalog Information .." << endl;
+//
+//    // Test Catalog Information
+//    TEST_RM_16(catalog_table_name);
 
     return 0;
 }

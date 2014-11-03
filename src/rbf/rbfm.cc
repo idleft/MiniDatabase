@@ -222,6 +222,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 	vector<short> *slotDirectory = directoryOfSlots[fileHandle.getFileName()];
 
 	char *page = (char*)malloc(PAGE_SIZE);
+	memset(page, 0, PAGE_SIZE);
 
 	// find first blank slot
 //	for(; slotDirectory!=NULL && pageNum < slotDirectory->size(); pageNum++ )
@@ -357,14 +358,13 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 			if( result != 0 )
 				break;
 
-
 			// reach to the end of Page
 			const char* endOfPage = page + PAGE_SIZE;
 
 			Slot* slot = goToSlot(endOfPage, slotNum);
 // Xikui
 			if( slot->begin < 0 )
-				return result;
+				return -1;
 // Xikui
 			//if( slot->begin < 0 )
 			//	return result;
@@ -694,66 +694,68 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 {
 	// Routine of update record.
 	RC result = -1;
-	cout<<2.1<<endl;
+//	cout<<2.1<<endl;
 	void * pageData = malloc(PAGE_SIZE);
 	char * endOfPage = (char*)pageData + PAGE_SIZE;
 	fileHandle.readPage(rid.pageNum,pageData);
 	vector<short> *freeSpace = directoryOfSlots[fileHandle.getFileName()];
 
-	cout<<2.2<<endl;
+//	cout<<2.2<<endl;
 	Slot* slot = goToSlot(endOfPage,rid.slotNum);
 	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
 
-	cout<<2.3<<endl;
+//	cout<<2.3<<endl;
 	short oldRecordSize = slot->end - slot->begin;
 	short newRecordSize = getSizeOfRecord(recordDescriptor, data);
 	void *newRecordData = malloc(newRecordSize);
 	short sizeDiff = newRecordSize - oldRecordSize;
 	//short currentFree = dirInfo->freeSpaceOffset;
 
-	cout<<2.4<<endl;
-	if(oldRecordSize==newRecordSize){
-		cout<<2.41<<endl;
-		// same size, update record
-		cout<<"equal"<<endl;
-		dataToRecord(data, recordDescriptor, newRecordData);
-		memcpy((char*) pageData + slot->begin,newRecordData,oldRecordSize);
-		result = fileHandle.writePage( rid.pageNum, pageData );
-		result = 0;
-	}
-	else{ // not equal, see if shift needed, if so shift first, then compare size
-		cout<<2.42<<endl;
+//	cout<<2.4<<endl;
+//	if(oldRecordSize==newRecordSize){
+////		cout<<2.41<<endl;
+//		// same size, update record
+//		cout<<"equal"<<endl;
+//		dataToRecord(data, recordDescriptor, newRecordData);
+//		memcpy((char*) pageData + slot->begin,newRecordData,oldRecordSize);
+//		result = fileHandle.writePage( rid.pageNum, pageData );
+//	}
+//	else{ // not equal, see if shift needed, if so shift first, then compare size
+//		cout<<2.42<<endl;
 		if (sizeDiff > (*freeSpace)[rid.pageNum])
 		{
-			cout<<2.421<<endl;
-		reorganizePage(fileHandle, recordDescriptor, rid.pageNum);
-		cout<<"reorg"<<endl;
+//			cout<<2.421<<endl;
+//			reorganizePage(fileHandle, recordDescriptor, rid.pageNum);
+			cout<<"reorg"<<endl;
 		}
-		cout<<2.43<<endl;
-		if(newRecordSize < oldRecordSize||(newRecordSize > oldRecordSize&&(sizeDiff < (*freeSpace)[rid.pageNum]))){
-			// do nothing to avoid overflow
-			cout<<"reorganize fit"<<endl;
-			short shiftDataBlockSize = dirInfo->freeSpaceOffset - slot->end;
-			memmove((char*)pageData + slot->end + sizeDiff, (char*)pageData + slot->end, shiftDataBlockSize);
-//			// shift all slot behind
-			shiftSlotInfo(pageData, sizeDiff,rid.slotNum);
-//			//update free space
-			dirInfo->freeSpaceOffset -= sizeDiff;
-			slot->end += sizeDiff;
-//			//update record
-			memcpy((char *)pageData + slot->begin, data, newRecordSize);
-			cout<<"do nothing"<<endl;
-			result = 0;
-		}
-		else{// not enough space, set tombstone, add point to new record
+//		cout<<2.43<<endl;
+//		if(newRecordSize < oldRecordSize||(newRecordSize > oldRecordSize&&(sizeDiff < (*freeSpace)[rid.pageNum]))){
+//			// do nothing to avoid overflow
+//			cout<<"reorganize fit"<<endl;
+//			short shiftDataBlockSize = dirInfo->freeSpaceOffset - slot->end;
+//			memmove((char*)pageData + slot->end + sizeDiff, (char*)pageData + slot->end, shiftDataBlockSize);
+////			// shift all slot behind
+//			shiftSlotInfo(pageData, sizeDiff,rid.slotNum);
+////			//update free space
+//			dirInfo->freeSpaceOffset -= sizeDiff;
+//			slot->end += sizeDiff;
+////			//update record
+//			memcpy((char *)pageData + slot->begin, data, newRecordSize);
+//			cout<<"do nothing"<<endl;
+//			result = 0;
+//		}
+//		else{// not enough space, set tombstone, add point to new record
 			RID newRid;
 			cout<<"no enough"<<endl;
 			result = insertRecord(fileHandle, recordDescriptor, data, newRid);
+			fileHandle.readPage(rid.pageNum,pageData);
 			setRecordTombStone((char*)pageData+slot->begin, newRid.pageNum, newRid.slotNum);
-		}
-		cout<<2.44<<endl;
-	}
-	cout<<2.5<<endl;
+			result = fileHandle.writePage( rid.pageNum, pageData );
+//		}
+//		cout<<2.44<<endl;
+		//result = fileHandle.writePage( rid.pageNum, pageData );
+//	}
+//	cout<<2.5<<endl;
 	free(pageData);
 	return result;
 }
@@ -854,7 +856,7 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 			short recordSize = slot->end + slot->begin;// as the slot begin is already -0
 			short trueStart = 0 - slot->begin;
 			short moveBlockSize = dirInfo->freeSpaceOffset - slot->end;
-			memmove(pageData + trueStart, pageData + slot->end, moveBlockSize);
+			memmove((char *)pageData + trueStart, (char *)pageData + slot->end, moveBlockSize);
 			shiftSlotInfo(pageData, -(recordSize), iter1);
 			dirInfo->freeSpaceOffset += recordSize;
 		}

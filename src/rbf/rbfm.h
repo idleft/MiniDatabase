@@ -193,8 +193,8 @@ IMPORTANT, PLEASE READ: All methods below this comment (other than the construct
 
   bool isRecordTombStone(const void* record, unsigned& pageNum, unsigned& slotNum) {
 	  if( *(short *)record == -1 ) {
-		  pageNum = *(unsigned *)((char*)record + sizeof(unsigned));
-		  slotNum = *(unsigned *)((char*)record + sizeof(unsigned) + sizeof(unsigned));
+		  pageNum = *(unsigned *)((char*)record + sizeof(short));
+		  slotNum = *(unsigned *)((char*)record + sizeof(short) + sizeof(unsigned));
 		  return true;
 	  }
 
@@ -203,7 +203,7 @@ IMPORTANT, PLEASE READ: All methods below this comment (other than the construct
 
   void setRecordTombStone(char *record, unsigned pageNum, unsigned slotNum) {
 	  *(short *)record = -1;
-	  *(unsigned *)(record + sizeof(unsigned)) = pageNum;
+	  *(unsigned *)(record + sizeof(short)) = pageNum;
 	  *(unsigned *)(record + sizeof(short) + sizeof(unsigned)) = slotNum;
   }
 
