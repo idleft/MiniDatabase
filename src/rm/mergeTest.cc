@@ -891,7 +891,7 @@ int main()
 //    TEST_RM_8_B("tbl_employee3");
 //
 //    cout << endl << "Test Insert Tuple .." << endl;
-//
+
     vector<RID> rids;
     vector<int> sizes;
 
@@ -902,15 +902,15 @@ int main()
 
     rids.clear();
     sizes.clear();
-
-    //vector<RID> rids;
-    //vector<int> sizes;
-
-	// Read Tuple
+//
+//    //vector<RID> rids;
+//    //vector<int> sizes;
+//
+//	// Read Tuple
     TEST_RM_10("tbl_employee4", rids, sizes);
 //
     cout << endl << "Test Update Tuple .." << endl;
-
+//
     rids.clear();
 	sizes.clear();
 
