@@ -74,8 +74,8 @@ class RecordBasedFileManager;
 
 class RBFM_ScanIterator {
 public:
-  RBFM_ScanIterator() {};
-  ~RBFM_ScanIterator() {};
+  RBFM_ScanIterator();
+  ~RBFM_ScanIterator();
 
   RC initialize(FileHandle &fileHandle,
 		  const vector<Attribute> &recordDescriptor,
@@ -86,10 +86,12 @@ public:
 
   // "data" follows the same format as RecordBasedFileManager::insertRecord()
   RC getNextRecord(RID &rid, void *data);
-  RC close() { return -1; };
+  RC close();
   bool checkCondition(void* data, string &attrName, vector<Attribute> &targetAttr);
   RC inrecreaseIteratorPos();
 
+  RC readAttributeForScan(char *record, void *attribute, short numOfAttribute, AttrType type, int &attrLength);
+  RC constructAttributeForScan(char* record, void* data, vector<AttrType> attrType, vector<short> attrNum);
 
 private:
   FileHandle fileHandle;
@@ -97,12 +99,21 @@ private:
   char* pageData;
   char* endOfPage;
   const void* targetPointer;
+
+  const void *condition;
   CompOp compOp;
   string conditionAttrName;
+  AttrType conditionAttrType;
+  int conditionAttrNum;
+
+  vector<short> constructAttrNum;
+  vector<AttrType> constructAttrType;
+
   vector<Attribute> recordDescriptor;
   Slot* slot;
   DirectoryOfSlotsInfo* dirInfo;
   RecordBasedFileManager* _rbfm;
+  map<unsigned, unsigned> tombstoneMap;
 };
 
 
