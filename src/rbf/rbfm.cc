@@ -871,7 +871,17 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 	short slotNum = dirInfo->numOfSlots;
 
 	for( unsigned iter1=1; iter1<= slotNum; iter1++){
-		if(checkTombStone(pageData, pageN, iter1)){
+		Slot * slot = goToSlot(endOfPage, iter1);
+		if(slot->begin<0)
+		{
+			short recordSize = slot->end + slot->begin;// as the slot begin is already -0
+			short trueStart = 0 - slot->begin;
+			short moveBlockSize = dirInfo->freeSpaceOffset - slot->end;
+			memmove(pageData + trueStart, pageData + slot->end, moveBlockSize);
+			shiftSlotInfo(pageData, -(recordSize), iter1);
+			dirInfo->freeSpaceOffset += recordSize;
+		}
+		else if(checkTombStone(pageData, pageN, iter1)){
 			shrinkTombstoneRecord(pageData, iter1);
 		}
 	}
