@@ -708,16 +708,12 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 	short newRecordSize = getSizeOfRecord(recordDescriptor, data);
 	void *newRecordData = malloc(newRecordSize);
 	short sizeDiff = newRecordSize - oldRecordSize;
-	//short currentFree = dirInfo->freeSpaceOffset;
 	dataToRecord(data, recordDescriptor, newRecordData);
 	if(PAGE_SIZE - dirInfo->freeSpaceOffset == freeSpace->at(rid.pageNum))
 					cout<<"true"<<endl;
 				else
 					cout<<"false"<<endl;
-//	cout<<2.4<<endl;
 	if(oldRecordSize==newRecordSize){
-//		cout<<2.41<<endl;
-		// same size, update record
 		cout<<"equal"<<endl;
 		memcpy((char*) pageData + slot->begin,newRecordData,oldRecordSize);
 		result = fileHandle.writePage( rid.pageNum, pageData );
@@ -829,14 +825,14 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 		Slot * slot = goToSlot(endOfPage, iter1);
 		if(slot->begin<0)
 		{
-			short recordSize = slot->end + slot->begin;// as the slot begin is already -0
-			short trueStart = 0 - slot->begin;
+			short trueStart = 0 - slot->begin-1;
+			short recordSize = slot->end - trueStart;// as the slot begin is already -0
 			short moveBlockSize = dirInfo->freeSpaceOffset - slot->end;
 			memmove((char *)pageData + trueStart, (char *)pageData + slot->end, moveBlockSize);
-			shiftSlotInfo(pageData, -(recordSize), iter1);
+			shiftSlotInfo(pageData, 0 - recordSize, iter1);
 			dirInfo->freeSpaceOffset += recordSize;
 		}
-		else if(checkTombStone(pageData, pageN, iter1)){
+		if(checkTombStone(pageData, pageN, iter1)){
 			char* endOfPage = (char*) pageData + PAGE_SIZE;
 			Slot* slot = goToSlot((char*)pageData+PAGE_SIZE, iter1);
 			int tombStoneSize = 2*sizeof(unsigned)+sizeof(short);
@@ -852,7 +848,7 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 			(*freeSpace)[pageN] +=shiftOffset;
 		}
 	}
-
+	fileHandle.writePage(pageN, pageData);
 	free(pageData);
 
 	return 0;

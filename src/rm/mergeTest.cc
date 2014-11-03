@@ -611,11 +611,6 @@ void TEST_RM_11(const string &tableName, vector<RID> &rids, vector<int> &sizes)
     {
         memset(tuple, 0, 1000);
         RID rid = rids[i];
-
-    	if(i==40)
-    		cout<<111<<endl;
-        prepareLargeTuple(i+10, tuple, &size);
-        cout<<"record"<<i<<endl;
         rc = rm->updateTuple(tableName, tuple, rid);
         assert(rc == success);
 
@@ -935,8 +930,15 @@ int main()
 //
 	// Insert Tuple
     TEST_RM_9("tbl_employee4", rids, sizes);
+        rids.clear();
+        sizes.clear();
     TEST_RM_10("tbl_employee4", rids, sizes);
+    rids.clear();
+    sizes.clear();
     TEST_RM_11("tbl_employee4", rids, sizes);
+    rids.clear();
+    sizes.clear();
+    TEST_RM_12("tbl_employee4", rids);
 //    cout << endl << "Test Read Tuple .." << endl;
 //
 //    rids.clear();
@@ -959,14 +961,11 @@ int main()
 //////
 ////    cout << endl << "Test Delete Tuple .." << endl;
 ////
-//    rids.clear();
-//    sizes.clear();
     //vector<RID> rids;
 //    //vector<int> sizes;
 //
 //	// Delete Tuple
 //
-//    TEST_RM_12("tbl_employee4", rids);
 
 //    cout << endl << "Test Simple Scan .." << endl;
 //
