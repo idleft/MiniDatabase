@@ -1182,7 +1182,7 @@ RC RBFM_ScanIterator::constructAttributeForScan(char* record, void* data, vector
 
 	for(unsigned i = 0; i < attrNum.size(); i++ )
 	{
-		readAttributeForScan( record, attribute, attrNum[i], attrType[i], attrLength );
+		readAttributeForScan( record, attribute, attrNum[i], attrType.at(i), attrLength );
 		memcpy( (char*)data+offset, attribute, attrLength );
 		offset += attrLength;
 	}
