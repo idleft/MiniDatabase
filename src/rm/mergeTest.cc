@@ -133,7 +133,8 @@ void TEST_RM_3(const string &tableName, const int nameLength, const string &name
     cout << "Original RID slot = " << rid.slotNum << endl;
 
     // Test Update Tuple
-    prepareTuple(8, "Newmannn", age, height, 100, updatedTuple, &updatedTupleSize);
+    prepareTuple(8, "nssseeee", age, height, 100, updatedTuple, &updatedTupleSize);
+    rid.slotNum = 1;
     rc = rm->updateTuple(tableName, updatedTuple, rid);
     assert(rc == success);
     cout << "Updated RID slot = " << rid.slotNum << endl;
@@ -611,6 +612,8 @@ void TEST_RM_11(const string &tableName, vector<RID> &rids, vector<int> &sizes)
         memset(tuple, 0, 1000);
         RID rid = rids[i];
 
+    	if(i==40)
+    		cout<<111<<endl;
         prepareLargeTuple(i+10, tuple, &size);
         cout<<"record"<<i<<endl;
         rc = rm->updateTuple(tableName, tuple, rid);
@@ -894,12 +897,8 @@ int main()
 
     // Insert/Read Tuple
 //    TEST_RM_1("tbl_employee", 6, "Peters", 24, 170.1, 5000);
-//
-//    // Delete Tuple
 //    TEST_RM_2("tbl_employee", 6, "Victor", 22, 180.2, 6000);
-//
-//    // Update Tuple
-    TEST_RM_3("tbl_employee", 6, "Thomas", 28, 187.3, 4000);
+//    TEST_RM_3("tbl_employee", 6, "Thomas", 28, 187.3, 4000);
 //
 //    cout << endl << "Test Read Attributes .." << endl;
 //
@@ -935,8 +934,9 @@ int main()
     vector<int> sizes;
 //
 	// Insert Tuple
-//    TEST_RM_9("tbl_employee4", rids, sizes);
-//
+    TEST_RM_9("tbl_employee4", rids, sizes);
+    TEST_RM_10("tbl_employee4", rids, sizes);
+    TEST_RM_11("tbl_employee4", rids, sizes);
 //    cout << endl << "Test Read Tuple .." << endl;
 //
 //    rids.clear();
@@ -946,7 +946,6 @@ int main()
 //    //vector<int> sizes;
 //
 //	// Read Tuple
-//    TEST_RM_10("tbl_employee4", rids, sizes);
 ////
 //    cout << endl << "Test Update Tuple .." << endl;
 //
@@ -957,7 +956,6 @@ int main()
 //    vector<int> sizes;
 
 //	  Update Tuple
-//    TEST_RM_11("tbl_employee4", rids, sizes);
 //////
 ////    cout << endl << "Test Delete Tuple .." << endl;
 ////

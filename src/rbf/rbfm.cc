@@ -662,19 +662,6 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 
 //		cout << "deleteRecord:data set to -1" << endl;
 
-<<<<<<< HEAD
-=======
-		// delete the record by setting offset to -1
-//		slot->begin = -1 - slot->begin;
-		slot->begin = - slot->begin;
-		// Delete not by set offset to -1, is set the first byte of data
-//		*(short*) data = short(-1);
-
-		cout << "deleteRecord:data set to -1" << endl;
-
-		// increase free space # WE do not increase the freespace until we reorgnize page
-//		short sizeOfRecord = getSizeOfRecord( recordDescriptor, data );
->>>>>>> 8339c0ef9c5c6fa24e1922c36773acf34f99c37f
 //		(*slotDirectory)[pageNum] += sizeOfRecord;// increase multiple times?
 		result = fileHandle.writePage( pageNum, page );
 		if( result != 0 )
@@ -722,52 +709,49 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 	void *newRecordData = malloc(newRecordSize);
 	short sizeDiff = newRecordSize - oldRecordSize;
 	//short currentFree = dirInfo->freeSpaceOffset;
-
+	dataToRecord(data, recordDescriptor, newRecordData);
+	if(PAGE_SIZE - dirInfo->freeSpaceOffset == freeSpace->at(rid.pageNum))
+					cout<<"true"<<endl;
+				else
+					cout<<"false"<<endl;
 //	cout<<2.4<<endl;
-//	if(oldRecordSize==newRecordSize){
-////		cout<<2.41<<endl;
-//		// same size, update record
-//		cout<<"equal"<<endl;
-//		dataToRecord(data, recordDescriptor, newRecordData);
-//		memcpy((char*) pageData + slot->begin,newRecordData,oldRecordSize);
-//		result = fileHandle.writePage( rid.pageNum, pageData );
-//	}
-//	else{ // not equal, see if shift needed, if so shift first, then compare size
-//		cout<<2.42<<endl;
-		if (sizeDiff > (*freeSpace)[rid.pageNum])
-		{
-//			cout<<2.421<<endl;
+	if(oldRecordSize==newRecordSize){
+//		cout<<2.41<<endl;
+		// same size, update record
+		cout<<"equal"<<endl;
+		memcpy((char*) pageData + slot->begin,newRecordData,oldRecordSize);
+		result = fileHandle.writePage( rid.pageNum, pageData );
+	}
+//	else{
+//		if (sizeDiff > (*freeSpace)[rid.pageNum])
+//		{
+////			cout<<2.421<<endl;
 //			reorganizePage(fileHandle, recordDescriptor, rid.pageNum);
-			cout<<"reorg"<<endl;
-		}
-//		cout<<2.43<<endl;
-//		if(newRecordSize < oldRecordSize||(newRecordSize > oldRecordSize&&(sizeDiff < (*freeSpace)[rid.pageNum]))){
-//			// do nothing to avoid overflow
-//			cout<<"reorganize fit"<<endl;
-//			short shiftDataBlockSize = dirInfo->freeSpaceOffset - slot->end;
-//			memmove((char*)pageData + slot->end + sizeDiff, (char*)pageData + slot->end, shiftDataBlockSize);
-////			// shift all slot behind
-//			shiftSlotInfo(pageData, sizeDiff,rid.slotNum);
-////			//update free space
-//			dirInfo->freeSpaceOffset -= sizeDiff;
-//			slot->end += sizeDiff;
-////			//update record
-//			memcpy((char *)pageData + slot->begin, data, newRecordSize);
-//			cout<<"do nothing"<<endl;
-//			result = 0;
+//			cout<<"reorg"<<endl;
 //		}
-//		else{// not enough space, set tombstone, add point to new record
+		if(newRecordSize < oldRecordSize||
+				(newRecordSize > oldRecordSize && (sizeDiff < (freeSpace)->at(rid.pageNum) ) ) ){
+			short shiftDataBlockSize = dirInfo->freeSpaceOffset - slot->end;
+			cout<<"ShiftBlockSize "<<shiftDataBlockSize<<" block end "<<slot->end+sizeDiff+shiftDataBlockSize
+					<<"Page start"<<pageData<<" record end "<<slot->end<<endl;
+			memmove((char*)pageData + slot->end + sizeDiff, (char*)pageData + slot->end, shiftDataBlockSize);
+			shiftSlotInfo(pageData, sizeDiff,rid.slotNum);
+			dirInfo->freeSpaceOffset += sizeDiff;
+			slot->end += sizeDiff;
+			memcpy((char *)pageData + slot->begin, newRecordData, newRecordSize);
+			(*freeSpace)[rid.pageNum] -=sizeDiff;
+			result = fileHandle.writePage( rid.pageNum, pageData );
+		}
+		else{// not enough space, set tombstone, add point to new record
 			RID newRid;
 			cout<<"no enough"<<endl;
 			result = insertRecord(fileHandle, recordDescriptor, data, newRid);
 			fileHandle.readPage(rid.pageNum,pageData);
 			setRecordTombStone((char*)pageData+slot->begin, newRid.pageNum, newRid.slotNum);
 			result = fileHandle.writePage( rid.pageNum, pageData );
-//		}
-//		cout<<2.44<<endl;
-		//result = fileHandle.writePage( rid.pageNum, pageData );
+		}
 //	}
-//	cout<<2.5<<endl;
+	cout<<2.5<<endl;
 	free(pageData);
 	return result;
 }
