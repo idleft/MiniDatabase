@@ -179,8 +179,6 @@ public:
 
   RC shiftSlotInfo(void* pageData, short shiftOffset, short slotNum);
 
-  RC shrinkTombstoneRecord(void* pageData, short slotId);
-
   bool checkTombStone(void* data, int pageId, int slotId);
 
   int getEstimatedRecordDataSize(vector<Attribute> recordDesciptor);

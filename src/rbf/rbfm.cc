@@ -658,7 +658,7 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 //		cout << "deleteRecord:goToSlot" << result << endl;
 		char* data = page + slot->begin;
 		isTombStone = isRecordTombStone( data, pageNum, slotNum );
-		slot->begin = -slot->begin;
+		slot->begin = -1 - slot->begin;
 
 //		cout << "deleteRecord:data set to -1" << endl;
 
@@ -722,13 +722,13 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 		memcpy((char*) pageData + slot->begin,newRecordData,oldRecordSize);
 		result = fileHandle.writePage( rid.pageNum, pageData );
 	}
-//	else{
-//		if (sizeDiff > (*freeSpace)[rid.pageNum])
-//		{
-////			cout<<2.421<<endl;
-//			reorganizePage(fileHandle, recordDescriptor, rid.pageNum);
-//			cout<<"reorg"<<endl;
-//		}
+	else{
+		if (sizeDiff > (*freeSpace)[rid.pageNum])
+		{
+			cout<<"reorg"<<endl;
+			reorganizePage(fileHandle, recordDescriptor, rid.pageNum);
+			fileHandle.readPage(rid.pageNum,pageData);
+		}
 		if(newRecordSize < oldRecordSize||
 				(newRecordSize > oldRecordSize && (sizeDiff < (freeSpace)->at(rid.pageNum) ) ) ){
 			short shiftDataBlockSize = dirInfo->freeSpaceOffset - slot->end;
@@ -750,8 +750,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 			setRecordTombStone((char*)pageData+slot->begin, newRid.pageNum, newRid.slotNum);
 			result = fileHandle.writePage( rid.pageNum, pageData );
 		}
-//	}
-	cout<<2.5<<endl;
+	}
 	free(pageData);
 	return result;
 }
@@ -797,25 +796,6 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
 	return result;
 }
 
-RC RecordBasedFileManager::shrinkTombstoneRecord(void* pageData, short slotId){
-
-	// the tombstone size is 3*short
-	char* endOfPage = (char*) pageData + PAGE_SIZE;
-	Slot* slot = goToSlot((char*)pageData+PAGE_SIZE, slotId);
-	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
-	short dataBlockBehindSize = dirInfo->freeSpaceOffset - slot->end;
-	short recordSize = slot->end - slot->begin;
-	short shiftOffset = 3*sizeof(short) - recordSize;
-	// move data
-	memmove((char*) pageData + slot->begin + 3*sizeof(short), (char*) pageData + slot->end,dataBlockBehindSize);
-	// update freespace
-	dirInfo->freeSpaceOffset += (recordSize - 3*sizeof(short));
-	// update slot behind
-	shiftSlotInfo(pageData, shiftOffset, slotId);
-	// update current slot
-	slot->end = slot->begin + 3*sizeof(short);
-	return 0;
-}
 
 bool RecordBasedFileManager::checkTombStone(void* pageData, int pageId, int slotId){
 	bool result = false;
@@ -857,7 +837,19 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 			dirInfo->freeSpaceOffset += recordSize;
 		}
 		else if(checkTombStone(pageData, pageN, iter1)){
-			shrinkTombstoneRecord(pageData, iter1);
+			char* endOfPage = (char*) pageData + PAGE_SIZE;
+			Slot* slot = goToSlot((char*)pageData+PAGE_SIZE, iter1);
+			int tombStoneSize = 2*sizeof(unsigned)+sizeof(short);
+			DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
+			short dataBlockBehindSize = dirInfo->freeSpaceOffset - slot->end;
+			short recordSize = slot->end - slot->begin;
+			short shiftOffset = recordSize - tombStoneSize;
+			memmove((char*) pageData + slot->begin + tombStoneSize, (char*) pageData + slot->end,dataBlockBehindSize);
+			dirInfo->freeSpaceOffset -= (recordSize - tombStoneSize);
+			shiftSlotInfo(pageData, 0-shiftOffset, iter1);
+			slot->end = slot->begin + tombStoneSize;
+			vector<short> *freeSpace = directoryOfSlots[fileHandle.getFileName()];
+			(*freeSpace)[pageN] +=shiftOffset;
 		}
 	}
 
