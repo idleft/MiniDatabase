@@ -20,14 +20,14 @@ RelationManager::RelationManager()
 	createColumnCatalog();
 	createIndexCatalog();
 
-//	if( _pfm->fileExists( TABLE_CATALOG_FILE_NAME  ) )
-//		loadCatalog();
-//	else
-//	{
+	if( _pfm->fileExists( TABLE_CATALOG_FILE_NAME  ) )
+		loadCatalog();
+	else
+	{
 		createCatalogFile( "table", tableCatalog );
 		createCatalogFile( "column", columnCatalog );
 		createCatalogFile( "index", indexCatalog );
-//	}
+	}
 
 }
 
@@ -157,30 +157,57 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 
 	FileHandle fileHandle;
 
-//	cout<<"Get attribute for table: "<<tableName<<endl;
+	attrs.clear();
+
+	if (tableRIDMap.find(tableName) == tableRIDMap.end() )
+		return result;
+
+//	cout<<"Get attribute for table: "<< tableName <<endl;
 	_rbfm->openFile(COLUMN_CATALOG_FILE_NAME, fileHandle);
 	int colCatalogSize = getCatalogSize(columnCatalog);
+
+//	cout<<"Get colCatalogSize: "<< colCatalogSize<<endl;
 
 	map<int, RID>* tableIdSet = tableRIDMap[tableName];
 //	printf("Table RID map size: %d  Table id set: %d\n",tableRIDMap.size(),tableIdSet->size());
 	for(map<int, RID>::iterator iter1 = tableIdSet->begin(); iter1!=tableIdSet->end(); iter1++){
+
 		int tableId = iter1->first; // only require tableId
+
+//		cout<<"Get tableId: "<< tableId <<endl;
+
 		map<int, RID> *attrMap = columnRIDMap[tableId];
+
 		for(map<int, RID>::iterator iter2 = attrMap->begin(); iter2 != attrMap->end(); iter2++){
+
 			Attribute colAttri;
+
 			RID attrRid = iter2->second;
+
+//			cout<<"Get attrRid: "<< attrRid.pageNum << "," << attrRid.slotNum << endl;
+
 			void* colDescriptor = malloc(colCatalogSize);
+
+//			cout<<"Get malloc succeeded" << endl;
+
+
 			result = _rbfm->readRecord(fileHandle, columnCatalog, attrRid, colDescriptor);
 			if( result != 0 )
 				return result;
+
+//			cout<<"Get readRecord: "<< result << endl;
 
 			result = colDescriptorToAttri(colDescriptor, colAttri);
 			if( result != 0 )
 				return result;
 
+//			cout<<"Get colDescriptorToAttri: "<< result << endl;
+
 //			cout << colAttri.length << "," << colAttri.name << "," << colAttri.type << endl;
 
 			attrs.push_back( colAttri );
+
+			free( colDescriptor );
 		}
 	}
 
@@ -256,10 +283,25 @@ RC RelationManager::deleteTuple(const string &tableName, const RID &rid)
 	FileHandle fileHandle;
 	RC result = -1;
 	vector<Attribute> tableAttributes;
-    _rbfm->openFile(tableName+".tbl",fileHandle);
-	getAttributes(tableName, tableAttributes);
+    result = _rbfm->openFile(tableName+".tbl",fileHandle);
+    if( result != 0 )
+    	return result;
+
+    cout << "deleteTuple: openFile" << endl;
+
+	result = getAttributes(tableName, tableAttributes);
+	if( result != 0 )
+		return result;
+
+	cout << "deleteTuple: getAttributes" << endl;
+
 	result = _rbfm->deleteRecord(fileHandle, tableAttributes, rid);
-    _rbfm->closeFile(fileHandle);
+	if( result != 0 )
+		return result;
+
+	cout << "deleteTuple: deleteRecord" << endl;
+
+    result = _rbfm->closeFile(fileHandle);
     return result;
 }
 
@@ -285,18 +327,26 @@ RC RelationManager::readTuple(const string &tableName, const RID &rid, void *dat
 	RC result = -1;
 	vector<Attribute> tableAttributes;
 
-	if(tableRIDMap.find(tableName) == tableRIDMap.end())
+	cout << "readTuple tableName:" << tableName << endl;
+
+	if( tableRIDMap.find(tableName) == tableRIDMap.end() )
 	{
 		return result;
 	}
 
-    result = _rbfm->openFile(tableName+".tbl",fileHandle);
-    if(result !=0)
-    	return result;
+	cout << "readTuple after finding RIDMap result:" << result << endl;
 
     result = getAttributes(tableName, tableAttributes);
     if( result != 0 )
     	return result;
+
+    cout << "readTuple after getAttributes:" << result << endl;
+
+    result = _rbfm->openFile(tableName+".tbl",fileHandle);
+	if(result !=0)
+		return result;
+
+    cout << "readTuple after fopenFile:" << result << endl;
 
     result = _rbfm->readRecord(fileHandle, tableAttributes, rid, data);
     if( result != 0 )
@@ -304,7 +354,12 @@ RC RelationManager::readTuple(const string &tableName, const RID &rid, void *dat
     	_rbfm->closeFile(fileHandle);
     	return -1;
     }
+
+    cout << "readTuple after readRecord:" << result << endl;
+
     result = _rbfm->closeFile(fileHandle);
+
+    cout << "readTuple after closeFile:" << result << endl;
     return result;
 }
 

@@ -342,59 +342,56 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 	Slot* slot;
 
 	if( fileHandle.getFile() == NULL )
-		return -1;
+		return result;
 
 	unsigned pageNum = rid.pageNum;
 	unsigned slotNum = rid.slotNum;
 
 	char* page = (char*)malloc(PAGE_SIZE);
 
-	// find page
-	result = fileHandle.readPage(pageNum, page);
-	if( result != 0 )
-		return -1;
+	bool isTombStone = true;
+	while( isTombStone )
+	{
+			// find page
+			result = fileHandle.readPage(pageNum, page);
+			if( result != 0 )
+				break;
 
-	while(checkTombStone(page, pageNum, slotNum)){
-		slot = goToSlot(page+PAGE_SIZE, slotNum);
-		pageNum = *(short *)((char*)page+slot->begin);
-		slotNum = *(short *)((char*)page+slot->begin+sizeof(short));
-		fileHandle.readPage(pageNum, page);
+
+			// reach to the end of Page
+			const char* endOfPage = page + PAGE_SIZE;
+
+			Slot* slot = goToSlot(endOfPage, slotNum);
+			//if( slot->begin < 0 )
+			//	return result;
+			char* beginOfRecord = page + slot->begin;
+			isTombStone = isRecordTombStone(beginOfRecord, pageNum, slotNum);
+
+			if( (short*)beginOfRecord < 0 )
+				return -1;
+
+			//	cout << "readRecord beginOfRecord" << endl;
+
+			if( !isTombStone ) {
+
+				short lengthOfRecord = slot->end - slot->begin;
+				void* record = malloc(lengthOfRecord);
+
+				//	cout << "readRecord lengthOfRecord=" << lengthOfRecord << endl;
+
+				// read record
+				memcpy( record, beginOfRecord, lengthOfRecord);
+
+				//	cout << "readRecord memcpy=" << lengthOfRecord << endl;
+
+				result = recordToData(record, recordDescriptor, data);
+
+				//	cout << "readRecord recordToData=" << result << endl;
+
+				free(record);
+			}
 	}
 
-
-//	cout << "readRecord readPage" << result << endl;
-
-	// reach to the end of Page
-	const char* endOfPage = page + PAGE_SIZE;
-
-	// find slot
-	slot = goToSlot(endOfPage, slotNum);
-	//if( slot->begin < 0 )
-	//	return result;
-
-//	cout << "readRecord goToSlot" << endl;
-
-	char* beginOfRecord = page + slot->begin;
-	if( *(short*)beginOfRecord < 0 )
-		return -1;
-
-//	cout << "readRecord beginOfRecord" << endl;
-
-	short lengthOfRecord = slot->end - slot->begin;
-	void* record = malloc(lengthOfRecord);
-
-//	cout << "readRecord lengthOfRecord=" << lengthOfRecord << endl;
-
-	// read record
-	memcpy( record, beginOfRecord, lengthOfRecord);
-
-//	cout << "readRecord memcpy=" << lengthOfRecord << endl;
-
-	result = recordToData(record, recordDescriptor, data);
-
-//	cout << "readRecord recordToData=" << result << endl;
-
-	free(record);
 	free(page);
 
 	return result;
@@ -629,14 +626,22 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 	if( fileHandle.getFile() == NULL )
 			return result;
 
+	cout << "deleteRecord: fileHandle.getFile()" << result << endl;
+
 	if( directoryOfSlots.find( fileHandle.getFileName() ) ==
 			directoryOfSlots.end() )
 		return result;
 
+	cout << "deleteRecord:directoryOfSlots" << result << endl;
+
 	unsigned pageNum = rid.pageNum;
 	unsigned slotNum = rid.slotNum;
 
+	cout << "deleteRecord:pageNum=" << pageNum << " slotNum="<< slotNum << endl;
+
 	vector<short> *slotDirectory = directoryOfSlots[fileHandle.getFileName()];
+
+	cout << "deleteRecord:slotDirectory size" << slotDirectory->size() << endl;
 
 	char* page = (char*)malloc( PAGE_SIZE );
 
@@ -647,6 +652,8 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 		if( result != 0 )
 			return result;
 
+		cout << "deleteRecord:readPage" << result << endl;
+
 		const char* endOfPage = page + PAGE_SIZE;
 
 		Slot* slot = goToSlot( endOfPage, slotNum );
@@ -656,14 +663,21 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 			break;
 		}
 
+		cout << "deleteRecord:goToSlot" << result << endl;
+
 		char* data = page + slot->begin;
 
 		isTombStone = isRecordTombStone( data, pageNum, slotNum );
 
+		cout << "deleteRecord:isRecordTombStone" << isTombStone << endl;
+
 		// delete the record by setting offset to -1
 		// Delete not by set offset to -1, is set the first byte of data
 		//slot->begin = -1 - slot->begin;
-		*(short*) data = short(-1);
+		*(short *)data == -1;
+//		*(short*) data = short(-1);
+
+		cout << "deleteRecord:data set to -1" << endl;
 
 		// increase free space # WE do not increase the freespace until we reorgnize page
 //		short sizeOfRecord = getSizeOfRecord( recordDescriptor, data );
@@ -671,6 +685,8 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 		result = fileHandle.writePage( pageNum, page );
 		if( result != 0 )
 			break;
+
+		cout << "deleteRecord:writePage" << endl;
 
 	}
 
