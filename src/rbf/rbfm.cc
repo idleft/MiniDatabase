@@ -362,14 +362,19 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 			const char* endOfPage = page + PAGE_SIZE;
 
 			Slot* slot = goToSlot(endOfPage, slotNum);
+// Xikui
+			if( slot->begin < 0 )
+				return result;
+// Xikui
 			//if( slot->begin < 0 )
 			//	return result;
 			char* beginOfRecord = page + slot->begin;
 			isTombStone = isRecordTombStone(beginOfRecord, pageNum, slotNum);
 
+/* Xikui
 			if( (short*)beginOfRecord < 0 )
 				return -1;
-
+*/
 			//	cout << "readRecord beginOfRecord" << endl;
 
 			if( !isTombStone ) {
@@ -672,9 +677,8 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 		cout << "deleteRecord:isRecordTombStone" << isTombStone << endl;
 
 		// delete the record by setting offset to -1
+		slot->begin = -1 - slot->begin;
 		// Delete not by set offset to -1, is set the first byte of data
-		//slot->begin = -1 - slot->begin;
-		*(short *)data == -1;
 //		*(short*) data = short(-1);
 
 		cout << "deleteRecord:data set to -1" << endl;
