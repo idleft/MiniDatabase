@@ -366,8 +366,7 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 			if( slot->begin < 0 )
 				return result;
 // Xikui
-			//if( slot->begin < 0 )
-			//	return result;
+
 			char* beginOfRecord = page + slot->begin;
 			isTombStone = isRecordTombStone(beginOfRecord, pageNum, slotNum);
 
