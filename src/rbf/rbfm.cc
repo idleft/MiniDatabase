@@ -239,7 +239,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 
 			appendRecord(page, record, sizeOfRecord, slotNum);
 
-			(*slotDirectory)[pageNum] -= sizeOfRecord + sizeof(Slot);
+			(*slotDirectory)[pageNum] -= (sizeOfRecord + sizeof(Slot));
 
 //			cout<<"insertRecord pageNum=" << pageNum << endl;
 
@@ -339,6 +339,7 @@ RC RecordBasedFileManager::newPageForRecord(const void* record, void * page, int
 RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data) {
 
 	RC result = -1;
+	Slot* slot;
 
 	if( fileHandle.getFile() == NULL )
 		return -1;
@@ -353,20 +354,28 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 	if( result != 0 )
 		return -1;
 
+	while(checkTombStone(page, pageNum, slotNum)){
+		slot = goToSlot(page+PAGE_SIZE, slotNum);
+		pageNum = *(short *)((char*)page+slot->begin);
+		slotNum = *(short *)((char*)page+slot->begin+sizeof(short));
+		fileHandle.readPage(pageNum, page);
+	}
+
+
 //	cout << "readRecord readPage" << result << endl;
 
 	// reach to the end of Page
 	const char* endOfPage = page + PAGE_SIZE;
 
 	// find slot
-	Slot* slot = goToSlot(endOfPage, slotNum);
+	slot = goToSlot(endOfPage, slotNum);
 	//if( slot->begin < 0 )
 	//	return result;
 
 //	cout << "readRecord goToSlot" << endl;
 
 	char* beginOfRecord = page + slot->begin;
-	if( (short*)beginOfRecord < 0 )
+	if( *(short*)beginOfRecord < 0 )
 		return -1;
 
 //	cout << "readRecord beginOfRecord" << endl;
@@ -723,20 +732,18 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 		cout<<"reorg"<<endl;
 		}
 		cout<<2.43<<endl;
-		if(freeSpace==NULL)
-			cout<<"shit happens"<<endl;
-		if(newRecordSize < oldRecordSize||(newRecordSize > oldRecordSize&&(sizeDiff > (*freeSpace)[rid.pageNum]))){
+		if(newRecordSize < oldRecordSize||(newRecordSize > oldRecordSize&&(sizeDiff < (*freeSpace)[rid.pageNum]))){
 			// do nothing to avoid overflow
 			cout<<"reorganize fit"<<endl;
 			short shiftDataBlockSize = dirInfo->freeSpaceOffset - slot->end;
-//			memmove((char*)pageData + slot->end + sizeDiff, (char*)pageData + slot->end, shiftDataBlockSize);
+			memmove((char*)pageData + slot->end + sizeDiff, (char*)pageData + slot->end, shiftDataBlockSize);
 //			// shift all slot behind
 			shiftSlotInfo(pageData, sizeDiff,rid.slotNum);
 //			//update free space
 			dirInfo->freeSpaceOffset -= sizeDiff;
 			slot->end += sizeDiff;
 //			//update record
-//			memcpy((char *)pageData + slot->begin, data, newRecordSize);
+			memcpy((char *)pageData + slot->begin, data, newRecordSize);
 			cout<<"do nothing"<<endl;
 			result = 0;
 		}
