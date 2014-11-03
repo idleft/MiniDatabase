@@ -366,8 +366,7 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 			if( slot->begin < 0 )
 				return -1;
 // Xikui
-			//if( slot->begin < 0 )
-			//	return result;
+
 			char* beginOfRecord = page + slot->begin;
 			isTombStone = isRecordTombStone(beginOfRecord, pageNum, slotNum);
 
@@ -663,6 +662,19 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 
 //		cout << "deleteRecord:data set to -1" << endl;
 
+<<<<<<< HEAD
+=======
+		// delete the record by setting offset to -1
+//		slot->begin = -1 - slot->begin;
+		slot->begin = - slot->begin;
+		// Delete not by set offset to -1, is set the first byte of data
+//		*(short*) data = short(-1);
+
+		cout << "deleteRecord:data set to -1" << endl;
+
+		// increase free space # WE do not increase the freespace until we reorgnize page
+//		short sizeOfRecord = getSizeOfRecord( recordDescriptor, data );
+>>>>>>> 8339c0ef9c5c6fa24e1922c36773acf34f99c37f
 //		(*slotDirectory)[pageNum] += sizeOfRecord;// increase multiple times?
 		result = fileHandle.writePage( pageNum, page );
 		if( result != 0 )
@@ -888,6 +900,47 @@ RC RecordBasedFileManager::reorganizeFile(FileHandle &fileHandle, const vector<A
 	return result;
 }
 
+RBFM_ScanIterator::RBFM_ScanIterator()
+{
+	compOp = NO_OP;
+	condition = NULL;
+	this->conditionAttrType = TypeInt;
+	this->conditionAttrNum = 0;
+
+	pageNum = 0;
+	slotNum = 0;
+
+	pageData = NULL;
+	endOfPage = NULL;
+
+	constructAttrNum.clear();
+	constructAttrType.clear();
+	tombstoneMap.clear();
+}
+
+RBFM_ScanIterator::~RBFM_ScanIterator(){}
+
+RC RBFM_ScanIterator::close()
+{
+	compOp = NO_OP;
+	condition = NULL;
+	this->conditionAttrType = TypeInt;
+	this->conditionAttrNum = 0;
+
+	pageNum = 0;
+	slotNum = 0;
+
+	free(pageData);
+	pageData = NULL;
+	endOfPage = NULL;
+
+	constructAttrNum.clear();
+	constructAttrType.clear();
+	tombstoneMap.clear();
+
+	return 0;
+}
+
 
 RC RBFM_ScanIterator::initialize(FileHandle &fileHandle,
 		  const vector<Attribute> &recordDescriptor,
@@ -914,7 +967,27 @@ RC RBFM_ScanIterator::initialize(FileHandle &fileHandle,
 
 	result = fileHandle.readPage( pageNum, pageData );
 
+	cout << "RBFM_ScanIterator::initialize" << endl;
+
+	for (unsigned i = 0, j = 0; i < recordDescriptor.size() && j < attributeNames.size(); i++) {
+			Attribute attr = recordDescriptor[i];
+
+	 		if (attr.name.compare(conditionAttribute) == 0) {
+	 			conditionAttrType = attr.type;
+	 			conditionAttrNum = (short)i;
+	 		}
+
+			if (attr.name.compare(attributeNames[j]) == 0) {
+	 			j++;
+	 			constructAttrNum.push_back((short)i);
+	 			constructAttrType.push_back(attr.type);
+	 		}
+	 }
+
 	dirInfo = _rbfm->goToDirectoryOfSlotsInfo(endOfPage); // EXTREMLLY not safe
+
+	cout << "RBFM_ScanIterator::dirInfo" << endl;
+
 	totalSlotNum = dirInfo->numOfSlots;
 
 	if( result != 0 )
@@ -1008,11 +1081,66 @@ RC  RBFM_ScanIterator::inrecreaseIteratorPos(){
 
 RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 {
+	RC result= -1;
+	void *attribute = malloc(PAGE_SIZE);
+	char *record;
+	int attrLength = 0;
 
+	do {
+		slotNum++;
+
+		if( slotNum > totalSlotNum )
+		{
+			slotNum = 1;
+			pageNum++;
+
+			if( pageNum >= fileHandle.getNumberOfPages() )
+				return RBFM_EOF;
+
+			fileHandle.readPage( pageNum, pageData );
+		}
+
+		rid.pageNum = pageNum;
+		rid.slotNum = slotNum;
+
+		slot = (Slot*)(endOfPage - sizeof(DirectoryOfSlotsInfo) - slotNum*sizeof(Slot));
+
+		if( slot->begin < 0 )
+			continue;
+
+		record = pageData + slot->begin;
+
+		if( *(short*)record == -1 )
+		{
+			RID newRID;
+			newRID.pageNum = *(unsigned *)(record + sizeof(short));
+			newRID.slotNum = *(unsigned *)(record + sizeof(short) + sizeof(unsigned));
+
+			tombstoneMap[newRID.pageNum * 1000 + newRID.slotNum] = newRID.pageNum * 1000 + slotNum;
+			continue;
+		}
+
+		if( tombstoneMap.find(rid.pageNum * 1000 + slotNum) != tombstoneMap.end() ) {
+			unsigned newRID = tombstoneMap[rid.pageNum * 1000 + slotNum];
+			tombstoneMap.erase(rid.pageNum * 1000 + slotNum);
+			rid.pageNum = newRID / 1000;
+			rid.slotNum = newRID % 1000;
+		}
+
+		readAttributeForScan( record, attribute, conditionAttrNum, conditionAttrType, attrLength );
+		result = checkCondition( attribute, conditionAttrName, recordDescriptor );
+
+	} while ( !result );
+
+	free( attribute );
+
+	return constructAttributeForScan( record, data, constructAttrType, constructAttrNum );
+
+/*
 	RC result= -1;
 	RC tombStoneChk = -1;
 
-	while(pageNum<totalPageNum&&result){
+	while( pageNum < totalPageNum && result ){
 		rid.pageNum = pageNum;
 		rid.slotNum = slotNum;
 
@@ -1029,5 +1157,52 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 		}
 	}
 	return result;
+	*/
 }
 
+RC RBFM_ScanIterator::readAttributeForScan(char *record, void *attribute, short numOfAttribute, AttrType type, int &attrLength)
+{
+	short begin = *(short*)(record + sizeof(short) * (numOfAttribute + 1));
+	short end = *(short*)(record + sizeof(short) * (numOfAttribute + 2));
+
+	attrLength = (int) (end - begin);
+
+	if( type == TypeInt )
+	{
+		memcpy( attribute, record + begin, sizeof(int));
+	}
+	else if ( type == TypeReal )
+	{
+		memcpy( attribute, record + begin, sizeof(float));
+	}
+	else if( type == TypeVarChar )
+	{
+		int offset = 0;
+
+		memcpy( attribute, &attrLength, sizeof(int) );
+		offset += sizeof(int);
+		memcpy( (char*)attribute + offset, record + begin, attrLength );
+		attrLength += offset;
+	}
+
+	return 0;
+
+}
+
+RC RBFM_ScanIterator::constructAttributeForScan(char* record, void* data, vector<AttrType> attrType, vector<short> attrNum)
+{
+	int offset = 0;
+	int attrLength = 0;
+
+	void* attribute = malloc(PAGE_SIZE);
+
+	for(unsigned i = 0; i < attrNum.size(); i++ )
+	{
+		readAttributeForScan( record, attribute, attrNum[i], attrType[i], attrLength );
+		memcpy( (char*)data+offset, attribute, attrLength );
+		offset += attrLength;
+	}
+
+	free( attribute );
+	return 0;
+}

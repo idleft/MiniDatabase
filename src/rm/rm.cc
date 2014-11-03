@@ -410,6 +410,8 @@ RC RelationManager::scan(const string &tableName,
 	if( result == -1 )
 		return result;
 
+	cout << "RelationManager::scan" << endl;
+
 	if( tableName.compare(TABLE_CATALOG_FILE_NAME) == 0 )
 	{
 		return rm_ScanIterator.initialize(tableCatalog, conditionAttribute, compOp, value, attributeNames);
@@ -427,8 +429,6 @@ RC RelationManager::scan(const string &tableName,
 
 		return rm_ScanIterator.initialize(catalogAttributes, conditionAttribute, compOp, value, attributeNames);
 	}
-
-    return -1;
 }
 
 // Extra credit
@@ -824,6 +824,8 @@ RC RM_ScanIterator::initialize(vector<Attribute> recordDescriptor,
 	      const void *value,
 	      const vector<string> &attributeNames)
 {
+	cout << "RelationManager::initialize" << endl;
+
 	return _rbfm_scanIterator.initialize(fileHandle, recordDescriptor, conditionAttribute, compOp, value, attributeNames);
 /*
 	RBFM_ScanIterator rbfm_it;
