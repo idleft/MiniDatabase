@@ -929,16 +929,16 @@ int main()
     vector<int> sizes;
 //
 	// Insert Tuple
-    TEST_RM_9("tbl_employee4", rids, sizes);
-        rids.clear();
-        sizes.clear();
-    TEST_RM_10("tbl_employee4", rids, sizes);
-    rids.clear();
-    sizes.clear();
-    TEST_RM_11("tbl_employee4", rids, sizes);
-    rids.clear();
-    sizes.clear();
-    TEST_RM_12("tbl_employee4", rids);
+//    TEST_RM_9("tbl_employee4", rids, sizes);
+//        rids.clear();
+//        sizes.clear();
+//    TEST_RM_10("tbl_employee4", rids, sizes);
+//    rids.clear();
+//    sizes.clear();
+//    TEST_RM_11("tbl_employee4", rids, sizes);
+//    rids.clear();
+//    sizes.clear();
+//    TEST_RM_12("tbl_employee4", rids);
 //    cout << endl << "Test Read Tuple .." << endl;
 //
 //    rids.clear();
@@ -974,7 +974,7 @@ int main()
 //
 //    cout << endl << "Test Delete Tuples and Delete Table  .." << endl;
 //    rids.clear();
-//	//vector<RID> rids;
+	//vector<RID> rids;
 //
 //	// DeleteTuples/Table
 //    TEST_RM_14("tbl_employee4", rids);
@@ -984,7 +984,7 @@ int main()
 //    createTable("tbl_b_employee4");
 //    TEST_RM_15("tbl_b_employee4");
     // NOTE: your Tables table must be called "Tables"
-//    string catalog_table_name = "Tables";
+    string catalog_table_name = "Tables";
 //
 //    cout << endl << "Test Catalog Information .." << endl;
 //
