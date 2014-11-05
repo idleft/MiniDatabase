@@ -35,15 +35,15 @@ RelationManager::~RelationManager()
 {
 	_rm = NULL;
 
-	map< string, map<int, RID> >:: iterator it;
-//	for( it= tableRIDMap.begin(); it != tableRIDMap.end(); it++)
-//		delete it->second;
-	tableRIDMap.clear();
+	map< string, map<int, RID> *>:: iterator it;
+	for( it= tableRIDMap.begin(); it != tableRIDMap.end(); it++)
+		delete it->second;
+//	tableRIDMap.clear();
 
-	map< int, map<int, RID> >:: iterator cit;
-//	for( cit= columnRIDMap.begin(); cit != columnRIDMap.end(); cit++)
-//			delete cit->second;
-	columnRIDMap.clear();
+	map< int, map<int, RID> *>:: iterator cit;
+	for( cit= columnRIDMap.begin(); cit != columnRIDMap.end(); cit++)
+			delete cit->second;
+//	columnRIDMap.clear();
 
 }
 
