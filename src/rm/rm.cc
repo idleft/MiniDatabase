@@ -19,11 +19,11 @@ RelationManager::RelationManager()
 	createTableCatalog();
 	createColumnCatalog();
 	createIndexCatalog();
-
+/*
 	createCatalogFile( "table", tableCatalog );
 	createCatalogFile( "column", columnCatalog );
 	createCatalogFile( "index", indexCatalog );
-
+*/
 	if( _pfm->fileExists( TABLE_CATALOG_FILE_NAME  ) )
 		loadCatalog();
 	else
@@ -164,7 +164,6 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 	attrs.clear();
 
 	cout << "RelationManager::getAttributes : tableName=" << tableName << endl;
-
 
 	cout << "RelationManager::getAttributes : tableRIDMap.size()=" << tableRIDMap.size() << endl;
 
@@ -429,12 +428,16 @@ RC RelationManager::scan(const string &tableName,
 
 	cout << "RelationManager::scan" << endl;
 
+	cout << "conditionAttribute: " <<  conditionAttribute  << endl;
+
 	if( fileName.compare(TABLE_CATALOG_FILE_NAME) == 0 )
 	{
+		cout << "fileName is " << TABLE_CATALOG_FILE_NAME << endl;
 		return rm_ScanIterator.initialize(tableCatalog, conditionAttribute, compOp, value, attributeNames);
 	}
 	else if( fileName.compare(COLUMN_CATALOG_FILE_NAME) == 0 )
 	{
+		cout << "fileName is " << COLUMN_CATALOG_FILE_NAME << endl;
 		return rm_ScanIterator.initialize(columnCatalog, conditionAttribute, compOp, value, attributeNames);
 	}
 	else
@@ -578,6 +581,7 @@ RC RelationManager::loadCatalog()
 	int offset = 0;
 
 	// load table catalog
+	cout << "tableCatalog[0].name=" << tableCatalog[0].name << " tableCatalog[1].name=" << tableCatalog[1].name << endl;
 	attributeNames.push_back(tableCatalog[0].name);	// tableID
 	attributeNames.push_back(tableCatalog[1].name);	// tableName
 
