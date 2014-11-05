@@ -930,14 +930,16 @@ RC RBFM_ScanIterator::initialize(FileHandle &fileHandle,
 	this->targetPointer = value;
 	this->compOp = compOp;
 
+	this->condition = value;
+
+	if( condition == NULL )
+	cout << " RBFM_ScanIterator::initialize:" << "condition is NULL"  << endl;
 	totalPageNum = fileHandle.getNumberOfPages();
-	if(totalPageNum <=0)
-		return result;
 
 	pageData = (char*) malloc( PAGE_SIZE );
 	endOfPage = pageData + PAGE_SIZE;
 
-	result = fileHandle.readPage( pageNum, pageData );
+	fileHandle.readPage( pageNum, pageData );
 
 	cout << "RBFM_ScanIterator::initialize" << endl;
 
@@ -962,10 +964,87 @@ RC RBFM_ScanIterator::initialize(FileHandle &fileHandle,
 
 	totalSlotNum = dirInfo->numOfSlots;
 
+	return 0;
+}
 	if( result != 0 )
-		return result;
+bool RBFM_ScanIterator::checkConditionForAttribute(void* attribute, const void* condition, AttrType attrType, CompOp compOp){
+	bool result = true;
 
-	return -1;
+	if( condition == NULL )
+	{
+		cout << "checkConditionForAttribute: condition is NULL" << endl;
+		return result;
+	}
+
+	cout << "checkConditionForAttribute: attrType" << endl;
+
+	// Read field value and compare
+	if(attrType == TypeInt){
+		int attr = *(int *)attribute;
+		int cond = *(int *)condition;
+
+		cout << "checkConditionForAttribute: TypeInt" << "attr" << attr << ", cond=" << cond << endl;
+		cout << "compOp:" << compOp << endl;
+
+		switch(compOp){
+			case EQ_OP :  result = (attr == cond); break;
+			case LT_OP :  result = (attr < cond); break;    // <
+			case GT_OP :  result = (attr > cond); break;   // >
+			case LE_OP :  result = (attr <= cond); break;   // <=
+			case GE_OP :  result = (attr >= cond); break;   // >=
+			case NE_OP :  result = (attr != cond); break;   // !=
+			case NO_OP :  result = true; break;
+		}
+	}
+	else if (attrType == TypeReal){
+		int attr = *(float *)attribute;
+		int cond = *(float *)condition;
+
+		int compareResult ;
+
+		cout << "checkConditionForAttribute: TypeReal" << "attr" << attr << ", cond=" << cond << endl;
+		cout << "compOp:" << compOp << endl;
+
+		if( attr - cond > 0.00001 )
+			compareResult = 1;
+		else if( attr - cond < -0.00001 )
+			compareResult = -1;
+		else
+			compareResult = 0;
+
+		switch(compOp){
+			case EQ_OP :  result = (compareResult == 0); break;
+			case LT_OP :  result = (compareResult < 0); break;    // <
+			case GT_OP :  result = (compareResult > 0); break;   // >
+			case LE_OP :  result = (compareResult <= 0); break;   // <=
+			case GE_OP :  result = (compareResult >= 0); break;   // >=
+			case NE_OP :  result = (compareResult != 0); break;   // !=
+			case NO_OP :  result = true; break;
+		}
+	}
+	else{
+		int attrLen = *(char*)attribute;
+		string attr((char*)attribute + sizeof(int), attrLen);
+
+		int condLen = *(char*)condition;
+		string cond((char*)condition + sizeof(int), condLen);
+
+		int strCmpRes = strcmp(attr.c_str(), cond.c_str());
+		cout << "checkConditionForAttribute: strCmpRes" << strCmpRes << "attr" << attr << ", cond=" << cond << endl;
+		cout << "compOp:" << compOp << endl;
+		switch(compOp){
+			case EQ_OP :  result = (strCmpRes == 0); break;
+			case LT_OP :  result = (strCmpRes < 0 ); break;    // <
+			case GT_OP :  result = (strCmpRes > 0); break;   // >
+			case LE_OP :  result = (strCmpRes <= 0); break;   // <=
+			case GE_OP :  result = (strCmpRes >= 0); break;   // >=
+			case NE_OP :  result = (strCmpRes != 0); break;   // !=
+			case NO_OP :  result = true; break;
+		}
+	}
+
+	cout << "checkConditionForAttribute result: " << result << endl;
+	return result;
 }
 
 bool RBFM_ScanIterator::checkCondition(void* data, string &attrName, vector<Attribute> &recordDescriptor){
@@ -1053,14 +1132,18 @@ RC  RBFM_ScanIterator::inrecreaseIteratorPos(){
 
 RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 {
-	RC result= -1;
+	cout << "RBFM_ScanIterator::getNextRecord 1" << endl;
+
+	bool result = false;
 	void *attribute = malloc(PAGE_SIZE);
 	char *record;
 	int attrLength = 0;
 
+	cout << "RBFM_ScanIterator::getNextRecord 2" << endl;
 	do {
 		slotNum++;
 
+		cout << "RBFM_ScanIterator::getNextRecord totalSlotNum=" << totalSlotNum << endl;
 		if( slotNum > totalSlotNum )
 		{
 			slotNum = 1;
@@ -1100,13 +1183,20 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 		}
 
 		readAttributeForScan( record, attribute, conditionAttrNum, conditionAttrType, attrLength );
-		result = checkCondition( attribute, conditionAttrName, recordDescriptor );
+//		result = checkCondition( attribute, conditionAttrName, recordDescriptor );
+		result = checkConditionForAttribute( attribute, condition, conditionAttrType, compOp );
 
+		cout << "checkConditionForAttribute result=" << result << endl;
 	} while ( !result );
 
 	free( attribute );
 
-	return constructAttributeForScan( record, data, constructAttrType, constructAttrNum );
+	cout << "attribute freed" << endl;
+
+	cout << "getNextRecord result=" << result << endl;
+
+	result = constructAttributeForScan( record, data, constructAttrType, constructAttrNum );
+	return result;
 
 /*
 	RC result= -1;
@@ -1138,6 +1228,7 @@ RC RBFM_ScanIterator::readAttributeForScan(char *record, void *attribute, short 
 	short end = *(short*)(record + sizeof(short) * (numOfAttribute + 2));
 
 	attrLength = (int) (end - begin);
+	cout << "numOfAttribute= " << numOfAttribute << " attrLength=" << attrLength << endl;
 
 	if( type == TypeInt )
 	{
@@ -1171,6 +1262,8 @@ RC RBFM_ScanIterator::constructAttributeForScan(char* record, void* data, vector
 	for(unsigned i = 0; i < attrNum.size(); i++ )
 	{
 		readAttributeForScan( record, attribute, attrNum[i], attrType.at(i), attrLength );
+		cout << "attrNum[i]=" << attrNum[i] << ",attType[i]=" << attrType[i] <<
+				" ,attrLength=" << attrLength << endl;
 		memcpy( (char*)data+offset, attribute, attrLength );
 		offset += attrLength;
 	}
