@@ -932,6 +932,9 @@ RC RBFM_ScanIterator::initialize(FileHandle &fileHandle,
 
 	this->condition = value;
 
+	cout << " RBFM_ScanIterator::initialize: fileName=" << fileHandle.getFileName()
+			<< ", fileHandle.getNumberOfPages()="<< fileHandle.getNumberOfPages() << endl;
+
 	if( condition == NULL )
 	cout << " RBFM_ScanIterator::initialize:" << "condition is NULL"  << endl;
 	totalPageNum = fileHandle.getNumberOfPages();
