@@ -163,6 +163,12 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 
 
 	cout << "RelationManager::getAttributes : tableRIDMap.size()=" << tableRIDMap.size() << endl;
+
+	for(map<string, map<int, RID>*>::iterator iter1 = tableRIDMap.begin(); result&&iter1!=tableRIDMap.end();iter1++){
+		string key = iter1->first;
+		cout << "RelationManager::getAttributes : key=" << key << endl;
+	}
+
 	if (tableRIDMap.find(tableName) == tableRIDMap.end() )
 		return result;
 
