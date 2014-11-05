@@ -176,19 +176,19 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 	if (tableRIDMap.find(tableName) == tableRIDMap.end() )
 		return result;
 
-//	cout<<"Get attribute for table: "<< tableName <<endl;
+	cout<<"Get attribute for table: "<< tableName <<endl;
 	_rbfm->openFile(COLUMN_CATALOG_FILE_NAME, fileHandle);
 	int colCatalogSize = getCatalogSize(columnCatalog);
 
-//	cout<<"Get colCatalogSize: "<< colCatalogSize<<endl;
+	cout<<"Get colCatalogSize: "<< colCatalogSize<<endl;
 
 	map<int, RID>* tableIdSet = tableRIDMap[tableName];
-//	printf("Table RID map size: %d  Table id set: %d\n",tableRIDMap.size(),tableIdSet->size());
+	printf("Table RID map size: %d  Table id set: %d\n",tableRIDMap.size(),tableIdSet->size());
 	for(map<int, RID>::iterator iter1 = tableIdSet->begin(); iter1!=tableIdSet->end(); iter1++){
 
 		int tableId = iter1->first; // only require tableId
 
-//		cout<<"Get tableId: "<< tableId <<endl;
+		cout<<"Get tableId: "<< tableId <<endl;
 
 		map<int, RID> *attrMap = columnRIDMap[tableId];
 
@@ -198,26 +198,26 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 
 			RID attrRid = iter2->second;
 
-//			cout<<"Get attrRid: "<< attrRid.pageNum << "," << attrRid.slotNum << endl;
+			cout<<"Get attrRid: "<< attrRid.pageNum << "," << attrRid.slotNum << endl;
 
 			void* colDescriptor = malloc(colCatalogSize);
 
-//			cout<<"Get malloc succeeded" << endl;
+			cout<<"Get malloc succeeded" << endl;
 
 
 			result = _rbfm->readRecord(fileHandle, columnCatalog, attrRid, colDescriptor);
 			if( result != 0 )
 				return result;
 
-//			cout<<"Get readRecord: "<< result << endl;
+			cout<<"Get readRecord: "<< result << endl;
 
 			result = colDescriptorToAttri(colDescriptor, colAttri);
 			if( result != 0 )
 				return result;
 
-//			cout<<"Get colDescriptorToAttri: "<< result << endl;
+			cout<<"Get colDescriptorToAttri: "<< result << endl;
 
-//			cout << colAttri.length << "," << colAttri.name << "," << colAttri.type << endl;
+			cout << colAttri.length << "," << colAttri.name << "," << colAttri.type << endl;
 
 			attrs.push_back( colAttri );
 
@@ -578,10 +578,10 @@ RC RelationManager::loadCatalog()
 	int offset = 0;
 
 	// load table catalog
-	attributeNames.push_back(tableCatalog.at(0).name);	// tableID
-	attributeNames.push_back(tableCatalog.at(1).name);	// tableName
+	attributeNames.push_back(tableCatalog[0].name);	// tableID
+	attributeNames.push_back(tableCatalog[1].name);	// tableName
 
-	scan( "table", tableCatalog.at(0).name, NO_OP, NULL, attributeNames, scanIterator);
+	scan( "table", tableCatalog[0].name, NO_OP, NULL, attributeNames, scanIterator);
 
 	while( scanIterator.getNextTuple( rid, data) != RM_EOF )
 	{
@@ -742,6 +742,7 @@ RC RelationManager::insertTableEntry( int tableID, string tableName, string catF
 
 	int varCharLen = tableName.length();
 	memcpy( data + offset, &varCharLen, sizeof(int));
+	cout << "varCharLen=" << varCharLen << endl;
 	offset += sizeof(int);
 	memcpy( data + offset, tableName.c_str(), varCharLen ); // modified by xk
 	offset += varCharLen;
