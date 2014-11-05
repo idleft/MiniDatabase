@@ -946,9 +946,14 @@ RC RBFM_ScanIterator::initialize(FileHandle &fileHandle,
 	for (unsigned i = 0, j = 0; i < recordDescriptor.size() && j < attributeNames.size(); i++) {
 			Attribute attr = recordDescriptor[i];
 
+			cout << "conditionAttribute=" << conditionAttribute <<
+					" attr.name=" << attr.name <<
+					" attributeNames[j]=" << attributeNames[j] << endl;
+
 	 		if (attr.name.compare(conditionAttribute) == 0) {
 	 			conditionAttrType = attr.type;
 	 			conditionAttrNum = (short)i;
+	 			cout << "conditionAttrNum=" << conditionAttrNum << endl;
 	 		}
 
 			if (attr.name.compare(attributeNames[j]) == 0) {
@@ -957,6 +962,8 @@ RC RBFM_ScanIterator::initialize(FileHandle &fileHandle,
 	 			constructAttrType.push_back(attr.type);
 	 		}
 	 }
+
+	cout << "conditionAttrNum=" << conditionAttrNum << endl;
 
 	dirInfo = _rbfm->goToDirectoryOfSlotsInfo(endOfPage); // EXTREMLLY not safe
 
@@ -1227,8 +1234,12 @@ RC RBFM_ScanIterator::readAttributeForScan(char *record, void *attribute, short 
 	short begin = *(short*)(record + sizeof(short) * (numOfAttribute + 1));
 	short end = *(short*)(record + sizeof(short) * (numOfAttribute + 2));
 
+	cout << "end= " << end << " begin=" << begin << " (end-begin)="<< (end-begin) << endl;
+
 	attrLength = (int) (end - begin);
 	cout << "numOfAttribute= " << numOfAttribute << " attrLength=" << attrLength << endl;
+
+	cout << "type= " << type << endl;
 
 	if( type == TypeInt )
 	{
@@ -1244,8 +1255,10 @@ RC RBFM_ScanIterator::readAttributeForScan(char *record, void *attribute, short 
 
 		memcpy( attribute, &attrLength, sizeof(int) );
 		offset += sizeof(int);
+		cout << "readAttributeForScan offset=" << offset << endl;
 		memcpy( (char*)attribute + offset, record + begin, attrLength );
 		attrLength += offset;
+		cout << "readAttributeForScan attrLength=" << attrLength << endl;
 	}
 
 	return 0;
@@ -1258,6 +1271,8 @@ RC RBFM_ScanIterator::constructAttributeForScan(char* record, void* data, vector
 	int attrLength = 0;
 
 	void* attribute = malloc(PAGE_SIZE);
+
+	cout << "constructAttributeForScan=" << attrNum.size() << endl;
 
 	for(unsigned i = 0; i < attrNum.size(); i++ )
 	{
