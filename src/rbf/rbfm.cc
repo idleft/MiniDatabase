@@ -381,16 +381,16 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 				short lengthOfRecord = slot->end - slot->begin;
 				void* record = malloc(lengthOfRecord);
 
-				//	cout << "readRecord lengthOfRecord=" << lengthOfRecord << endl;
+				cout << "readRecord lengthOfRecord=" << lengthOfRecord << endl;
 
 				// read record
 				memcpy( record, beginOfRecord, lengthOfRecord);
 
-				//	cout << "readRecord memcpy=" << lengthOfRecord << endl;
+					cout << "readRecord memcpy=" << lengthOfRecord << endl;
 
 				result = recordToData(record, recordDescriptor, data);
 
-				//	cout << "readRecord recordToData=" << result << endl;
+					cout << "readRecord recordToData=" << result << endl;
 
 				free(record);
 			}
@@ -541,6 +541,8 @@ RC RecordBasedFileManager::dataToRecord(const void* data, const vector<Attribute
 		{
 			memcpy( &varLength, (char*)data + elementStart, sizeof(int));
 			elementStart += sizeof(int);
+
+			cout << "varLength" << varLength << endl;
 
 			memcpy( (char*)record + offset, (char*)data + elementStart, varLength);
 
@@ -1144,11 +1146,12 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 {
 	cout << "RBFM_ScanIterator::getNextRecord 1" << endl;
 
+	Slot* slot;
+/*
 	bool result = false;
 	void *attribute = malloc(PAGE_SIZE);
 	char *record;
 	int attrLength = 0;
-	Slot* slot;
 
 	cout << "RBFM_ScanIterator::getNextRecord 2" << endl;
 	do {
@@ -1218,29 +1221,47 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 
 	result = constructAttributeForScan( record, data, constructAttrType, constructAttrNum );
 	return result;
+*/
 
-/*
 	RC result= -1;
 	RC tombStoneChk = -1;
 
 	while( pageNum < totalPageNum && result ){
+		slotNum++;
+
+		if( slotNum > totalSlotNum )
+		{
+			slotNum = 1;
+			pageNum++;
+
+			if( pageNum >= fileHandle.getNumberOfPages() )
+				return RBFM_EOF;
+
+			fileHandle.readPage( pageNum, pageData );
+		}
+
 		rid.pageNum = pageNum;
 		rid.slotNum = slotNum;
 
 		// read the record out
 		slot = _rbfm->goToSlot(endOfPage, slotNum);
-		data = malloc(slot->end - slot->begin);
-		tombStoneChk = _rbfm->readRecord(fileHandle, recordDescriptor, rid, data);
+		short estimateRecordLen = slot->end - slot->begin;
+		cout << "estimateRecordLen= " << endl;
+		void* recordData = malloc(estimateRecordLen);
+
+		tombStoneChk = _rbfm->readRecord(fileHandle, recordDescriptor, rid, recordData);
+
 		inrecreaseIteratorPos();
+
 		if(tombStoneChk == -1)
 			continue;
 		// see the condition
-		if(checkCondition(data, conditionAttrName, recordDescriptor)){
+		if(checkCondition(recordData, conditionAttrName, recordDescriptor)){
 			result = 0;
 		}
 	}
 	return result;
-	*/
+
 }
 
 RC RBFM_ScanIterator::readAttributeForScan(char *record, void *attribute, short numOfAttribute, AttrType type, int &attrLength)
@@ -1267,17 +1288,17 @@ RC RBFM_ScanIterator::readAttributeForScan(char *record, void *attribute, short 
 	{
 		int offset = 0;
 
+		cout << "attrLength=" << attrLength << endl;
 		memcpy( attribute, &attrLength, sizeof(int) );
-		offset += sizeof(int);
-		memcpy( (char*)attribute + offset, record + begin, attrLength );
+		memcpy( (char*)attribute + sizeof(int), record + begin, attrLength );
 
-		cout << (char*)attribute << endl;
-
+//		cout << (char*)attribute << endl;
+	/*
 		cout << "attribute=";
 		for(int j = 0; j < attrLength; j++)
 		{
 			printf("%c", *((char*)attribute + offset));
-			offset++;
+			j++;
 		}
 		printf("\n");
 
@@ -1285,10 +1306,10 @@ RC RBFM_ScanIterator::readAttributeForScan(char *record, void *attribute, short 
 		for(int j = 0; j < attrLength; j++)
 		{
 			printf("%c", *((char*)record + begin));
-			offset++;
+			j++;
 		}
 		printf("\n");
-
+	*/
 		attrLength += sizeof(int);
 		cout << "readAttributeForScan attrLength=" << attrLength << endl;
 	}
