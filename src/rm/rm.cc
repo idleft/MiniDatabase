@@ -20,10 +20,6 @@ RelationManager::RelationManager()
 	createColumnCatalog();
 	createIndexCatalog();
 
-	createCatalogFile( "table", tableCatalog );
-	createCatalogFile( "column", columnCatalog );
-	createCatalogFile( "index", indexCatalog );
-
 	if( _pfm->fileExists( TABLE_CATALOG_FILE_NAME  ) )
 		loadCatalog();
 	else
