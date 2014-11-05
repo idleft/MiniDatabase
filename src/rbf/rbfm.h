@@ -88,6 +88,7 @@ public:
   RC getNextRecord(RID &rid, void *data);
   RC close();
   bool checkCondition(void* data, string &attrName, vector<Attribute> &targetAttr);
+  bool checkConditionForAttribute(void* attribute, const void* condition, AttrType attrType, CompOp compOp);
   RC inrecreaseIteratorPos();
 
   RC readAttributeForScan(char *record, void *attribute, short numOfAttribute, AttrType type, int &attrLength);
