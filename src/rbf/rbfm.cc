@@ -966,7 +966,7 @@ RC RBFM_ScanIterator::initialize(FileHandle &fileHandle,
 
 	return 0;
 }
-	if( result != 0 )
+
 bool RBFM_ScanIterator::checkConditionForAttribute(void* attribute, const void* condition, AttrType attrType, CompOp compOp){
 	bool result = true;
 
