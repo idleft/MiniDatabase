@@ -111,7 +111,6 @@ private:
   vector<AttrType> constructAttrType;
 
   vector<Attribute> recordDescriptor;
-  Slot* slot;
   DirectoryOfSlotsInfo* dirInfo;
   RecordBasedFileManager* _rbfm;
   map<unsigned, unsigned> tombstoneMap;

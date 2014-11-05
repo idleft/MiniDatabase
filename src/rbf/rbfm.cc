@@ -1145,6 +1145,7 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 	void *attribute = malloc(PAGE_SIZE);
 	char *record;
 	int attrLength = 0;
+	Slot* slot;
 
 	cout << "RBFM_ScanIterator::getNextRecord 2" << endl;
 	do {
@@ -1165,12 +1166,15 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 		rid.pageNum = pageNum;
 		rid.slotNum = slotNum;
 
-		slot = (Slot*)(endOfPage - sizeof(DirectoryOfSlotsInfo) - slotNum*sizeof(Slot));
-
+		slot = _rbfm->goToSlot(endOfPage, slotNum);
 		if( slot->begin < 0 )
 			continue;
 
 		record = pageData + slot->begin;
+
+		cout << "slot->begin" << slot->begin << endl;
+
+		cout << "*(short*)record=" << *(short*)record << endl;
 
 		if( *(short*)record == -1 )
 		{
@@ -1255,9 +1259,27 @@ RC RBFM_ScanIterator::readAttributeForScan(char *record, void *attribute, short 
 
 		memcpy( attribute, &attrLength, sizeof(int) );
 		offset += sizeof(int);
-		cout << "readAttributeForScan offset=" << offset << endl;
 		memcpy( (char*)attribute + offset, record + begin, attrLength );
-		attrLength += offset;
+
+		cout << (char*)attribute << endl;
+
+		cout << "attribute=";
+		for(int j = 0; j < attrLength; j++)
+		{
+			printf("%c", *((char*)attribute + offset));
+			offset++;
+		}
+		printf("\n");
+
+		cout << "record=";
+		for(int j = 0; j < attrLength; j++)
+		{
+			printf("%c", *((char*)record + begin));
+			offset++;
+		}
+		printf("\n");
+
+		attrLength += sizeof(int);
 		cout << "readAttributeForScan attrLength=" << attrLength << endl;
 	}
 
