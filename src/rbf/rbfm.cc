@@ -1172,6 +1172,13 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 
 		record = pageData + slot->begin;
 
+		short sizeOfRecord = slot->end - slot->begin;
+		data = malloc(sizeOfRecord);
+
+		cout << "rid.pageNum:" << rid.pageNum <<  " ,rid.slotNum:" << rid.slotNum << endl;
+
+		result = _rbfm->readRecord(fileHandle, recordDescriptor, rid, record);
+
 		cout << "slot->begin" << slot->begin << endl;
 
 		cout << "*(short*)record=" << *(short*)record << endl;
