@@ -161,7 +161,6 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 
 	cout << "RelationManager::getAttributes : tableName=" << tableName << endl;
 
-
 	cout << "RelationManager::getAttributes : tableRIDMap.size()=" << tableRIDMap.size() << endl;
 
 	for(map<string, map<int, RID>*>::iterator iter1 = tableRIDMap.begin(); result&&iter1!=tableRIDMap.end();iter1++){
@@ -425,12 +424,16 @@ RC RelationManager::scan(const string &tableName,
 
 	cout << "RelationManager::scan" << endl;
 
+	cout << "conditionAttribute: " <<  conditionAttribute  << endl;
+
 	if( fileName.compare(TABLE_CATALOG_FILE_NAME) == 0 )
 	{
+		cout << "fileName is " << TABLE_CATALOG_FILE_NAME << endl;
 		return rm_ScanIterator.initialize(tableCatalog, conditionAttribute, compOp, value, attributeNames);
 	}
 	else if( fileName.compare(COLUMN_CATALOG_FILE_NAME) == 0 )
 	{
+		cout << "fileName is " << COLUMN_CATALOG_FILE_NAME << endl;
 		return rm_ScanIterator.initialize(columnCatalog, conditionAttribute, compOp, value, attributeNames);
 	}
 	else
@@ -574,6 +577,7 @@ RC RelationManager::loadCatalog()
 	int offset = 0;
 
 	// load table catalog
+	cout << "tableCatalog[0].name=" << tableCatalog[0].name << " tableCatalog[1].name=" << tableCatalog[1].name << endl;
 	attributeNames.push_back(tableCatalog[0].name);	// tableID
 	attributeNames.push_back(tableCatalog[1].name);	// tableName
 
