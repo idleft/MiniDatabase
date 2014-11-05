@@ -159,6 +159,10 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 
 	attrs.clear();
 
+	cout << "RelationManager::getAttributes : tableName=" << tableName << endl;
+
+
+	cout << "RelationManager::getAttributes : tableRIDMap.size()=" << tableRIDMap.size() << endl;
 	if (tableRIDMap.find(tableName) == tableRIDMap.end() )
 		return result;
 
@@ -406,24 +410,27 @@ RC RelationManager::scan(const string &tableName,
 
 	string fileName =  tableName + ".tbl";
 
+	cout << "tableName for scanning=" << tableName << " attributeNames.size()="<< attributeNames.size()<< endl;
+	cout << "scan tableIDMap size=" << tableRIDMap.size() << endl;
+
 	result = _rbfm->openFile( fileName, rm_ScanIterator.fileHandle );
 	if( result == -1 )
 		return result;
 
 	cout << "RelationManager::scan" << endl;
 
-	if( tableName.compare(TABLE_CATALOG_FILE_NAME) == 0 )
+	if( fileName.compare(TABLE_CATALOG_FILE_NAME) == 0 )
 	{
 		return rm_ScanIterator.initialize(tableCatalog, conditionAttribute, compOp, value, attributeNames);
 	}
-	else if( tableName.compare(COLUMN_CATALOG_FILE_NAME) == 0 )
+	else if( fileName.compare(COLUMN_CATALOG_FILE_NAME) == 0 )
 	{
 		return rm_ScanIterator.initialize(columnCatalog, conditionAttribute, compOp, value, attributeNames);
 	}
 	else
 	{
 		vector<Attribute>	catalogAttributes;
-		result = getAttributes( fileName, catalogAttributes);
+		result = getAttributes( tableName, catalogAttributes );
 		if( result != 0 )
 			return result;
 
@@ -569,6 +576,8 @@ RC RelationManager::loadCatalog()
 
 	while( scanIterator.getNextTuple( rid, data) != RM_EOF )
 	{
+		cout << "loadCatalog:scanIterator.getNextTuple" << endl;
+
 		// [tableID][tableName][catFileName][numOfColums]
 		memcpy( &tableID, data,  sizeof(int));
 		offset += sizeof(int);
@@ -577,14 +586,17 @@ RC RelationManager::loadCatalog()
 		memcpy( &tableNameLen, data+offset, sizeof(int));
 		offset += sizeof(int);
 
-		memcpy( &tableName, data+ offset, tableNameLen);
-		offset += tableNameLen;
+		cout << "tableNameLen=" << tableNameLen << endl;
+
+		tableName = string(data, tableNameLen);
 
 		map<int, RID> *tableRID = new map<int, RID>();
 		(*tableRID)[tableID] = rid;
 
+		cout << "tableName=" << tableName << " tableID=" << tableID << endl;
 		tableRIDMap[tableName] = tableRID;
 		data = start;
+		cout << "loadCatalog:tableRIDMap" << endl;
 	}
 
 	// load column catalog
@@ -673,7 +685,9 @@ RC RelationManager::createCatalogFile(const string& tableName, const vector<Attr
 	(*tableRID)[TABLE_ID] = rid;
 
 	tableRIDMap[tableName] = tableRID; // modified to fix the pointer to object
-//	cout<<"For table name :"<<tableName<<" Size: "<< tableRIDMap[tableName]->size() << endl;
+	cout<<"For table name :"<< tableName << " TABLE_ID=" << TABLE_ID << " Size: "<< tableRIDMap[tableName]->size() << endl;
+
+	cout << "RelationManager::createCatalogFile : tableRIDMap.size()=" << tableRIDMap.size() << endl;
 
 	result = _rbfm->closeFile( fileHandle );
 	if( result != 0 )
@@ -757,10 +771,11 @@ RC RelationManager::insertColumnEntry(int tableID, string tableName, int columnS
 	int varCharLen = tableName.length();
 	memcpy( data + offset, &varCharLen, sizeof(int));
 	offset += sizeof(int);
-	const char *cstrTable = &tableName[0];
-	memcpy( data + offset, cstrTable, varCharLen);
+//	const char *cstrTable = &tableName[0];
+	memcpy( data + offset, tableName.c_str(), varCharLen);
 //	cout << "tableName:" << cstrTable << endl;
 	offset += varCharLen;
+	cout << "tableName=" << tableName.c_str() << endl;
 
 	memcpy( data + offset, &columnStart, sizeof(int));
 	offset += sizeof(int);
@@ -782,6 +797,9 @@ RC RelationManager::insertColumnEntry(int tableID, string tableName, int columnS
 	result = _rbfm->insertRecord( fileHandle, columnCatalog, data, rid );
 	if( result != 0 )
 		return -1;
+
+	cout<<"For table name :"<< tableName << " TABLE_ID=" << tableID << " rid pageNum: " << rid.pageNum <<
+			" rid slotNum: " << rid.slotNum << " result:"<< result << endl;
 
 	free( data );
 
@@ -806,25 +824,13 @@ unsigned RelationManager::getCatalogSize(vector<Attribute> catalog)
 	return length;
 }
 
-// "data" follows the same format as RelationManager::insertTuple()
-RC RM_ScanIterator::getNextTuple(RID &rid, void *data)
-{
-	return _rbfm_scanIterator.getNextRecord(rid, data);
-};
-
-RC RM_ScanIterator::close()
-{
-	_rbfm_scanIterator.close();
-	return _rbfm->closeFile( fileHandle );
-};
-
 RC RM_ScanIterator::initialize(vector<Attribute> recordDescriptor,
 		  const string &conditionAttribute,
 	      const CompOp compOp,
 	      const void *value,
 	      const vector<string> &attributeNames)
 {
-	cout << "RelationManager::initialize" << endl;
+	cout << "RM_ScanIterator::initialize" << endl;
 
 	return _rbfm_scanIterator.initialize(fileHandle, recordDescriptor, conditionAttribute, compOp, value, attributeNames);
 /*
@@ -833,3 +839,19 @@ RC RM_ScanIterator::initialize(vector<Attribute> recordDescriptor,
 	return _rbfm->scan(fileHandle, recordDescriptor, conditionAttribute, compOp, value, attributeNames, rbfm_it);
 */
 }
+
+// "data" follows the same format as RelationManager::insertTuple()
+RC RM_ScanIterator::getNextTuple(RID &rid, void *data)
+{
+	cout << "RM_ScanIterator::getNextTuple" << endl;
+	cout << rid.pageNum << "," << rid.slotNum << endl;
+	RC result  = _rbfm_scanIterator.getNextRecord(rid, data);
+	cout << "getNextTuple result=" << result;
+	return result;
+};
+
+RC RM_ScanIterator::close()
+{
+	_rbfm_scanIterator.close();
+	return _rbfm->closeFile( fileHandle );
+};
