@@ -570,7 +570,6 @@ RC RelationManager::loadCatalog()
 	char* start = data;
 
 	int tableID = 0;
-	string tableName;
 
 	int offset = 0;
 
@@ -594,7 +593,7 @@ RC RelationManager::loadCatalog()
 
 		cout << "tableNameLen=" << tableNameLen << endl;
 
-		tableName = string(data, tableNameLen);
+		string tableName = string(data+offset, tableNameLen);
 
 		map<int, RID> *tableRID = new map<int, RID>();
 		(*tableRID)[tableID] = rid;
