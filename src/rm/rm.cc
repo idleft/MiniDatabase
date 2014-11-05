@@ -20,6 +20,10 @@ RelationManager::RelationManager()
 	createColumnCatalog();
 	createIndexCatalog();
 
+	createCatalogFile( "table", tableCatalog );
+	createCatalogFile( "column", columnCatalog );
+	createCatalogFile( "index", indexCatalog );
+
 	if( _pfm->fileExists( TABLE_CATALOG_FILE_NAME  ) )
 		loadCatalog();
 	else
@@ -739,13 +743,13 @@ RC RelationManager::insertTableEntry( int tableID, string tableName, string catF
 	int varCharLen = tableName.length();
 	memcpy( data + offset, &varCharLen, sizeof(int));
 	offset += sizeof(int);
-	memcpy( data + offset, &tableName, varCharLen );
+	memcpy( data + offset, tableName.c_str(), varCharLen ); // modified by xk
 	offset += varCharLen;
 
 	varCharLen = catFileName.length();
 	memcpy( data + offset, &varCharLen, sizeof(int));
 	offset += sizeof(int);
-	memcpy( data + offset, &catFileName, catFileName.length() );
+	memcpy( data + offset, catFileName.c_str(), catFileName.length() );// modified by xk
 	offset += varCharLen;
 
 	int numOfColumns = tableCatalog.size();
