@@ -163,6 +163,9 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 
 	attrs.clear();
 
+	if( tableRIDMap.size() == 0 )
+		loadCatalog();
+
 	cout << "RelationManager::getAttributes : tableName=" << tableName << endl;
 
 	cout << "RelationManager::getAttributes : tableRIDMap.size()=" << tableRIDMap.size() << endl;
@@ -578,8 +581,6 @@ RC RelationManager::loadCatalog()
 
 	int tableID = 0;
 
-	int offset = 0;
-
 	// load table catalog
 	cout << "tableCatalog[0].name=" << tableCatalog[0].name << " tableCatalog[1].name=" << tableCatalog[1].name << endl;
 	attributeNames.push_back(tableCatalog[0].name);	// tableID
@@ -587,21 +588,24 @@ RC RelationManager::loadCatalog()
 
 	scan( "table", tableCatalog[0].name, NO_OP, NULL, attributeNames, scanIterator);
 
-	while( scanIterator.getNextTuple( rid, data) != RM_EOF )
+	while( scanIterator.getNextTuple( rid, data ) != RM_EOF )
 	{
 		cout << "loadCatalog:scanIterator.getNextTuple" << endl;
 
 		// [tableID][tableName][catFileName][numOfColums]
 		memcpy( &tableID, data,  sizeof(int));
-		offset += sizeof(int);
 
-		int tableNameLen = 0;
-		memcpy( &tableNameLen, data+offset, sizeof(int));
-		offset += sizeof(int);
+		cout << "tableID=" << tableID << endl;
 
+		data = data + sizeof(int);
+
+		int tableNameLen;
+		memcpy( &tableNameLen, data, sizeof(int));
 		cout << "tableNameLen=" << tableNameLen << endl;
 
-		string tableName = string(data+offset, tableNameLen);
+		data = data+sizeof(int);
+
+		string tableName = string(data, tableNameLen);
 
 		map<int, RID> *tableRID = new map<int, RID>();
 		(*tableRID)[tableID] = rid;
@@ -626,10 +630,9 @@ RC RelationManager::loadCatalog()
 	{
 		// [tableID][tableName][columnStart][columnName][columnType][maxLength]
 		memcpy( &tableID, data,  sizeof(int));
-		offset += sizeof(int);
+		data = data + sizeof(int);
 
-		memcpy( &columnStart, data+offset,  sizeof(int));
-		offset += sizeof(int);
+		memcpy( &columnStart, data,  sizeof(int));
 
 		// tableID already exists in the column map
 		if( columnRIDMap.find(tableID) != columnRIDMap.end() )
@@ -860,7 +863,7 @@ RC RM_ScanIterator::getNextTuple(RID &rid, void *data)
 	cout << "RM_ScanIterator::getNextTuple" << endl;
 	cout << rid.pageNum << "," << rid.slotNum << endl;
 	RC result  = _rbfm_scanIterator.getNextRecord(rid, data);
-	cout << "getNextTuple result=" << result;
+	cout << "getNextTuple result=" << result << endl;
 	return result;
 };
 
