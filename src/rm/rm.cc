@@ -587,7 +587,7 @@ RC RelationManager::loadCatalog()
 
 	while( scanIterator.getNextTuple( rid, data ) != RM_EOF )
 	{
-		cout << "loadCatalog:scanIterator.getNextTuple" << endl;
+		cout << "************loadCatalog:scanIterator.getNextTuple***********" << endl;
 
 		// [tableID][tableName][catFileName][numOfColums]
 		memcpy( &tableID, data,  sizeof(int));
@@ -607,7 +607,7 @@ RC RelationManager::loadCatalog()
 		map<int, RID> *tableRID = new map<int, RID>();
 		(*tableRID)[tableID] = rid;
 
-		cout << "tableName=" << tableName << " tableID=" << tableID << endl;
+		cout << "************tableName=" << tableName << " tableID=" << tableID << "********" << endl;
 		tableRIDMap[tableName] = tableRID;
 		data = start;
 		cout << "loadCatalog:tableRIDMap" << endl;
@@ -862,7 +862,7 @@ RC RM_ScanIterator::initialize(vector<Attribute> recordDescriptor,
 RC RM_ScanIterator::getNextTuple(RID &rid, void *data)
 {
 	cout << "RM_ScanIterator::getNextTuple" << endl;
-	cout << rid.pageNum << "," << rid.slotNum << endl;
+	cout << "*********" << rid.pageNum << "," << rid.slotNum << "***********" << endl;
 	RC result  = _rbfm_scanIterator.getNextRecord(rid, data);
 	cout << "getNextTuple result=" << result << endl;
 	return result;
