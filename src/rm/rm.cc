@@ -162,31 +162,31 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 	if( tableRIDMap.size() == 0 )
 		loadCatalog();
 
-	cout << "RelationManager::getAttributes : tableName=" << tableName << endl;
-
-	cout << "RelationManager::getAttributes : tableRIDMap.size()=" << tableRIDMap.size() << endl;
+//	cout << "RelationManager::getAttributes : tableName=" << tableName << endl;
+//
+//	cout << "RelationManager::getAttributes : tableRIDMap.size()=" << tableRIDMap.size() << endl;
 
 	for(map<string, map<int, RID>*>::iterator iter1 = tableRIDMap.begin(); result&&iter1!=tableRIDMap.end();iter1++){
 		string key = iter1->first;
-		cout << "RelationManager::getAttributes : key=" << key << endl;
+//		cout << "RelationManager::getAttributes : key=" << key << endl;
 	}
 
 	if (tableRIDMap.find(tableName) == tableRIDMap.end() )
 		return result;
 
-	cout<<"Get attribute for table: "<< tableName <<endl;
+//	cout<<"Get attribute for table: "<< tableName <<endl;
 	_rbfm->openFile(COLUMN_CATALOG_FILE_NAME, fileHandle);
 	int colCatalogSize = getCatalogSize(columnCatalog);
 
-	cout<<"Get colCatalogSize: "<< colCatalogSize<<endl;
+//	cout<<"Get colCatalogSize: "<< colCatalogSize<<endl;
 
 	map<int, RID>* tableIdSet = tableRIDMap[tableName];
-	printf("Table RID map size: %d  Table id set: %d\n",tableRIDMap.size(),tableIdSet->size());
+//	printf("Table RID map size: %d  Table id set: %d\n",tableRIDMap.size(),tableIdSet->size());
 	for(map<int, RID>::iterator iter1 = tableIdSet->begin(); iter1!=tableIdSet->end(); iter1++){
 
 		int tableId = iter1->first; // only require tableId
 
-		cout<<"Get tableId: "<< tableId <<endl;
+//		cout<<"Get tableId: "<< tableId <<endl;
 
 		map<int, RID> *attrMap = columnRIDMap[tableId];
 
@@ -196,26 +196,26 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 
 			RID attrRid = iter2->second;
 
-			cout<<"Get attrRid: "<< attrRid.pageNum << "," << attrRid.slotNum << endl;
+//			cout<<"Get attrRid: "<< attrRid.pageNum << "," << attrRid.slotNum << endl;
 
 			void* colDescriptor = malloc(colCatalogSize);
 
-			cout<<"Get malloc succeeded" << endl;
+//			cout<<"Get malloc succeeded" << endl;
 
 
 			result = _rbfm->readRecord(fileHandle, columnCatalog, attrRid, colDescriptor);
 			if( result != 0 )
 				return result;
 
-			cout<<"Get readRecord: "<< result << endl;
+//			cout<<"Get readRecord: "<< result << endl;
 
 			result = colDescriptorToAttri(colDescriptor, colAttri);
 			if( result != 0 )
 				return result;
 
-			cout<<"Get colDescriptorToAttri: "<< result << endl;
+//			cout<<"Get colDescriptorToAttri: "<< result << endl;
 
-			cout << colAttri.length << "," << colAttri.name << "," << colAttri.type << endl;
+//			cout << colAttri.length << "," << colAttri.name << "," << colAttri.type << endl;
 
 			attrs.push_back( colAttri );
 

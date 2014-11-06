@@ -109,6 +109,7 @@ private:
 
   vector<short> constructAttrNum;
   vector<AttrType> constructAttrType;
+  vector<string> attributeNames;
 
   vector<Attribute> recordDescriptor;
   DirectoryOfSlotsInfo* dirInfo;

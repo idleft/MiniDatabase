@@ -890,9 +890,9 @@ int main()
 	cout << endl << "Test Get Attributes .." << endl;
 
 	// Get Attributes
-	TEST_RM_0("tbl_employee");
-
-    // Insert/Read Tuple
+//	TEST_RM_0("tbl_employee");
+//
+//    // Insert/Read Tuple
 //    TEST_RM_1("tbl_employee", 6, "Peters", 24, 170.1, 5000);
 //    TEST_RM_2("tbl_employee", 6, "Victor", 22, 180.2, 6000);
 //    TEST_RM_3("tbl_employee", 6, "Thomas", 28, 187.3, 4000);
@@ -938,8 +938,8 @@ int main()
 //    rids.clear();
 //    sizes.clear();
 //    TEST_RM_11("tbl_employee4", rids, sizes);
-////    rids.clear();
-////    sizes.clear();
+//    rids.clear();
+//    sizes.clear();
 //    TEST_RM_12("tbl_employee4", rids);
 //    cout << endl << "Test Read Tuple .." << endl;
 //
@@ -972,7 +972,7 @@ int main()
 //    cout << endl << "Test Simple Scan .." << endl;
 //
 //       // Scan
-//    TEST_RM_13("tbl_employee4");
+    TEST_RM_13("tbl_employee4");
 //
 //    cout << endl << "Test Delete Tuples and Delete Table  .." << endl;
 //    rids.clear();

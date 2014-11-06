@@ -383,17 +383,9 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 				short lengthOfRecord = slot->end - slot->begin;
 				void* record = malloc(lengthOfRecord);
 
-				cout << "readRecord lengthOfRecord=" << lengthOfRecord << endl;
-
 				// read record
 				memcpy( record, beginOfRecord, lengthOfRecord);
-
-					cout << "readRecord memcpy=" << lengthOfRecord << endl;
-
 				result = recordToData(record, recordDescriptor, data);
-
-					cout << "readRecord recordToData=" << result << endl;
-
 				free(record);
 			}
 	}
@@ -505,7 +497,11 @@ RC RecordBasedFileManager::recordToData(void* record, const vector<Attribute> &r
 
 			memcpy( (char*)data+offset, &varLength, sizeof(int));
 			offset += sizeof(int);
-
+			if(varLength<0){
+				puts("Hi");
+				printRecord(recordDescriptor, record);
+			}
+			printf("%d %d %d\n",offset, elementStart, varLength);
 			memcpy( (char*)data+offset, (char*)record+elementStart, varLength);
 			offset += varLength;
 		}
@@ -543,9 +539,6 @@ RC RecordBasedFileManager::dataToRecord(const void* data, const vector<Attribute
 		{
 			memcpy( &varLength, (char*)data + elementStart, sizeof(int));
 			elementStart += sizeof(int);
-
-			cout << "varLength" << varLength << endl;
-
 			memcpy( (char*)record + offset, (char*)data + elementStart, varLength);
 
 			offset += varLength;
@@ -933,6 +926,7 @@ RC RBFM_ScanIterator::initialize(FileHandle &fileHandle,
 	this->conditionAttrName = conditionAttribute;
 	this->targetPointer = value;
 	this->compOp = compOp;
+	this->attributeNames = attributeNames;
 
 	this->condition = value;
 
@@ -955,47 +949,16 @@ RC RBFM_ScanIterator::initialize(FileHandle &fileHandle,
 
 	cout << "RBFM_ScanIterator::initialize" << endl;
 
-//	for (unsigned i = 0, j = 0; i < recordDescriptor.size() && j < attributeNames.size(); i++) {
-//			Attribute attr = recordDescriptor[i];
-//
-//			cout << "conditionAttribute=" << conditionAttribute <<
-//					" attr.name=" << attr.name <<
-//					" attributeNames[j]=" << attributeNames[j] << endl;
-//
-//	 		if (attr.name.compare(conditionAttribute) == 0) {
-//	 			conditionAttrType = attr.type;
-//	 			conditionAttrNum = (short)i;
-//	 			cout << "conditionAttrNum=" << conditionAttrNum << endl;
-//	 		}
-//
-//			if (attr.name.compare(attributeNames[j]) == 0) {
-//	 			j++;
-//	 			constructAttrNum.push_back((short)i);
-//	 			constructAttrType.push_back(attr.type);
-//	 		}
-//	 }
-
-//	cout << "conditionAttrNum=" << conditionAttrNum << endl;
-
-//	dirInfo = _rbfm->goToDirectoryOfSlotsInfo(endOfPage); // EXTREMLLY not safe
-
-//	cout << "RBFM_ScanIterator::dirInfo" << endl;
-
-//	totalSlotNum = dirInfo->numOfSlots;
-
 	return 0;
 }
-
+/*
 bool RBFM_ScanIterator::checkConditionForAttribute(void* attribute, const void* condition, AttrType attrType, CompOp compOp){
 	bool result = true;
 
 	if( condition == NULL )
 	{
-		cout << "checkConditionForAttribute: condition is NULL" << endl;
 		return result;
 	}
-
-	cout << "checkConditionForAttribute: attrType" << endl;
 
 	// Read field value and compare
 	if(attrType == TypeInt){
@@ -1065,7 +1028,7 @@ bool RBFM_ScanIterator::checkConditionForAttribute(void* attribute, const void* 
 	cout << "checkConditionForAttribute result: " << result << endl;
 	return result;
 }
-
+*/
 bool RBFM_ScanIterator::checkCondition(void* data, string &attrName, vector<Attribute> &recordDescriptor){
 	if(targetPointer == NULL)
 		return true;
@@ -1154,8 +1117,6 @@ RC  RBFM_ScanIterator::inrecreaseIteratorPos(){
 
 RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 {
-	cout << "RBFM_ScanIterator::getNextRecord 1" << endl;
-
 	Slot* slot;
 	RC result= -1;
 	RC tombStoneChk = -1;
@@ -1176,12 +1137,9 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 		rid.pageNum = pageNum;
 		rid.slotNum = slotNum;
 
-		cout << "rid.pageNum:" << rid.pageNum <<  " ,rid.slotNum:" << rid.slotNum << endl;
-
 		// read the record out
 		slot = _rbfm->goToSlot(endOfPage, slotNum);
 		short estimateRecordLen = slot->end - slot->begin;
-		cout << "estimateRecordLen= " << estimateRecordLen << endl;
 		void* recordData = malloc(estimateRecordLen);
 
 		tombStoneChk = _rbfm->readRecord(fileHandle, recordDescriptor, rid, recordData);
@@ -1190,17 +1148,52 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 
 		if(tombStoneChk == -1)
 			continue;
+		else
+			puts("hi!");
 		// see the condition
 		if(checkCondition(recordData, conditionAttrName, recordDescriptor)){
 			result = 0;
-			memcpy(data, recordData, estimateRecordLen);
+			int offSet = 0,outOffset= 0;
+			//memcpy(data, recordData, estimateRecordLen);
+			for(vector<string>::iterator iter1 = attributeNames.begin(); iter1!=attributeNames.end(); iter1++){
+				for(vector<Attribute>::iterator iter2 = recordDescriptor.begin(); iter2!=recordDescriptor.end(); iter2++){
+					if(*iter1 == iter2->name){
+						if(iter2->type == TypeInt){
+							memcpy((char*)data + outOffset, (char *)recordData+offSet, sizeof(int));
+							outOffset +=sizeof(int);
+						}
+						else if(iter2->type == TypeReal){
+							memcpy((char*)data + outOffset, (char *)recordData+offSet, sizeof(float));
+							outOffset += sizeof(int);
+						}
+						else{
+							int varLen = *(int *)((char*)recordData + offSet);
+							memcpy((char*)data + outOffset, &varLen, sizeof(int));
+							memcpy((char*)data + outOffset+sizeof(int), (char *)recordData+offSet+sizeof(int), varLen);
+							outOffset +=(varLen + sizeof(int));
+						}
+						offSet = 0;
+						break;
+					}
+					else{
+						if(iter2->type == TypeInt)
+							offSet += sizeof(int);
+						else if(iter2->type == TypeReal)
+							offSet +=sizeof(float);
+						else{
+							int varLen = *(int *)((char*)recordData + offSet);
+							offSet +=(varLen + sizeof(int));
+						}
+					}
+				}
+			}
 		}
 		free(recordData);
 	}
 
 	return result;
 }
-
+/*
 RC RBFM_ScanIterator::readAttributeForScan(char *record, void *attribute, short numOfAttribute, AttrType type, int &attrLength)
 {
 	short begin = *(short*)(record + sizeof(short) * (numOfAttribute + 1));
@@ -1230,23 +1223,23 @@ RC RBFM_ScanIterator::readAttributeForScan(char *record, void *attribute, short 
 		memcpy( (char*)attribute + sizeof(int), record + begin, attrLength );
 
 //		cout << (char*)attribute << endl;
-	/*
-		cout << "attribute=";
-		for(int j = 0; j < attrLength; j++)
-		{
-			printf("%c", *((char*)attribute + offset));
-			j++;
-		}
-		printf("\n");
-
-		cout << "record=";
-		for(int j = 0; j < attrLength; j++)
-		{
-			printf("%c", *((char*)record + begin));
-			j++;
-		}
-		printf("\n");
-	*/
+//
+//		cout << "attribute=";
+//		for(int j = 0; j < attrLength; j++)
+//		{
+//			printf("%c", *((char*)attribute + offset));
+//			j++;
+//		}
+//		printf("\n");
+//
+//		cout << "record=";
+//		for(int j = 0; j < attrLength; j++)
+//		{
+//			printf("%c", *((char*)record + begin));
+//			j++;
+//		}
+//		printf("\n");
+//
 		attrLength += sizeof(int);
 		cout << "readAttributeForScan attrLength=" << attrLength << endl;
 	}
@@ -1275,4 +1268,4 @@ RC RBFM_ScanIterator::constructAttributeForScan(char* record, void* data, vector
 
 	free( attribute );
 	return 0;
-}
+}*/
