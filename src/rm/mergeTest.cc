@@ -837,6 +837,8 @@ void initializeTable(){
 
     // Create Table tbl_employee4
     createLargeTable("tbl_employee4");
+
+
 }
 void TEST_RM_16(const string &tableName)
 {
@@ -891,14 +893,14 @@ int main()
 	TEST_RM_0("tbl_employee");
 
     // Insert/Read Tuple
-//    TEST_RM_1("tbl_employee", 6, "Peters", 24, 170.1, 5000);
-//    TEST_RM_2("tbl_employee", 6, "Victor", 22, 180.2, 6000);
-//    TEST_RM_3("tbl_employee", 6, "Thomas", 28, 187.3, 4000);
-//
+    TEST_RM_1("tbl_employee", 6, "Peters", 24, 170.1, 5000);
+    TEST_RM_2("tbl_employee", 6, "Victor", 22, 180.2, 6000);
+    TEST_RM_3("tbl_employee", 6, "Thomas", 28, 187.3, 4000);
+
 //    cout << endl << "Test Read Attributes .." << endl;
 //
 ////    // Read Attributes
-//    TEST_RM_4("tbl_employee", 6, "Veekay", 27, 171.4, 9000);
+    TEST_RM_4("tbl_employee", 6, "Veekay", 27, 171.4, 9000);
 //
 //   cout << endl << "Test Delete Tuples .." << endl;
 //
@@ -929,16 +931,16 @@ int main()
     vector<int> sizes;
 //
 	// Insert Tuple
-//    TEST_RM_9("tbl_employee4", rids, sizes);
-//        rids.clear();
-//        sizes.clear();
-//    TEST_RM_10("tbl_employee4", rids, sizes);
+    TEST_RM_9("tbl_employee4", rids, sizes);
+        rids.clear();
+        sizes.clear();
+    TEST_RM_10("tbl_employee4", rids, sizes);
+    rids.clear();
+    sizes.clear();
+    TEST_RM_11("tbl_employee4", rids, sizes);
 //    rids.clear();
 //    sizes.clear();
-//    TEST_RM_11("tbl_employee4", rids, sizes);
-//    rids.clear();
-//    sizes.clear();
-//    TEST_RM_12("tbl_employee4", rids);
+    TEST_RM_12("tbl_employee4", rids);
 //    cout << endl << "Test Read Tuple .." << endl;
 //
 //    rids.clear();
