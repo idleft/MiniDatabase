@@ -888,7 +888,7 @@ int main()
 	cout << endl << "Test Get Attributes .." << endl;
 
 	// Get Attributes
-//	TEST_RM_0("tbl_employee");
+	TEST_RM_0("tbl_employee");
 
     // Insert/Read Tuple
 //    TEST_RM_1("tbl_employee", 6, "Peters", 24, 170.1, 5000);
