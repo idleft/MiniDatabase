@@ -78,6 +78,8 @@ RC RecordBasedFileManager::openFile(const string &fileName, FileHandle &fileHand
 	RC result = -1;
 
 	result = pfm->openFile( fileName.c_str(), fileHandle );
+//	printf("$%s$",fileName.c_str());
+	cout<<fileName.c_str()<<endl;
 	if( result == 0 ) {
 		if( directoryOfSlots.find(fileName) == directoryOfSlots.end() )	// fileName does not exist in directory of slots
 		{
@@ -938,43 +940,48 @@ RC RBFM_ScanIterator::initialize(FileHandle &fileHandle,
 			<< ", fileHandle.getNumberOfPages()="<< fileHandle.getNumberOfPages() << endl;
 
 	if( condition == NULL )
-	cout << " RBFM_ScanIterator::initialize:" << "condition is NULL"  << endl;
+		cout << " RBFM_ScanIterator::initialize:" << "condition is NULL"  << endl;
+	pageNum = 0;
+	slotNum = 1;
 	totalPageNum = fileHandle.getNumberOfPages();
 
 	pageData = (char*) malloc( PAGE_SIZE );
+	memset( pageData, 0, PAGE_SIZE );
+	fileHandle.readPage(0, pageData); // read the first page
 	endOfPage = pageData + PAGE_SIZE;
 
-	fileHandle.readPage( pageNum, pageData );
+	dirInfo = _rbfm->goToDirectoryOfSlotsInfo(endOfPage);
+	totalSlotNum = dirInfo->numOfSlots;
 
 	cout << "RBFM_ScanIterator::initialize" << endl;
 
-	for (unsigned i = 0, j = 0; i < recordDescriptor.size() && j < attributeNames.size(); i++) {
-			Attribute attr = recordDescriptor[i];
+//	for (unsigned i = 0, j = 0; i < recordDescriptor.size() && j < attributeNames.size(); i++) {
+//			Attribute attr = recordDescriptor[i];
+//
+//			cout << "conditionAttribute=" << conditionAttribute <<
+//					" attr.name=" << attr.name <<
+//					" attributeNames[j]=" << attributeNames[j] << endl;
+//
+//	 		if (attr.name.compare(conditionAttribute) == 0) {
+//	 			conditionAttrType = attr.type;
+//	 			conditionAttrNum = (short)i;
+//	 			cout << "conditionAttrNum=" << conditionAttrNum << endl;
+//	 		}
+//
+//			if (attr.name.compare(attributeNames[j]) == 0) {
+//	 			j++;
+//	 			constructAttrNum.push_back((short)i);
+//	 			constructAttrType.push_back(attr.type);
+//	 		}
+//	 }
 
-			cout << "conditionAttribute=" << conditionAttribute <<
-					" attr.name=" << attr.name <<
-					" attributeNames[j]=" << attributeNames[j] << endl;
+//	cout << "conditionAttrNum=" << conditionAttrNum << endl;
 
-	 		if (attr.name.compare(conditionAttribute) == 0) {
-	 			conditionAttrType = attr.type;
-	 			conditionAttrNum = (short)i;
-	 			cout << "conditionAttrNum=" << conditionAttrNum << endl;
-	 		}
+//	dirInfo = _rbfm->goToDirectoryOfSlotsInfo(endOfPage); // EXTREMLLY not safe
 
-			if (attr.name.compare(attributeNames[j]) == 0) {
-	 			j++;
-	 			constructAttrNum.push_back((short)i);
-	 			constructAttrType.push_back(attr.type);
-	 		}
-	 }
+//	cout << "RBFM_ScanIterator::dirInfo" << endl;
 
-	cout << "conditionAttrNum=" << conditionAttrNum << endl;
-
-	dirInfo = _rbfm->goToDirectoryOfSlotsInfo(endOfPage); // EXTREMLLY not safe
-
-	cout << "RBFM_ScanIterator::dirInfo" << endl;
-
-	totalSlotNum = dirInfo->numOfSlots;
+//	totalSlotNum = dirInfo->numOfSlots;
 
 	return 0;
 }
@@ -1060,13 +1067,16 @@ bool RBFM_ScanIterator::checkConditionForAttribute(void* attribute, const void* 
 }
 
 bool RBFM_ScanIterator::checkCondition(void* data, string &attrName, vector<Attribute> &recordDescriptor){
+	if(targetPointer == NULL)
+		return true;
 	bool result = false;
 	AttrType attrType;
 	int flag = -1;
 	short fieldOffset = 0;
 	int varLen = 0;
 	// Find the right type and position of compare field
-	for(vector<Attribute>::iterator iter1 = recordDescriptor.begin(); result&&iter1!=recordDescriptor.end();iter1++){
+	int tmp = recordDescriptor.size();
+	for(vector<Attribute>::iterator iter1 = recordDescriptor.begin(); !result&&iter1!=recordDescriptor.end();iter1++){
 		if(iter1->name == attrName){
 			attrType = iter1->type;
 			flag = 0;
@@ -1101,7 +1111,7 @@ bool RBFM_ScanIterator::checkCondition(void* data, string &attrName, vector<Attr
 	}
 	else if (attrType == TypeReal){
 		int fieldValue = *(int *)((char *)data+fieldOffset);
-		int targetValue = *(int *)targetPointer;
+		float targetValue = *(float *)targetPointer;
 		switch(compOp){
 			case EQ_OP :  result = (fieldValue == targetValue); break;
 			case LT_OP :  result = (fieldValue < targetValue); break;    // <
@@ -1147,12 +1157,10 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 	cout << "RBFM_ScanIterator::getNextRecord 1" << endl;
 
 	Slot* slot;
-
 	RC result= -1;
 	RC tombStoneChk = -1;
 
 	while( pageNum < totalPageNum && result ){
-		slotNum++;
 
 		if( slotNum > totalSlotNum )
 		{
@@ -1168,10 +1176,12 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 		rid.pageNum = pageNum;
 		rid.slotNum = slotNum;
 
+		cout << "rid.pageNum:" << rid.pageNum <<  " ,rid.slotNum:" << rid.slotNum << endl;
+
 		// read the record out
 		slot = _rbfm->goToSlot(endOfPage, slotNum);
 		short estimateRecordLen = slot->end - slot->begin;
-		cout << "estimateRecordLen= " << endl;
+		cout << "estimateRecordLen= " << estimateRecordLen << endl;
 		void* recordData = malloc(estimateRecordLen);
 
 		tombStoneChk = _rbfm->readRecord(fileHandle, recordDescriptor, rid, recordData);
@@ -1183,10 +1193,12 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 		// see the condition
 		if(checkCondition(recordData, conditionAttrName, recordDescriptor)){
 			result = 0;
+			memcpy(data, recordData, estimateRecordLen);
 		}
+		free(recordData);
 	}
-	return result;
 
+	return result;
 }
 
 RC RBFM_ScanIterator::readAttributeForScan(char *record, void *attribute, short numOfAttribute, AttrType type, int &attrLength)
