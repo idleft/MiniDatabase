@@ -578,6 +578,7 @@ RC RelationManager::loadCatalog()
 
 	// load table catalog
 	cout << "tableCatalog[0].name=" << tableCatalog[0].name << " tableCatalog[1].name=" << tableCatalog[1].name << endl;
+	// we the value we want is tableID and tableName
 	attributeNames.push_back(tableCatalog[0].name);	// tableID
 	attributeNames.push_back(tableCatalog[1].name);	// tableName
 
@@ -627,16 +628,18 @@ RC RelationManager::loadCatalog()
 		memcpy( &columnStart, data+offset,  sizeof(int));
 		offset += sizeof(int);
 
+		map<int, RID> *columnRID;
 		// tableID already exists in the column map
 		if( columnRIDMap.find(tableID) != columnRIDMap.end() )
 		{
 			// Handle later
+			columnRID = columnRIDMap[tableID];
+			columnRID[columnStart] = rid;
 		}
 		else
 		{
-			map<int, RID> *columnRID = new map<int, RID>();
+			*columnRID = new map<int, RID>();
 			(*columnRID)[columnStart] = rid;
-
 			columnRIDMap[tableID] = columnRID;
 		}
 
