@@ -942,9 +942,11 @@ RC RBFM_ScanIterator::initialize(FileHandle &fileHandle,
 	totalPageNum = fileHandle.getNumberOfPages();
 
 	pageData = (char*) malloc( PAGE_SIZE );
-	endOfPage = pageData + PAGE_SIZE;
+	memset( pageData, 0, PAGE_SIZE );
 
 	fileHandle.readPage( pageNum, pageData );
+
+	endOfPage = pageData + PAGE_SIZE;
 
 	cout << "RBFM_ScanIterator::initialize" << endl;
 
@@ -1147,7 +1149,7 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 	cout << "RBFM_ScanIterator::getNextRecord 1" << endl;
 
 	Slot* slot;
-/*
+
 	bool result = false;
 	void *attribute = malloc(PAGE_SIZE);
 	char *record;
@@ -1183,7 +1185,7 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 
 		cout << "rid.pageNum:" << rid.pageNum <<  " ,rid.slotNum:" << rid.slotNum << endl;
 
-		result = _rbfm->readRecord(fileHandle, recordDescriptor, rid, record);
+//		result = _rbfm->readRecord(fileHandle, recordDescriptor, rid, record);
 
 		cout << "slot->begin" << slot->begin << endl;
 
@@ -1221,8 +1223,8 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 
 	result = constructAttributeForScan( record, data, constructAttrType, constructAttrNum );
 	return result;
-*/
 
+/*
 	RC result= -1;
 	RC tombStoneChk = -1;
 
@@ -1243,10 +1245,12 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 		rid.pageNum = pageNum;
 		rid.slotNum = slotNum;
 
+		cout << "rid.pageNum:" << rid.pageNum <<  " ,rid.slotNum:" << rid.slotNum << endl;
+
 		// read the record out
 		slot = _rbfm->goToSlot(endOfPage, slotNum);
 		short estimateRecordLen = slot->end - slot->begin;
-		cout << "estimateRecordLen= " << endl;
+		cout << "estimateRecordLen= " << estimateRecordLen << endl;
 		void* recordData = malloc(estimateRecordLen);
 
 		tombStoneChk = _rbfm->readRecord(fileHandle, recordDescriptor, rid, recordData);
@@ -1260,8 +1264,9 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 			result = 0;
 		}
 	}
-	return result;
 
+	return result;
+*/
 }
 
 RC RBFM_ScanIterator::readAttributeForScan(char *record, void *attribute, short numOfAttribute, AttrType type, int &attrLength)
