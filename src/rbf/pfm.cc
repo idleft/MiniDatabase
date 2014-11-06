@@ -148,7 +148,7 @@ RC FileHandle::writePage(PageNum pageNum, const void *data)
 	if( file == NULL )
 			return -1;
 
-	if( pageNum >= getNumberOfPages() )
+	if( pageNum > getNumberOfPages() )
 		return -1;
 
 	if( fseek(file, pageNum * PAGE_SIZE, SEEK_SET) != 0 )
