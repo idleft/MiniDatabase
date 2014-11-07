@@ -29,6 +29,7 @@ typedef struct
 {
 	short numOfSlots;
 	short freeSpaceOffset;
+	short numOfReorgSlots;
 } DirectoryOfSlotsInfo;
 
 #define HEADER_PAGE_SIZE 2000
