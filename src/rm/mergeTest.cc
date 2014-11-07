@@ -883,7 +883,7 @@ void TEST_RM_16(const string &tableName)
 int main()
 {
 	// Create Tables
-//	initializeTable();
+	initializeTable();
 
     cout << endl << "Test Insert/Read Tuple .." << endl;
 
@@ -931,7 +931,7 @@ int main()
     vector<int> sizes;
 //
 	// Insert Tuple
-//    TEST_RM_9("tbl_employee4", rids, sizes);
+    TEST_RM_9("tbl_employee4", rids, sizes);
 //        rids.clear();
 //        sizes.clear();
 //    TEST_RM_10("tbl_employee4", rids, sizes);

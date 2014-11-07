@@ -467,8 +467,8 @@ RC RecordBasedFileManager::recordToData(void* record, const vector<Attribute> &r
 {
 	short offset = 0;
 	short elementStart = 0;
-
-	for (unsigned i = 0; i < recordDescriptor.size(); i++)
+	short tmpSize = recordDescriptor.size();
+	for (short i = 0; i < recordDescriptor.size(); i++)
 	{
 		Attribute attr = recordDescriptor[i];
 
@@ -746,14 +746,14 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 			RID newRid;
 			cout<<"not enough space"<<endl;
 			result = insertRecord(fileHandle, recordDescriptor, data, newRid);
-//			fileHandle.readPage(rid.pageNum,pageData);
+			fileHandle.readPage(rid.pageNum,pageData);
 			setRecordTombStone((char*)pageData+slot->begin, newRid.pageNum, newRid.slotNum);
 //			result = fileHandle.writePage( rid.pageNum, pageData );
 		}
 
 		result = fileHandle.writePage( rid.pageNum, pageData );
 	}
-
+	free(newRecordData);
 	free(pageData);
 	return result;
 }
@@ -848,7 +848,7 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 		if( slot->begin > 0  && slot->end > 0 )
 		{
 			short recordSize = slot->end - slot->begin;
-			memcpy( reorganizedPage + offset, page + slot->begin, recordSize);
+			memcpy( (char*)reorganizedPage + offset, (char*)page + slot->begin, recordSize);
 			reOrgSlot->begin = offset;
 			reOrgSlot->end = offset + recordSize;
 			offset += recordSize;
@@ -897,7 +897,9 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 		*/
 	}
 
-	result = fileHandle.writePage(pageN, page);
+//	result = fileHandle.writePage(pageN, page);
+	result = fileHandle.writePage(pageN, reorganizedPage);
+
 	reOrgPagedirInfo->numOfReorgSlots = 0;
 	reOrgPagedirInfo->freeSpaceOffset = offset;
 
@@ -1191,6 +1193,7 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 				return RBFM_EOF;
 
 			fileHandle.readPage( pageNum, pageData );
+			endOfPage = pageData + PAGE_SIZE;
 		}
 
 		rid.pageNum = pageNum;
