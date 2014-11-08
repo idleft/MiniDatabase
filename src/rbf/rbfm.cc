@@ -853,61 +853,25 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 			reOrgSlot->end = offset + recordSize;
 			offset += recordSize;
 		}
-
-		// deleted record
 		if( slot->begin < 0 )
 		{
 			reOrgSlot->begin = slot->begin;
 			reOrgSlot->end = slot->end;
-
-			/*
-			short trueStart = 0 - slot->begin-1;
-			short recordSize = slot->end - trueStart;// as the slot begin is already -0
-			short moveBlockSize = dirInfo->freeSpaceOffset - slot->end;
-
-			memmove((char *)pageData + trueStart, (char *)pageData + slot->end, moveBlockSize);
-			shiftSlotInfo(pageData, 0 - recordSize, iter1);
-			dirInfo->freeSpaceOffset += recordSize;
-			*/
 		}
 
 		slot--;
 		reOrgSlot--;
-
-		// tombstone
-		/*
-		if( checkTombStone(page, pageN, iter1) ){
-			char* endOfPage = (char*) page + PAGE_SIZE;
-			Slot* slot = goToSlot((char*)page+PAGE_SIZE, iter1);
-			int tombStoneSize = 2*sizeof(unsigned)+sizeof(short);
-			DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
-			short dataBlockBehindSize = dirInfo->freeSpaceOffset - slot->end;
-			short recordSize = slot->end - slot->begin;
-			short shiftOffset = recordSize - tombStoneSize;
-
-			memmove((char*) page + slot->begin + tombStoneSize, (char*) page + slot->end,dataBlockBehindSize);
-			dirInfo->freeSpaceOffset -= (recordSize - tombStoneSize);
-
-			shiftSlotInfo(page, 0-shiftOffset, iter1);
-			slot->end = slot->begin + tombStoneSize;
-
-			vector<short> *freeSpace = directoryOfSlots[fileHandle.getFileName()];
-			(*freeSpace)[pageN] +=shiftOffset;
-		}
-		*/
 	}
-
-//	result = fileHandle.writePage(pageN, page);
-	result = fileHandle.writePage(pageN, reorganizedPage);
-
-	reOrgPagedirInfo->numOfReorgSlots = 0;
+	reOrgPagedirInfo->numOfSlots = dirInfo->numOfSlots;
 	reOrgPagedirInfo->freeSpaceOffset = offset;
+
+	result = fileHandle.writePage(pageN, reorganizedPage);
 
 	vector<short> *freeSpace = directoryOfSlots[fileHandle.getFileName()];
 	(*freeSpace)[pageN] = PAGE_SIZE - offset - sizeof(DirectoryOfSlotsInfo) - reOrgPagedirInfo->numOfSlots*sizeof(Slot);
 
 	free(page);
-	free(reoranizePage);
+	free(reorganizedPage);
 	return result;
 }
 
