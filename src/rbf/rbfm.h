@@ -93,6 +93,7 @@ public:
 
   RC readAttributeForScan(char *record, void *attribute, short numOfAttribute, AttrType type, int &attrLength);
   RC constructAttributeForScan(char* record, void* data, vector<AttrType> attrType, vector<short> attrNum);
+  RC getAttrSizeByName(string attrName, vector<Attribute> attrSet);
 
 private:
   FileHandle fileHandle;
