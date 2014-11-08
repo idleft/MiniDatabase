@@ -530,18 +530,18 @@ RC RelationManager::loadCatalog()
 		// [tableID][tableName][catFileName][numOfColums]
 		memcpy( &tableID, data,  sizeof(int));
 
-		cout << "tableID=" << tableID << endl;
+//		cout << "tableID=" << tableID << endl;
 
 		data = data + sizeof(int);
 
 		int tableNameLen;
 		memcpy( &tableNameLen, data, sizeof(int));
-		cout << "tableNameLen=" << tableNameLen << endl;
+//		cout << "tableNameLen=" << tableNameLen << endl;
 
 		data = data+sizeof(int);
 
 		string tableName = string(data, tableNameLen);
-		cout<<"load table name: "<<tableName<<"table id: "<<tableID<<endl;
+		cout<<"load table name: "<<tableName<<" table id: "<<tableID<<endl;
 
 		map<int, RID> *tableRID = new map<int, RID>();
 		(*tableRID)[tableID] = rid;

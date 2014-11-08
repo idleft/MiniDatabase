@@ -182,7 +182,7 @@ public:
 
   RC shiftSlotInfo(void* pageData, short shiftOffset, short slotNum);
 
-  RC getAttrFromData(const vector<Attribute> &recordDescriptor, void* recordData, void* data, const string attributeName);
+  RC getAttrFromData(const vector<Attribute> &recordDescriptor, void* recordData, void* data, const string attributeName, short& attrSize);
 
 
   bool checkTombStone(void* data, int pageId, int slotId);

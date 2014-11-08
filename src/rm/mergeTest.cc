@@ -883,7 +883,7 @@ void TEST_RM_16(const string &tableName)
 int main()
 {
 	// Create Tables
-//	initializeTable();
+	initializeTable();
 
     cout << endl << "Test Insert/Read Tuple .." << endl;
 

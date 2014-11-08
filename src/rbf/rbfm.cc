@@ -739,19 +739,25 @@ int RecordBasedFileManager::getEstimatedRecordDataSize(vector<Attribute> rescord
 	return res;
 }
 
-RC RecordBasedFileManager::getAttrFromData(const vector<Attribute> &recordDescriptor, void* recordData, void* data, const string attributeName){
+RC RecordBasedFileManager::getAttrFromData(const vector<Attribute> &recordDescriptor, void* recordData, void* data, const string attributeName, short &attrSize){
 	int fieldPointer = 0;
 	RC result = -1;
 	for(int iter1 = 0; iter1<recordDescriptor.size(); iter1++){
 		if(recordDescriptor.at(iter1).name == attributeName){
 			result = 0;
-			if(recordDescriptor.at(iter1).type == TypeInt)
+			if(recordDescriptor.at(iter1).type == TypeInt){
 				memcpy(data, (char *)recordData+fieldPointer, sizeof(int));
-			else if(recordDescriptor.at(iter1).type == TypeReal)
+				attrSize = sizeof(int);
+			}
+			else if(recordDescriptor.at(iter1).type == TypeReal){
 				memcpy(data, (char *)recordData+fieldPointer, sizeof(float));
+				attrSize = sizeof(float);
+			}
 			else{
 				int varLen = *(int *)((char*)recordData + fieldPointer);
-				memcpy(data, (char *)recordData+fieldPointer+sizeof(int), varLen);
+				memcpy(data,&varLen, sizeof(int));
+				memcpy((char*)data+sizeof(int), (char *)recordData+fieldPointer+sizeof(int), varLen);
+				attrSize = sizeof(varLen) + varLen;
 			}
 		}
 		else{
@@ -771,10 +777,11 @@ RC RecordBasedFileManager::getAttrFromData(const vector<Attribute> &recordDescri
 RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data)
 {
 	RC result = -1;
+	short attrSize;
 	int estimateRecordLen = getEstimatedRecordDataSize(recordDescriptor);
 	void *recordData = malloc(estimateRecordLen);
 	readRecord(fileHandle, recordDescriptor,rid,recordData);
-	result = getAttrFromData(recordDescriptor, recordData, data, attributeName);
+	result = getAttrFromData(recordDescriptor, recordData, data, attributeName, attrSize);
 	free(recordData);
 	return result;
 }
@@ -825,20 +832,18 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 	for( unsigned iter1 = 0; iter1 < slotNum; iter1++ ) {
 
 		// data is there, let's move them
-		if( slot->begin > 0  && slot->end > 0 )
+		if( slot->begin < 0 )
 		{
+			reOrgSlot->begin = slot->begin;
+			reOrgSlot->end = slot->end;
+		}
+		else{
 			short recordSize = slot->end - slot->begin;
 			memcpy( (char*)reorganizedPage + offset, (char*)page + slot->begin, recordSize);
 			reOrgSlot->begin = offset;
 			reOrgSlot->end = offset + recordSize;
 			offset += recordSize;
 		}
-		if( slot->begin < 0 )
-		{
-			reOrgSlot->begin = slot->begin;
-			reOrgSlot->end = slot->end;
-		}
-
 		slot--;
 		reOrgSlot--;
 	}
@@ -1044,7 +1049,6 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 
 	while( pageNum < totalPageNum && result ){
 
-		cout<<"dead loop"<<endl;
 		if( slotNum > dirInfo->numOfSlots )
 		{
 			slotNum = 1;
@@ -1075,13 +1079,16 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 		}
 		if(checkCondition(recordData, conditionAttrName, recordDescriptor)){
 			result = 0;
-			int attrSetSize = 0, attrSize = 0;
+			int attrSetSize = 0;
+			short attrSize = 0;
 			void *attrBuffer = malloc(1000);//assume single feature maximum size 1000 ##DANGER##
-			for(string attrName : this->attributeNames)
+			for(int iter1 = 0; iter1<this->attributeNames.size(); iter1++)
 			{
-				attrSize = getAttrSizeByName(attrName, recordDescriptor);
-				this->_rbfm->readAttribute(fileHandle, recordDescriptor,rid, attrName,attrBuffer);
+				string attrName = this->attributeNames.at(iter1);
+				this->_rbfm->getAttrFromData(recordDescriptor, recordData, attrBuffer, attrName,attrSize);
+//				cout<<"Reading attribute "<<attrName<<" Length: "<<attrSize<<endl;
 				memcpy((char*)data + attrSetSize, attrBuffer, attrSize);
+				attrSetSize += attrSize;
 			}
 			free(attrBuffer);
 		}
@@ -1091,8 +1098,10 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 }
 
 RC RBFM_ScanIterator::getAttrSizeByName(string attrName, vector<Attribute> attrSet){
-	for(Attribute attr : attrSet)
+	for(int iter1 = 0; iter1<attrSet.size();iter1++){
+		Attribute attr = attrSet.at(iter1);
 		if(attr.name == attrName)
 			return attr.length;
+	}
 	return -1;
 }
