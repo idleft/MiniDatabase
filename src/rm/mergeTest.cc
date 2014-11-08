@@ -883,7 +883,7 @@ void TEST_RM_16(const string &tableName)
 int main()
 {
 	// Create Tables
-	initializeTable();
+//	initializeTable();
 
     cout << endl << "Test Insert/Read Tuple .." << endl;
 
@@ -914,7 +914,7 @@ int main()
 ////
 //    cout << endl << "Test Reorganize Page .." << endl;
 ////    // Reorganize Page
-//    TEST_RM_7("tbl_employee2");
+    TEST_RM_7("tbl_employee2");
 //
 //    cout << endl << "Test Simple Scan .." << endl;
 //
@@ -931,7 +931,7 @@ int main()
     vector<int> sizes;
 //
 	// Insert Tuple
-    TEST_RM_9("tbl_employee4", rids, sizes);
+//    TEST_RM_9("tbl_employee4", rids, sizes);
 //        rids.clear();
 //        sizes.clear();
 //    TEST_RM_10("tbl_employee4", rids, sizes);
@@ -972,7 +972,7 @@ int main()
 //    cout << endl << "Test Simple Scan .." << endl;
 //
 //       // Scan
-    TEST_RM_13("tbl_employee4");
+//    TEST_RM_13("tbl_employee4");
 //
 //    cout << endl << "Test Delete Tuples and Delete Table  .." << endl;
 //    rids.clear();

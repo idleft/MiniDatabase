@@ -207,7 +207,6 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 	RC result = -1;
 	PageNum pageNum = 0;
 
-//	cout<<"##FileName##"+fileHandle.getFileName()<<endl;
 	if( fileHandle.getFile() == NULL ) //IERROR Run case 6, sisgtrp
 		return result;
 
@@ -731,15 +730,16 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 
 		if(newRecordSize < oldRecordSize||
 				(newRecordSize > oldRecordSize && (sizeDiff < (freeSpace)->at(rid.pageNum) ) ) ){
-			short shiftDataBlockSize = dirInfo->freeSpaceOffset - slot->end;
+//			short shiftDataBlockSize = dirInfo->freeSpaceOffset - slot->end;
 //			cout<<"ShiftBlockSize "<<shiftDataBlockSize<<" block end "<<slot->end+sizeDiff+shiftDataBlockSize
 //					<<"Page start"<<pageData<<" record end "<<slot->end<<endl;
-			memmove((char*)pageData + slot->end + sizeDiff, (char*)pageData + slot->end, shiftDataBlockSize);
-			shiftSlotInfo(pageData, sizeDiff,rid.slotNum);
-			dirInfo->freeSpaceOffset += sizeDiff;
-			slot->end += sizeDiff;
+			//memmove((char*)pageData + slot->end + sizeDiff, (char*)pageData + slot->end, shiftDataBlockSize);
+//			shiftSlotInfo(pageData, sizeDiff,rid.slotNum);
+//			dirInfo->freeSpaceOffset += sizeDiff;
+//			slot->end += sizeDiff;
 			memcpy((char *)pageData + slot->begin, newRecordData, newRecordSize);
-			(*freeSpace)[rid.pageNum] -=sizeDiff;
+			slot->end = slot->begin+newRecordSize;
+//			(*freeSpace)[rid.pageNum] -=sizeDiff;
 //			result = fileHandle.writePage( rid.pageNum, pageData );
 		}
 		else{// not enough space, set tombstone, add point to new record
@@ -857,8 +857,8 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 		// deleted record
 		if( slot->begin < 0 )
 		{
-			reOrgSlot->begin = 0;
-			reOrgSlot->end = 0;
+			reOrgSlot->begin = slot->begin;
+			reOrgSlot->end = slot->end;
 
 			/*
 			short trueStart = 0 - slot->begin-1;
@@ -907,7 +907,7 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 	(*freeSpace)[pageN] = PAGE_SIZE - offset - sizeof(DirectoryOfSlotsInfo) - reOrgPagedirInfo->numOfSlots*sizeof(Slot);
 
 	free(page);
-
+	free(reoranizePage);
 	return result;
 }
 
@@ -1263,79 +1263,3 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 
 	return result;
 }
-/*
-RC RBFM_ScanIterator::readAttributeForScan(char *record, void *attribute, short numOfAttribute, AttrType type, int &attrLength)
-{
-	short begin = *(short*)(record + sizeof(short) * (numOfAttribute + 1));
-	short end = *(short*)(record + sizeof(short) * (numOfAttribute + 2));
-
-	cout << "end= " << end << " begin=" << begin << " (end-begin)="<< (end-begin) << endl;
-
-	attrLength = (int) (end - begin);
-	cout << "numOfAttribute= " << numOfAttribute << " attrLength=" << attrLength << endl;
-
-	cout << "type= " << type << endl;
-
-	if( type == TypeInt )
-	{
-		memcpy( attribute, record + begin, sizeof(int));
-	}
-	else if ( type == TypeReal )
-	{
-		memcpy( attribute, record + begin, sizeof(float));
-	}
-	else if( type == TypeVarChar )
-	{
-		int offset = 0;
-
-		cout << "attrLength=" << attrLength << endl;
-		memcpy( attribute, &attrLength, sizeof(int) );
-		memcpy( (char*)attribute + sizeof(int), record + begin, attrLength );
-
-//		cout << (char*)attribute << endl;
-//
-//		cout << "attribute=";
-//		for(int j = 0; j < attrLength; j++)
-//		{
-//			printf("%c", *((char*)attribute + offset));
-//			j++;
-//		}
-//		printf("\n");
-//
-//		cout << "record=";
-//		for(int j = 0; j < attrLength; j++)
-//		{
-//			printf("%c", *((char*)record + begin));
-//			j++;
-//		}
-//		printf("\n");
-//
-		attrLength += sizeof(int);
-		cout << "readAttributeForScan attrLength=" << attrLength << endl;
-	}
-
-	return 0;
-
-}
-
-RC RBFM_ScanIterator::constructAttributeForScan(char* record, void* data, vector<AttrType> attrType, vector<short> attrNum)
-{
-	int offset = 0;
-	int attrLength = 0;
-
-	void* attribute = malloc(PAGE_SIZE);
-
-	cout << "constructAttributeForScan=" << attrNum.size() << endl;
-
-	for(unsigned i = 0; i < attrNum.size(); i++ )
-	{
-		readAttributeForScan( record, attribute, attrNum[i], attrType.at(i), attrLength );
-		cout << "attrNum[i]=" << attrNum[i] << ",attType[i]=" << attrType[i] <<
-				" ,attrLength=" << attrLength << endl;
-		memcpy( (char*)data+offset, attribute, attrLength );
-		offset += attrLength;
-	}
-
-	free( attribute );
-	return 0;
-}*/

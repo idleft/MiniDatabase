@@ -584,11 +584,10 @@ RC RelationManager::loadCatalog()
 	attributeNames.push_back(tableCatalog[1].name);	// tableName
 
 	scan( "Tables", tableCatalog[0].name, NO_OP, NULL, attributeNames, scanIterator);
-
+	cout<<"Loading table..."<<endl;
 	while( scanIterator.getNextTuple( rid, data ) != RM_EOF )
 	{
 //		cout << "************loadCatalog:scanIterator.getNextTuple***********" << endl;
-
 		// [tableID][tableName][catFileName][numOfColums]
 		memcpy( &tableID, data,  sizeof(int));
 
@@ -603,6 +602,7 @@ RC RelationManager::loadCatalog()
 		data = data+sizeof(int);
 
 		string tableName = string(data, tableNameLen);
+		cout<<"load table name: "<<tableName<<"table id: "<<tableID<<endl;
 
 		map<int, RID> *tableRID = new map<int, RID>();
 		(*tableRID)[tableID] = rid;
