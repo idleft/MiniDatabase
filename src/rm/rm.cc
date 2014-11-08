@@ -295,26 +295,42 @@ RC RelationManager::deleteTuple(const string &tableName, const RID &rid)
 	FileHandle fileHandle;
 	RC result = -1;
 	vector<Attribute> tableAttributes;
-    result = _rbfm->openFile(tableName+".tbl",fileHandle);
+    result = _rbfm->openFile(tableName+".tbl", fileHandle);
     if( result != 0 )
     	return result;
 
-//    cout << "deleteTuple: openFile" << endl;
-
-	result = getAttributes(tableName, tableAttributes);
+    cout << "deleteTuple: openFile" << result << endl;
+/*
+    void *record = malloc(PAGE_SIZE);
+    result =  _rbfm->readRecord( fileHandle, tableAttributes, rid, record );
+    if( result != 0 )
+    {
+    	free( record );
+    	_rbfm->closeFile( fileHandle );
+    	return result;
+    }
+*/
+	result = getAttributes( tableName, tableAttributes );
 	if( result != 0 )
 		return result;
 
-//	cout << "deleteTuple: getAttributes" << endl;
+	cout << "deleteTuple: getAttributes" << result << endl;
 
-	result = _rbfm->deleteRecord(fileHandle, tableAttributes, rid);
+	result = _rbfm->deleteRecord( fileHandle, tableAttributes, rid );
 	if( result != 0 )
+	{
+//		free( record );
+		_rbfm->closeFile( fileHandle );
 		return result;
-
-//	cout << "deleteTuple: deleteRecord" << endl;
+	}
+	cout << "deleteTuple: deleteRecord" << result << endl;
 
     result = _rbfm->closeFile(fileHandle);
-    return result;
+    {
+//    	free( record );
+    	return result;
+    }
+
 }
 
 RC RelationManager::updateTuple(const string &tableName, const void *data, const RID &rid)
