@@ -739,13 +739,9 @@ int RecordBasedFileManager::getEstimatedRecordDataSize(vector<Attribute> rescord
 	return res;
 }
 
-RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data)
-{
-	RC result = -1;
-	int estimateRecordLen = getEstimatedRecordDataSize(recordDescriptor);
+RC RecordBasedFileManager::getAttrFromData(const vector<Attribute> &recordDescriptor, void* recordData, void* data, const string attributeName){
 	int fieldPointer = 0;
-	void* recordData = malloc(estimateRecordLen);
-	readRecord(fileHandle, recordDescriptor,rid,recordData);
+	RC result = -1;
 	for(int iter1 = 0; iter1<recordDescriptor.size(); iter1++){
 		if(recordDescriptor.at(iter1).name == attributeName){
 			result = 0;
@@ -769,6 +765,16 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
 			}
 		}
 	}
+	return result;
+}
+
+RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data)
+{
+	RC result = -1;
+	int estimateRecordLen = getEstimatedRecordDataSize(recordDescriptor);
+	void *recordData = malloc(estimateRecordLen);
+	readRecord(fileHandle, recordDescriptor,rid,recordData);
+	result = getAttrFromData(recordDescriptor, recordData, data, attributeName);
 	free(recordData);
 	return result;
 }
@@ -1059,7 +1065,7 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 		if(slot->begin<0)
 			continue;
 		short estimateRecordLen = _rbfm->getEstimatedRecordDataSize(recordDescriptor);
-		void* recordData = malloc(1000); // assume recordLength 1000 maximum ##DANGER##
+		void* recordData = malloc(estimateRecordLen);
 		tombStoneChk = _rbfm->readRecord(fileHandle, recordDescriptor, rid, recordData);
 
 		if(tombStoneChk == -1)

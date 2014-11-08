@@ -95,6 +95,7 @@ public:
   RC constructAttributeForScan(char* record, void* data, vector<AttrType> attrType, vector<short> attrNum);
   RC getAttrSizeByName(string attrName, vector<Attribute> attrSet);
 
+
 private:
   FileHandle fileHandle;
   unsigned pageNum,slotNum,totalPageNum,totalSlotNum;
@@ -180,6 +181,9 @@ public:
   RC appendRecord(char *page, const void *record, short sizeOfRecord, unsigned slotNum);
 
   RC shiftSlotInfo(void* pageData, short shiftOffset, short slotNum);
+
+  RC getAttrFromData(const vector<Attribute> &recordDescriptor, void* recordData, void* data, const string attributeName);
+
 
   bool checkTombStone(void* data, int pageId, int slotId);
 

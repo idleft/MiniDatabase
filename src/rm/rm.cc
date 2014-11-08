@@ -19,6 +19,7 @@ RelationManager::RelationManager()
 	createTableCatalog();
 	createColumnCatalog();
 	createIndexCatalog();
+	cout<<"Table:: "<<tableCatalog.at(0).name<<endl;
 
 	if( _pfm->fileExists( TABLE_CATALOG_FILE_NAME  ) )
 		loadCatalog();
@@ -369,26 +370,16 @@ RC RelationManager::scan(const string &tableName,
 	RC result = -1;
 
 	string fileName =  tableName + ".tbl";
-
-//	cout << "tableName for scanning=" << tableName << " attributeNames.size()="<< attributeNames.size()<< endl;
-//	cout << "scan tableIDMap size=" << tableRIDMap.size() << endl;
-
 	result = _rbfm->openFile( fileName, rm_ScanIterator.fileHandle );
 	if( result == -1 )
 		return result;
 
-//	cout << "RelationManager::scan" << endl;
-
-//	cout << "conditionAttribute: " <<  conditionAttribute  << endl;
-
 	if( fileName.compare(TABLE_CATALOG_FILE_NAME) == 0 )
 	{
-//		cout << "fileName is " << TABLE_CATALOG_FILE_NAME << endl;
 		result = rm_ScanIterator.initialize(tableCatalog, conditionAttribute, compOp, value, attributeNames);
 	}
 	else if( fileName.compare(COLUMN_CATALOG_FILE_NAME) == 0 )
 	{
-//		cout << "fileName is " << COLUMN_CATALOG_FILE_NAME << endl;
 		result = rm_ScanIterator.initialize(columnCatalog, conditionAttribute, compOp, value, attributeNames);
 	}
 	else
@@ -398,7 +389,6 @@ RC RelationManager::scan(const string &tableName,
 		if( result == 0 )
 			result = rm_ScanIterator.initialize(catalogAttributes, conditionAttribute, compOp, value, attributeNames);
 	}
-	//_rbfm->closeFile(rm_ScanIterator.fileHandle);
 	return 0;
 }
 
@@ -529,23 +519,24 @@ RC RelationManager::loadCatalog()
 
 	// load table catalog
 	// we the value we want is tableID and tableName
-	attributeNames.push_back(tableCatalog[0].name);	// tableID
-	attributeNames.push_back(tableCatalog[1].name);	// tableName
-
-	scan( "Tables", tableCatalog[0].name, NO_OP, NULL, attributeNames, scanIterator);
+	attributeNames.push_back(tableCatalog.at(0).name);	// tableID
+	attributeNames.push_back(tableCatalog.at(1).name);	// tableName
+	scan( "Tables", tableCatalog.at(1).name, NO_OP, NULL, attributeNames, scanIterator);
 	cout<<"Loading table..."<<endl;
+
+
 	while( scanIterator.getNextTuple( rid, data ) != RM_EOF )
 	{
 		// [tableID][tableName][catFileName][numOfColums]
 		memcpy( &tableID, data,  sizeof(int));
 
-//		cout << "tableID=" << tableID << endl;
+		cout << "tableID=" << tableID << endl;
 
 		data = data + sizeof(int);
 
 		int tableNameLen;
 		memcpy( &tableNameLen, data, sizeof(int));
-//		cout << "tableNameLen=" << tableNameLen << endl;
+		cout << "tableNameLen=" << tableNameLen << endl;
 
 		data = data+sizeof(int);
 
