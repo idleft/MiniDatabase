@@ -398,6 +398,8 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
 	{
 		Attribute attr = recordDescriptor.at(i);
 
+		cout<<attr.name;
+
 		if( attr.type == TypeInt )
 		{
 			printf("%d\n", *((int*)((char*)data + offset)));
@@ -693,24 +695,12 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 	else{
 		if (sizeDiff > (*freeSpace)[rid.pageNum])
 		{
-//			cout<<"reorg"<<endl;
 			reorganizePage(fileHandle, recordDescriptor, rid.pageNum);
-//			fileHandle.readPage(rid.pageNum,pageData);
 		}
-
 		if(newRecordSize < oldRecordSize||
 				(newRecordSize > oldRecordSize && (sizeDiff < (freeSpace)->at(rid.pageNum) ) ) ){
-//			short shiftDataBlockSize = dirInfo->freeSpaceOffset - slot->end;
-//			cout<<"ShiftBlockSize "<<shiftDataBlockSize<<" block end "<<slot->end+sizeDiff+shiftDataBlockSize
-//					<<"Page start"<<pageData<<" record end "<<slot->end<<endl;
-			//memmove((char*)pageData + slot->end + sizeDiff, (char*)pageData + slot->end, shiftDataBlockSize);
-//			shiftSlotInfo(pageData, sizeDiff,rid.slotNum);
-//			dirInfo->freeSpaceOffset += sizeDiff;
-//			slot->end += sizeDiff;
 			memcpy((char *)pageData + slot->begin, newRecordData, newRecordSize);
 			slot->end = slot->begin+newRecordSize;
-//			(*freeSpace)[rid.pageNum] -=sizeDiff;
-//			result = fileHandle.writePage( rid.pageNum, pageData );
 		}
 		else{// not enough space, set tombstone, add point to new record
 			RID newRid;
@@ -742,7 +732,7 @@ int RecordBasedFileManager::getEstimatedRecordDataSize(vector<Attribute> rescord
 RC RecordBasedFileManager::getAttrFromData(const vector<Attribute> &recordDescriptor, void* recordData, void* data, const string attributeName, short &attrSize){
 	int fieldPointer = 0;
 	RC result = -1;
-	for(int iter1 = 0; iter1<recordDescriptor.size(); iter1++){
+	for(int iter1 = 0; iter1<recordDescriptor.size()&&result == -1; iter1++){
 		if(recordDescriptor.at(iter1).name == attributeName){
 			result = 0;
 			if(recordDescriptor.at(iter1).type == TypeInt){
@@ -757,7 +747,7 @@ RC RecordBasedFileManager::getAttrFromData(const vector<Attribute> &recordDescri
 				int varLen = *(int *)((char*)recordData + fieldPointer);
 				memcpy(data,&varLen, sizeof(int));
 				memcpy((char*)data+sizeof(int), (char *)recordData+fieldPointer+sizeof(int), varLen);
-				attrSize = sizeof(varLen) + varLen;
+				attrSize = sizeof(int) + varLen;
 			}
 		}
 		else{
@@ -1071,7 +1061,7 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 		short estimateRecordLen = _rbfm->getEstimatedRecordDataSize(recordDescriptor);
 		void* recordData = malloc(estimateRecordLen);
 		tombStoneChk = _rbfm->readRecord(fileHandle, recordDescriptor, rid, recordData);
-
+//		_rbfm->printRecord(recordDescriptor,recordData);
 		if(tombStoneChk == -1)
 		{
 			free(recordData);

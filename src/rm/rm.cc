@@ -386,6 +386,8 @@ RC RelationManager::scan(const string &tableName,
 	{
 		vector<Attribute>	catalogAttributes;
 		result = getAttributes( tableName, catalogAttributes );
+//		for(int iter1 = 0; iter1< catalogAttributes.size(); iter1++)
+//			cout<<"attr: "<<catalogAttributes.at(iter1).name<<endl;
 		if( result == 0 )
 			result = rm_ScanIterator.initialize(catalogAttributes, conditionAttribute, compOp, value, attributeNames);
 	}

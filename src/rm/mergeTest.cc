@@ -883,7 +883,7 @@ void TEST_RM_16(const string &tableName)
 int main()
 {
 	// Create Tables
-	initializeTable();
+//	initializeTable();
 
     cout << endl << "Test Insert/Read Tuple .." << endl;
 
@@ -914,7 +914,7 @@ int main()
 ////
 //    cout << endl << "Test Reorganize Page .." << endl;
 ////    // Reorganize Page
-    TEST_RM_7("tbl_employee2");
+//    TEST_RM_7("tbl_employee2");
 //
 //    cout << endl << "Test Simple Scan .." << endl;
 //
@@ -972,7 +972,7 @@ int main()
 //    cout << endl << "Test Simple Scan .." << endl;
 //
 //       // Scan
-//    TEST_RM_13("tbl_employee4");
+    TEST_RM_13("tbl_employee4");
 //
 //    cout << endl << "Test Delete Tuples and Delete Table  .." << endl;
 //    rids.clear();
@@ -982,7 +982,7 @@ int main()
 //    TEST_RM_14("tbl_employee4", rids);
 //
 //    cout << endl << "Test Scan with conditions .." << endl;
-//	// Scan with conditions
+////	// Scan with conditions
 //    createTable("tbl_b_employee4");
 //    TEST_RM_15("tbl_b_employee4");
     // NOTE: your Tables table must be called "Tables"
