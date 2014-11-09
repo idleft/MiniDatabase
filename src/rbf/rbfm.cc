@@ -631,17 +631,23 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 		Slot* slot = goToSlot( endOfPage, slotNum );
 		if( slot->begin < 0 ) // delete a deleted record
 		{
+//			printf("%d %d is deleted",pageNum,slotNum);
 			result = -1;
 			break;
 		}
 
 		char* data = page + slot->begin;
-		isTombStone = isRecordTombStone( data, pageNum, slotNum );
+//		printf("Delete : %d %d\n", pageNum, slotNum);
+		unsigned newPageNum,newSlotNum;
+		newPageNum = pageNum;
+		newSlotNum = slotNum;
+		isTombStone = isRecordTombStone( data, newPageNum, newSlotNum );
 		slot->begin = -1 - slot->begin;
 		result = fileHandle.writePage( pageNum, page );
 		if( result != 0 )
 			break;
-
+		pageNum = newPageNum;
+		slotNum = newSlotNum;
 	}
 
 	free(page);
@@ -696,6 +702,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 	else{
 		if (sizeDiff > (*freeSpace)[rid.pageNum])
 		{
+//			printf("request reorganize");
 			reorganizePage(fileHandle, recordDescriptor, rid.pageNum);
 		}
 		if(newRecordSize < oldRecordSize){
@@ -704,7 +711,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 		}
 		else{// not enough space, set tombstone, add point to new record
 			RID newRid;
-			cout<<"not enough space"<<endl;
+//			cout<<"not enough space"<<endl;
 			result = insertRecord(fileHandle, recordDescriptor, data, newRid);
 			fileHandle.readPage(rid.pageNum,pageData);
 			setRecordTombStone((char*)pageData+slot->begin, newRid.pageNum, newRid.slotNum);

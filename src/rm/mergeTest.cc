@@ -611,6 +611,8 @@ void TEST_RM_11(const string &tableName, vector<RID> &rids, vector<int> &sizes)
     {
         memset(tuple, 0, 1000);
         RID rid = rids[i];
+
+        prepareLargeTuple(i+10, tuple, &size);
         rc = rm->updateTuple(tableName, tuple, rid);
         assert(rc == success);
 
@@ -645,11 +647,17 @@ void TEST_RM_12(const string &tableName, vector<RID> &rids)
     // Functions Tested
     // 1. delete tuple
     // 2. read tuple
-    cout << "****In Test case 12****" << endl;
+    void * returnedData = malloc(1000);
+    RC rc = 0;
+
+	//////wang test
+	RID tmp;
+	tmp.pageNum = 199;
+	tmp.slotNum = 7;
+
+    rc = rm->readTuple(tableName, tmp, returnedData);
 
     int numTuples = 2000;
-    RC rc = 0;
-    void * returnedData = malloc(1000);
     
     readRIDsFromDisk(rids, numTuples);
 
@@ -883,7 +891,12 @@ void TEST_RM_16(const string &tableName)
 int main()
 {
 	// Create Tables
-//	initializeTable();
+    vector<RID> rids;
+    vector<int> sizes;
+	initializeTable();
+    TEST_RM_9("tbl_employee4", rids, sizes);
+    TEST_RM_11("tbl_employee4", rids, sizes);
+    TEST_RM_12("tbl_employee4", rids);
 //	TEST_RM_0("tbl_employee");
 //    TEST_RM_1("tbl_employee", 6, "Peters", 24, 170.1, 5000);
 //    TEST_RM_2("tbl_employee", 6, "Victor", 22, 180.2, 6000);
@@ -894,19 +907,15 @@ int main()
 //    TEST_RM_7("tbl_employee2");
 //    TEST_RM_8_A("tbl_employee3");
 //    TEST_RM_8_B("tbl_employee3");
-    vector<RID> rids;
-    vector<int> sizes;
-//    TEST_RM_9("tbl_employee4", rids, sizes);
 //        rids.clear();
 //        sizes.clear();
 //    TEST_RM_10("tbl_employee4", rids, sizes);
 //    rids.clear();
 //    sizes.clear();
     //update
-//    TEST_RM_11("tbl_employee4", rids, sizes);
 //    rids.clear();
 //    sizes.clear();
-//    TEST_RM_12("tbl_employee4", rids);
+//
 //    rids.clear();
 //    sizes.clear();
 //    TEST_RM_13("tbl_employee4");
