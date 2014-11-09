@@ -853,8 +853,8 @@ void TEST_RM_16(const string &tableName)
     cout << "Catalog schema: (";
     for(unsigned i = 0; i < attrs.size(); i++)
     {
-        if (i < attrs.size() - 1) cout << attrs[i].name << ", ";
-        else cout << attrs[i].name << ")" << endl << endl;
+        if (i < attrs.size() - 1) cout << attrs.at(i).name << ", ";
+        else cout << attrs.at(i).name << ")" << endl << endl;
     }
 
     RID rid;
@@ -864,7 +864,7 @@ void TEST_RM_16(const string &tableName)
     RM_ScanIterator rmsi;
     vector<string> projected_attrs;
     for (int i = 0; i < attrs.size(); i++){
-      projected_attrs.push_back(attrs[i].name);
+      projected_attrs.push_back(attrs.at(i).name);
     }
 
     rc = rm->scan(tableName, "", NO_OP, NULL, projected_attrs, rmsi);
@@ -902,10 +902,11 @@ int main()
 //    TEST_RM_10("tbl_employee4", rids, sizes);
 //    rids.clear();
 //    sizes.clear();
+    //update
 //    TEST_RM_11("tbl_employee4", rids, sizes);
 //    rids.clear();
 //    sizes.clear();
-    TEST_RM_12("tbl_employee4", rids);
+//    TEST_RM_12("tbl_employee4", rids);
 //    rids.clear();
 //    sizes.clear();
 //    TEST_RM_13("tbl_employee4");

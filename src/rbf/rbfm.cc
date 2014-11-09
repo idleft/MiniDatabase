@@ -678,6 +678,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 	}
 
 	vector<short> *freeSpace = directoryOfSlots[fileHandle.getFileName()];
+	// calculate cfreespace = PAGE_SIZE - dirInfo.freeOffset - (dirinfo.slotnum+2)*sizeof(int)
 
 	Slot* slot = goToSlot(endOfPage,rid.slotNum);
 	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
@@ -697,8 +698,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 		{
 			reorganizePage(fileHandle, recordDescriptor, rid.pageNum);
 		}
-		if(newRecordSize < oldRecordSize||
-				(newRecordSize > oldRecordSize && (sizeDiff < (freeSpace)->at(rid.pageNum) ) ) ){
+		if(newRecordSize < oldRecordSize){
 			memcpy((char *)pageData + slot->begin, newRecordData, newRecordSize);
 			slot->end = slot->begin+newRecordSize;
 		}
@@ -708,7 +708,6 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 			result = insertRecord(fileHandle, recordDescriptor, data, newRid);
 			fileHandle.readPage(rid.pageNum,pageData);
 			setRecordTombStone((char*)pageData+slot->begin, newRid.pageNum, newRid.slotNum);
-//			result = fileHandle.writePage( rid.pageNum, pageData );
 		}
 
 		result = fileHandle.writePage( rid.pageNum, pageData );
