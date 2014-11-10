@@ -26,7 +26,7 @@ RelationManager::RelationManager()
 	else
 	{
 		createCatalogFile( "Tables", tableCatalog );
-		createCatalogFile( "column", columnCatalog );
+		createCatalogFile( "Columns", columnCatalog );
 		createCatalogFile( "index", indexCatalog );
 	}
 
@@ -53,7 +53,7 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 	RC result = -1;
 	// check reserved table names
 	if( tableName.compare("Tables") == 0 ||
-			tableName.compare("column") == 0 ||
+			tableName.compare("Columns") == 0 ||
 			tableName.compare("index") == 0 )
 	{
 		cout << "Not allowed table name=" << tableName << "in the system. try different name" << endl;
@@ -559,7 +559,7 @@ RC RelationManager::loadCatalog()
 	attributeNames.push_back(columnCatalog.at(0).name);	// tableID
 	attributeNames.push_back(columnCatalog.at(2).name);	// columnStart
 
-	scan( "column", columnCatalog.at(2).name, NO_OP, NULL, attributeNames, scanIterator);
+	scan( "Columns", columnCatalog.at(2).name, NO_OP, NULL, attributeNames, scanIterator);
 
 	int columnStart = 0;
 	int pCounter = 0;
