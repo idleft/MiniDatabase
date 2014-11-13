@@ -54,7 +54,7 @@ unsigned IndexManager::hash(const Attribute &attribute, const void *key)
 	return 0;
 }
 
-RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const unsigned &primaryPageNumber) 
+RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attribute &attribute, const unsigned &primaryPageNumber) 
 {
 	return -1;
 }

@@ -71,7 +71,7 @@ class IndexManager {
   // # of entries : ??
   // entries: [xx] [xx] [xx] [xx] [xx]
   // where [xx] shows each entry.
-  RC printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const unsigned &primaryPageNumber);
+  RC printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attribute &attribute, const unsigned &primaryPageNumber);
   
   // Get the number of primary pages
   RC getNumberOfPrimaryPages(IXFileHandle &ixfileHandle, unsigned &numberOfPrimaryPages);
