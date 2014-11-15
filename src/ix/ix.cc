@@ -21,22 +21,63 @@ IndexManager::~IndexManager()
 
 RC IndexManager::createFile(const string &fileName, const unsigned &numberOfPages)
 {
-	return -1;
+	RC rc1,rc2;
+	string metaFileName, idxFileName;
+	metaFileName = fileName + METASUFFIX;
+	idxFileName = fileName + BUCKETSUFFIX;
+	rc1 = _pfm->createFile(metaFileName.c_str());
+	rc2 = _pfm->createFile(idxFileName.c_str());
+
+	void *data = malloc(PAGE_SIZE*numberOfPages);
+	FILE *file = fopen(idxFileName.c_str(),"rb");
+	fwrite(data, 1, PAGE_SIZE*numberOfPages, file);
+	fclose(file);
+	free(data);
+
+	if(rc1==0&&rc2==0)
+		return 0;
+	else
+		return -1;
 }
 
 RC IndexManager::destroyFile(const string &fileName)
 {
-	return -1;
+	RC rc1,rc2;
+	string metaFileName, idxFileName;
+	metaFileName = fileName + METASUFFIX;
+	idxFileName = fileName + BUCKETSUFFIX;
+	rc1 = _pfm->destroyFile(metaFileName.c_str());
+	rc2 = _pfm->destroyFile(idxFileName.c_str());
+	if(rc1==0&&rc2==0)
+		return 0;
+	else
+		return -1;
 }
 
 RC IndexManager::openFile(const string &fileName, IXFileHandle &ixFileHandle)
 {
-	return -1;
+	RC rc1,rc2;
+	string metaFileName, idxFilename;
+	metaFileName = fileName + METASUFFIX;
+	idxFilename = fileName + BUCKETSUFFIX;
+
+	rc1 = _pfm->openFile(metaFileName.c_str(), ixFileHandle.metaFileHandle);
+	rc2 = _pfm->openFile(idxFilename.c_str(),ixFileHandle.idxFileHandle);
+	if(rc1==0&&rc2==0)
+			return 0;
+	else
+		return -1;
 }
 
 RC IndexManager::closeFile(IXFileHandle &ixfileHandle)
 {
-	return -1;
+	RC rc1,rc2;
+	rc1 = _pfm->closeFile(ixfileHandle.metaFileHandle);
+	rc2 = _pfm->closeFile(ixfileHandle.idxFileHandle);
+	if(rc1==0&&rc2==0)
+			return 0;
+	else
+		return -1;
 }
 
 RC IndexManager::insertEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid)
@@ -61,12 +102,19 @@ RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attr
 
 RC IndexManager::getNumberOfPrimaryPages(IXFileHandle &ixfileHandle, unsigned &numberOfPrimaryPages) 
 {
-	return -1;
+	int pageNum = 0;
+	pageNum = ixfileHandle.idxFileHandle.getNumberOfPages();
+	numberOfPrimaryPages = pageNum;
+	return 0;
 }
 
 RC IndexManager::getNumberOfAllPages(IXFileHandle &ixfileHandle, unsigned &numberOfAllPages) 
 {
-	return -1;
+	int pageNum = 0;
+	pageNum+=ixfileHandle.idxFileHandle.getNumberOfPages();
+	pageNum+=ixfileHandle.metaFileHandle.getNumberOfPages();
+	numberOfAllPages = pageNum;
+	return 0;
 }
 
 
@@ -102,6 +150,9 @@ RC IX_ScanIterator::close()
 
 IXFileHandle::IXFileHandle()
 {
+	readPageCounter = 0;
+	writePageCounter = 0;
+	appendPageCounter = 0;
 }
 
 IXFileHandle::~IXFileHandle()
@@ -110,7 +161,14 @@ IXFileHandle::~IXFileHandle()
 
 RC IXFileHandle::collectCounterValues(unsigned &readPageCount, unsigned &writePageCount, unsigned &appendPageCount)
 {
-	return -1;
+	/*
+	 * Currently, only update the counter in IXFileHandle
+	 * when collect is called.
+	 * */
+	readPageCount = this->readPageCounter;
+	writePageCount = this->writePageCounter;
+	appendPageCount = this->appendPageCounter;
+	return 0;
 }
 
 void IX_PrintError (RC rc)

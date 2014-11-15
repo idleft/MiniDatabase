@@ -687,7 +687,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 	// calculate cfreespace = PAGE_SIZE - dirInfo.freeOffset - (dirinfo.slotnum+2)*sizeof(int)
 
 	Slot* slot = goToSlot(endOfPage,rid.slotNum);
-	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
+//	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
 
 //	cout<<2.3<<endl;
 	short oldRecordSize = slot->end - slot->begin;
@@ -959,7 +959,6 @@ bool RBFM_ScanIterator::checkCondition(void* data, string &attrName, vector<Attr
 	short fieldOffset = 0;
 	int varLen = 0;
 	// Find the right type and position of compare field
-	int tmp = recordDescriptor.size();
 	for(vector<Attribute>::iterator iter1 = recordDescriptor.begin(); !result&&iter1!=recordDescriptor.end();iter1++){
 		if(iter1->name == attrName){
 			attrType = iter1->type;

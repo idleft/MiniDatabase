@@ -10,7 +10,7 @@
 
 class IX_ScanIterator;
 class IXFileHandle;
-
+const string METASUFFIX = '.meta', BUCKETSUFFIX = '.idx';
 
 class IndexManager {
  public:
@@ -85,6 +85,8 @@ class IndexManager {
 
  private:
   static IndexManager *_index_manager;
+  PagedFileManager *_pfm;
+  IXFileHandle ixFilehandle;
 };
 
 
@@ -106,10 +108,18 @@ public:
     IXFileHandle();  							// Constructor
     ~IXFileHandle(); 							// Destructor
     
+    RC readPage(PageNum pageNum, void *data);
+    RC writePage(PageNum pageNum, const void *data);
+    RC appendPage(const void *data);
+    unsigned getNumberOfPages();
+
 private:
     unsigned readPageCounter;
     unsigned writePageCounter;
     unsigned appendPageCounter;
+
+    FileHandle metaFileHandle;
+    FileHandle idxFileHandle;
 };
 
 // print out the error message for a given return code
