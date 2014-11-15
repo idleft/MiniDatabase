@@ -622,7 +622,7 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 	unsigned pageNum = rid.pageNum;
 	unsigned slotNum = rid.slotNum;
 
-//	cout << "deleteRecord:pageNum=" << pageNum << " slotNum="<< slotNum << endl;
+	cout << "deleteRecord:pageNum=" << pageNum << " slotNum="<< slotNum << endl;
 
 	vector<short> *slotDirectory = directoryOfSlots[fileHandle.getFileName()];
 
@@ -644,16 +644,18 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 		Slot* slot = goToSlot( endOfPage, slotNum );
 		if( slot->begin < 0 ) // delete a deleted record
 		{
+			cout << "deleteRecord:slot->begin" << slot->begin << endl;
 			result = -1;
+//			result = 0;
 			break;
 		}
 
 //		cout << "deleteRecord:goToSlot" << result << endl;
-		char* data = page + slot->begin;
-		isTombStone = isRecordTombStone( data, pageNum, slotNum );
+		char* record = page + slot->begin;
+		isTombStone = isRecordTombStone( record, pageNum, slotNum );
 		slot->begin = -1 - slot->begin;
 
-//		cout << "deleteRecord:data set to -1" << endl;
+		cout << "deleteRecord:data set to " << slot->begin << endl;
 
 //		(*slotDirectory)[pageNum] += sizeOfRecord;// increase multiple times?
 		result = fileHandle.writePage( pageNum, page );
@@ -744,7 +746,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 		}
 		else{// not enough space, set tombstone, add point to new record
 			RID newRid;
-			cout<<"not enough space"<<endl;
+//			cout<<"not enough space"<<endl;
 			result = insertRecord(fileHandle, recordDescriptor, data, newRid);
 			fileHandle.readPage(rid.pageNum,pageData);
 			setRecordTombStone((char*)pageData+slot->begin, newRid.pageNum, newRid.slotNum);
@@ -761,7 +763,11 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 int RecordBasedFileManager::getEstimatedRecordDataSize(vector<Attribute> recordDesciptor){
 	int res = 0;
 	for(int iter1 = 0; iter1<recordDesciptor.size(); iter1++)
+	{
 		res+=recordDesciptor.at(iter1).length;
+		if( recordDesciptor.at(iter1).type == TypeVarChar )
+			res+=sizeof(int);
+	}
 	return res;
 }
 
@@ -821,11 +827,10 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 	if( directoryOfSlots.find(fileHandle.getFileName()) == directoryOfSlots.end() )
 		return result;
 
-	unsigned pageN = pageNumber;
-	void* page = malloc(PAGE_SIZE);
-	void* reorganizedPage = malloc(PAGE_SIZE);
+	char* page = (char*)malloc(PAGE_SIZE);
+	char* reorganizedPage = (char*)malloc(PAGE_SIZE);
 
-	result = fileHandle.readPage(pageN, page);
+	result = fileHandle.readPage(pageNumber, page);
 
 	memcpy( reorganizedPage, page, PAGE_SIZE );
 
@@ -845,10 +850,10 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 	for( unsigned iter1 = 0; iter1 < slotNum; iter1++ ) {
 
 		// data is there, let's move them
-		if( slot->begin > 0  && slot->end > 0 )
+		if( slot->begin >= 0  && slot->end > 0 )
 		{
 			short recordSize = slot->end - slot->begin;
-			memcpy( (char*)reorganizedPage + offset, (char*)page + slot->begin, recordSize);
+			memcpy( reorganizedPage + offset, page + slot->begin, recordSize);
 			reOrgSlot->begin = offset;
 			reOrgSlot->end = offset + recordSize;
 			offset += recordSize;
@@ -897,17 +902,18 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 		*/
 	}
 
-//	result = fileHandle.writePage(pageN, page);
-	result = fileHandle.writePage(pageN, reorganizedPage);
-
 	reOrgPagedirInfo->numOfReorgSlots = 0;
 	reOrgPagedirInfo->freeSpaceOffset = offset;
 
 	vector<short> *freeSpace = directoryOfSlots[fileHandle.getFileName()];
-	(*freeSpace)[pageN] = PAGE_SIZE - offset - sizeof(DirectoryOfSlotsInfo) - reOrgPagedirInfo->numOfSlots*sizeof(Slot);
+	(*freeSpace)[pageNumber] = PAGE_SIZE - offset - sizeof(DirectoryOfSlotsInfo) - reOrgPagedirInfo->numOfSlots*sizeof(Slot);
+
+
+//	result = fileHandle.writePage(pageN, page);
+	result = fileHandle.writePage(pageNumber, reorganizedPage);
 
 	free(page);
-	free(reoranizePage);
+	free(reorganizedPage);
 	return result;
 }
 
@@ -1212,7 +1218,7 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 
 		if(tombStoneChk == -1)
 		{
-			free(recordData);
+//			free(recordData);
 			continue;
 		}
 		/*
