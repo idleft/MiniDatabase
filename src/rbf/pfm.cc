@@ -116,6 +116,9 @@ FileHandle::FileHandle()
 {
 	this->file = NULL;
 	this->fileName = "";
+	readPageCounter = 0;
+	writePageCounter = 0;
+	appendPageCounter = 0;
 }
 
 
@@ -139,6 +142,8 @@ RC FileHandle::readPage(PageNum pageNum, void *data)
 
 	size_t result = fread( data, 1, PAGE_SIZE, file );
 
+	readPageCounter+=1;
+
 	return (result == PAGE_SIZE ? 0 : -1);
 }
 
@@ -156,6 +161,8 @@ RC FileHandle::writePage(PageNum pageNum, const void *data)
 
 	size_t result = fwrite( data, 1, PAGE_SIZE, file);
 
+	writePageCounter+=1;
+
     return result == PAGE_SIZE ? 0 : -1;
 }
 
@@ -168,6 +175,8 @@ RC FileHandle::appendPage(const void *data)
 	fseek(file, 0, SEEK_END);
 
 	size_t result = fwrite( data, 1, PAGE_SIZE, file );
+
+	appendPageCounter+=1;
 
     return result == PAGE_SIZE ? 0 : -1;
 }
@@ -210,6 +219,15 @@ void FileHandle::clear()
 	this->fileName.clear();
 	this->file = NULL;
 }
+
+RC FileHandle::collectCounterValues(unsigned &readPageCount, unsigned &writePageCount, unsigned &appendPageCount)
+{
+	readPageCount = this->readPageCounter;
+	writePageCount = this->writePageCounter;
+	appendPageCount = this->appendPageCounter;
+	return 0;
+}
+
 
 
 

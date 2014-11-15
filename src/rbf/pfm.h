@@ -57,10 +57,16 @@ public:
     std::string getFileName();
 
     void clear();
+    RC collectCounterValues(unsigned &readPageCount, unsigned &writePageCount, unsigned &appendPageCount);
+
 
 private:
     FILE *file;
     std::string fileName;
+    unsigned readPageCounter;
+	unsigned writePageCounter;
+	unsigned appendPageCounter;
+
  };
 
  #endif

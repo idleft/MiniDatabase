@@ -5,12 +5,12 @@
 #include <string>
 
 #include "../rbf/rbfm.h"
-
+#include "../rbf/pfm.h"
 # define IX_EOF (-1)  // end of the index scan
 
 class IX_ScanIterator;
 class IXFileHandle;
-const string METASUFFIX = '.meta', BUCKETSUFFIX = '.idx';
+const string METASUFFIX = ".meta", BUCKETSUFFIX = ".idx";
 
 class IndexManager {
  public:
@@ -78,7 +78,7 @@ class IndexManager {
 
   // Get the number of all pages (primary + overflow)
   RC getNumberOfAllPages(IXFileHandle &ixfileHandle, unsigned &numberOfAllPages);
-  
+
  protected:
   IndexManager   ();                            // Constructor
   ~IndexManager  ();                            // Destructor
@@ -86,7 +86,6 @@ class IndexManager {
  private:
   static IndexManager *_index_manager;
   PagedFileManager *_pfm;
-  IXFileHandle ixFilehandle;
 };
 
 
@@ -107,19 +106,14 @@ public:
 
     IXFileHandle();  							// Constructor
     ~IXFileHandle(); 							// Destructor
-    
-    RC readPage(PageNum pageNum, void *data);
-    RC writePage(PageNum pageNum, const void *data);
-    RC appendPage(const void *data);
-    unsigned getNumberOfPages();
+    FileHandle metaFileHandle;
+    FileHandle idxFileHandle;
 
 private:
     unsigned readPageCounter;
     unsigned writePageCounter;
     unsigned appendPageCounter;
 
-    FileHandle metaFileHandle;
-    FileHandle idxFileHandle;
 };
 
 // print out the error message for a given return code

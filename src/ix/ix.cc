@@ -25,11 +25,12 @@ RC IndexManager::createFile(const string &fileName, const unsigned &numberOfPage
 	string metaFileName, idxFileName;
 	metaFileName = fileName + METASUFFIX;
 	idxFileName = fileName + BUCKETSUFFIX;
-	rc1 = _pfm->createFile(metaFileName.c_str());
-	rc2 = _pfm->createFile(idxFileName.c_str());
+	rc1 = _pfm->createFile(&metaFileName[0]);
+	rc2 = _pfm->createFile(&idxFileName[0]);
 
 	void *data = malloc(PAGE_SIZE*numberOfPages);
-	FILE *file = fopen(idxFileName.c_str(),"rb");
+	memset(data, 0, PAGE_SIZE*numberOfPages);
+	FILE *file = fopen(&idxFileName[0],"rb+");
 	fwrite(data, 1, PAGE_SIZE*numberOfPages, file);
 	fclose(file);
 	free(data);
@@ -46,8 +47,8 @@ RC IndexManager::destroyFile(const string &fileName)
 	string metaFileName, idxFileName;
 	metaFileName = fileName + METASUFFIX;
 	idxFileName = fileName + BUCKETSUFFIX;
-	rc1 = _pfm->destroyFile(metaFileName.c_str());
-	rc2 = _pfm->destroyFile(idxFileName.c_str());
+	rc1 = _pfm->destroyFile(&metaFileName[0]);
+	rc2 = _pfm->destroyFile(&idxFileName[0]);
 	if(rc1==0&&rc2==0)
 		return 0;
 	else
@@ -61,8 +62,8 @@ RC IndexManager::openFile(const string &fileName, IXFileHandle &ixFileHandle)
 	metaFileName = fileName + METASUFFIX;
 	idxFilename = fileName + BUCKETSUFFIX;
 
-	rc1 = _pfm->openFile(metaFileName.c_str(), ixFileHandle.metaFileHandle);
-	rc2 = _pfm->openFile(idxFilename.c_str(),ixFileHandle.idxFileHandle);
+	rc1 = _pfm->openFile(&metaFileName[0], ixFileHandle.metaFileHandle);
+	rc2 = _pfm->openFile(&idxFilename[0],ixFileHandle.idxFileHandle);
 	if(rc1==0&&rc2==0)
 			return 0;
 	else
@@ -165,6 +166,12 @@ RC IXFileHandle::collectCounterValues(unsigned &readPageCount, unsigned &writePa
 	 * Currently, only update the counter in IXFileHandle
 	 * when collect is called.
 	 * */
+	unsigned s1,s2,s3,e1,e2,e3;
+	metaFileHandle.collectCounterValues(s1,s2,s3);
+	idxFileHandle.collectCounterValues(e1,e2,e3);
+	this->readPageCounter = s1+e1;
+	this->writePageCounter = s2+e2;
+	this->appendPageCounter = s3+e3;
 	readPageCount = this->readPageCounter;
 	writePageCount = this->writePageCounter;
 	appendPageCount = this->appendPageCounter;
