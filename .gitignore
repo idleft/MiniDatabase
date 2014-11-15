@@ -6,4 +6,5 @@ src/rm/mergeTest.cc
 ./src/.DS_Store
 *.tbl
 *.tbl_desc
-
+*.idx
+*.meta
