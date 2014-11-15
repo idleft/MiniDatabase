@@ -845,14 +845,10 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 	reOrgPagedirInfo->numOfSlots = dirInfo->numOfSlots;
 	reOrgPagedirInfo->freeSpaceOffset = offset;
 
-	result = fileHandle.writePage(pageN, reorganizedPage);
+	result = fileHandle.writePage(pageNumber, reorganizedPage);
 
 	vector<short> *freeSpace = directoryOfSlots[fileHandle.getFileName()];
 	(*freeSpace)[pageNumber] = PAGE_SIZE - offset - sizeof(DirectoryOfSlotsInfo) - reOrgPagedirInfo->numOfSlots*sizeof(Slot);
-
-
-//	result = fileHandle.writePage(pageN, page);
-	result = fileHandle.writePage(pageNumber, reorganizedPage);
 
 	free(page);
 	free(reorganizedPage);

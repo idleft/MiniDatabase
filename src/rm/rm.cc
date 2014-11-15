@@ -258,42 +258,17 @@ RC RelationManager::deleteTuple(const string &tableName, const RID &rid)
     if( result != 0 )
     	return result;
 
-<<<<<<< HEAD
-    cout << "deleteTuple: openFile" << result << endl;
-/*
-    void *record = malloc(PAGE_SIZE);
-    result =  _rbfm->readRecord( fileHandle, tableAttributes, rid, record );
-    if( result != 0 )
-    {
-    	free( record );
-    	_rbfm->closeFile( fileHandle );
-    	return result;
-    }
-*/
-	result = getAttributes( tableName, tableAttributes );
-	if( result != 0 )
-		return result;
-
-	cout << "deleteTuple: getAttributes" << result << endl;
-
-	result = _rbfm->deleteRecord( fileHandle, tableAttributes, rid );
-=======
 	result = getAttributes(tableName, tableAttributes);
 	if( result != 0 )
 		return result;
 
 	result = _rbfm->deleteRecord(fileHandle, tableAttributes, rid);
->>>>>>> xkwang
 	if( result != 0 )
 	{
 //		free( record );
 		_rbfm->closeFile( fileHandle );
 		return result;
-<<<<<<< HEAD
 	}
-	cout << "deleteTuple: deleteRecord" << result << endl;
-=======
->>>>>>> xkwang
 
     result = _rbfm->closeFile(fileHandle);
     {
