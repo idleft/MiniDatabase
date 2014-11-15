@@ -29,7 +29,6 @@ typedef struct
 {
 	short numOfSlots;
 	short freeSpaceOffset;
-	short numOfReorgSlots;
 } DirectoryOfSlotsInfo;
 
 #define HEADER_PAGE_SIZE 2000
@@ -94,6 +93,8 @@ public:
 
   RC readAttributeForScan(char *record, void *attribute, short numOfAttribute, AttrType type, int &attrLength);
   RC constructAttributeForScan(char* record, void* data, vector<AttrType> attrType, vector<short> attrNum);
+  RC getAttrSizeByName(string attrName, vector<Attribute> attrSet);
+
 
 private:
   FileHandle fileHandle;
@@ -180,6 +181,9 @@ public:
   RC appendRecord(char *page, const void *record, short sizeOfRecord, unsigned slotNum);
 
   RC shiftSlotInfo(void* pageData, short shiftOffset, short slotNum);
+
+  RC getAttrFromData(const vector<Attribute> &recordDescriptor, void* recordData, void* data, const string attributeName, short& attrSize);
+
 
   bool checkTombStone(void* data, int pageId, int slotId);
 

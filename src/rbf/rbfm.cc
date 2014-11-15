@@ -398,6 +398,8 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
 	{
 		Attribute attr = recordDescriptor.at(i);
 
+		cout<<attr.name;
+
 		if( attr.type == TypeInt )
 		{
 			printf("%d\n", *((int*)((char*)data + offset)));
@@ -466,7 +468,6 @@ RC RecordBasedFileManager::recordToData(void* record, const vector<Attribute> &r
 {
 	short offset = 0;
 	short elementStart = 0;
-	short tmpSize = recordDescriptor.size();
 	for (short i = 0; i < recordDescriptor.size(); i++)
 	{
 		Attribute attr = recordDescriptor[i];
@@ -610,24 +611,12 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 
 	if( fileHandle.getFile() == NULL )
 			return result;
-
-//	cout << "deleteRecord: fileHandle.getFile()" << result << endl;
-
 	if( directoryOfSlots.find( fileHandle.getFileName() ) ==
 			directoryOfSlots.end() )
 		return result;
 
-//	cout << "deleteRecord:directoryOfSlots" << result << endl;
-
 	unsigned pageNum = rid.pageNum;
 	unsigned slotNum = rid.slotNum;
-
-	cout << "deleteRecord:pageNum=" << pageNum << " slotNum="<< slotNum << endl;
-
-	vector<short> *slotDirectory = directoryOfSlots[fileHandle.getFileName()];
-
-//	cout << "deleteRecord:slotDirectory size" << slotDirectory->size() << endl;
-
 	char* page = (char*)malloc( PAGE_SIZE );
 
 	bool isTombStone = true;
@@ -637,33 +626,28 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 		if( result != 0 )
 			return result;
 
-//		cout << "deleteRecord:readPage" << result << endl;
-
 		const char* endOfPage = page + PAGE_SIZE;
 
 		Slot* slot = goToSlot( endOfPage, slotNum );
 		if( slot->begin < 0 ) // delete a deleted record
 		{
-			cout << "deleteRecord:slot->begin" << slot->begin << endl;
 			result = -1;
 //			result = 0;
 			break;
 		}
 
-//		cout << "deleteRecord:goToSlot" << result << endl;
-		char* record = page + slot->begin;
-		isTombStone = isRecordTombStone( record, pageNum, slotNum );
+		char* data = page + slot->begin;
+//		printf("Delete : %d %d\n", pageNum, slotNum);
+		unsigned newPageNum,newSlotNum;
+		newPageNum = pageNum;
+		newSlotNum = slotNum;
+		isTombStone = isRecordTombStone( data, newPageNum, newSlotNum );
 		slot->begin = -1 - slot->begin;
-
-		cout << "deleteRecord:data set to " << slot->begin << endl;
-
-//		(*slotDirectory)[pageNum] += sizeOfRecord;// increase multiple times?
 		result = fileHandle.writePage( pageNum, page );
 		if( result != 0 )
 			break;
-
-//		cout << "deleteRecord:writePage" << endl;
-
+		pageNum = newPageNum;
+		slotNum = newSlotNum;
 	}
 
 	free(page);
@@ -700,8 +684,8 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 	}
 
 	vector<short> *freeSpace = directoryOfSlots[fileHandle.getFileName()];
+	// calculate cfreespace = PAGE_SIZE - dirInfo.freeOffset - (dirinfo.slotnum+2)*sizeof(int)
 
-//	cout<<2.2<<endl;
 	Slot* slot = goToSlot(endOfPage,rid.slotNum);
 	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
 
@@ -711,38 +695,19 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 	void *newRecordData = malloc(newRecordSize);
 	short sizeDiff = newRecordSize - oldRecordSize;
 	dataToRecord(data, recordDescriptor, newRecordData);
-	/*
-	if(PAGE_SIZE - dirInfo->freeSpaceOffset == freeSpace->at(rid.pageNum))
-					cout<<"true"<<endl;
-				else
-					cout<<"false"<<endl;
-					*/
 	if(oldRecordSize==newRecordSize){
-//		cout<<"equal"<<endl;
 		memcpy((char*) pageData + slot->begin, newRecordData, oldRecordSize);
 		result = fileHandle.writePage( rid.pageNum, pageData );
 	}
 	else{
 		if (sizeDiff > (*freeSpace)[rid.pageNum])
 		{
-//			cout<<"reorg"<<endl;
+//			printf("request reorganize");
 			reorganizePage(fileHandle, recordDescriptor, rid.pageNum);
-//			fileHandle.readPage(rid.pageNum,pageData);
 		}
-
-		if(newRecordSize < oldRecordSize||
-				(newRecordSize > oldRecordSize && (sizeDiff < (freeSpace)->at(rid.pageNum) ) ) ){
-//			short shiftDataBlockSize = dirInfo->freeSpaceOffset - slot->end;
-//			cout<<"ShiftBlockSize "<<shiftDataBlockSize<<" block end "<<slot->end+sizeDiff+shiftDataBlockSize
-//					<<"Page start"<<pageData<<" record end "<<slot->end<<endl;
-			//memmove((char*)pageData + slot->end + sizeDiff, (char*)pageData + slot->end, shiftDataBlockSize);
-//			shiftSlotInfo(pageData, sizeDiff,rid.slotNum);
-//			dirInfo->freeSpaceOffset += sizeDiff;
-//			slot->end += sizeDiff;
+		if(newRecordSize < oldRecordSize){
 			memcpy((char *)pageData + slot->begin, newRecordData, newRecordSize);
 			slot->end = slot->begin+newRecordSize;
-//			(*freeSpace)[rid.pageNum] -=sizeDiff;
-//			result = fileHandle.writePage( rid.pageNum, pageData );
 		}
 		else{// not enough space, set tombstone, add point to new record
 			RID newRid;
@@ -750,7 +715,6 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 			result = insertRecord(fileHandle, recordDescriptor, data, newRid);
 			fileHandle.readPage(rid.pageNum,pageData);
 			setRecordTombStone((char*)pageData+slot->begin, newRid.pageNum, newRid.slotNum);
-//			result = fileHandle.writePage( rid.pageNum, pageData );
 		}
 
 		result = fileHandle.writePage( rid.pageNum, pageData );
@@ -760,34 +724,36 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 	return result;
 }
 
-int RecordBasedFileManager::getEstimatedRecordDataSize(vector<Attribute> recordDesciptor){
+int RecordBasedFileManager::getEstimatedRecordDataSize(vector<Attribute> rescordDescriptor){
 	int res = 0;
-	for(int iter1 = 0; iter1<recordDesciptor.size(); iter1++)
+	for(int iter1 = 0; iter1<rescordDescriptor.size(); iter1++)
 	{
-		res+=recordDesciptor.at(iter1).length;
-		if( recordDesciptor.at(iter1).type == TypeVarChar )
+		if(rescordDescriptor.at(iter1).type==TypeVarChar)
 			res+=sizeof(int);
+		res+=rescordDescriptor.at(iter1).length;
 	}
 	return res;
 }
 
-RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data)
-{
-	RC result = -1;
-	int estimateRecordLen = getEstimatedRecordDataSize(recordDescriptor);
+RC RecordBasedFileManager::getAttrFromData(const vector<Attribute> &recordDescriptor, void* recordData, void* data, const string attributeName, short &attrSize){
 	int fieldPointer = 0;
-	void* recordData = malloc(estimateRecordLen);
-	readRecord(fileHandle, recordDescriptor,rid,recordData);
-	for(int iter1 = 0; iter1<recordDescriptor.size(); iter1++){
+	RC result = -1;
+	for(int iter1 = 0; iter1<recordDescriptor.size()&&result == -1; iter1++){
 		if(recordDescriptor.at(iter1).name == attributeName){
 			result = 0;
-			if(recordDescriptor.at(iter1).type == TypeInt)
+			if(recordDescriptor.at(iter1).type == TypeInt){
 				memcpy(data, (char *)recordData+fieldPointer, sizeof(int));
-			else if(recordDescriptor.at(iter1).type == TypeReal)
+				attrSize = sizeof(int);
+			}
+			else if(recordDescriptor.at(iter1).type == TypeReal){
 				memcpy(data, (char *)recordData+fieldPointer, sizeof(float));
+				attrSize = sizeof(float);
+			}
 			else{
 				int varLen = *(int *)((char*)recordData + fieldPointer);
-				memcpy(data, (char *)recordData+fieldPointer+sizeof(int), varLen);
+				memcpy(data,&varLen, sizeof(int));
+				memcpy((char*)data+sizeof(int), (char *)recordData+fieldPointer+sizeof(int), varLen);
+				attrSize = sizeof(int) + varLen;
 			}
 		}
 		else{
@@ -801,6 +767,17 @@ RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<At
 			}
 		}
 	}
+	return result;
+}
+
+RC RecordBasedFileManager::readAttribute(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, const string attributeName, void *data)
+{
+	RC result = -1;
+	short attrSize;
+	int estimateRecordLen = getEstimatedRecordDataSize(recordDescriptor);
+	void *recordData = malloc(estimateRecordLen);
+	readRecord(fileHandle, recordDescriptor,rid,recordData);
+	result = getAttrFromData(recordDescriptor, recordData, data, attributeName, attrSize);
 	free(recordData);
 	return result;
 }
@@ -850,60 +827,25 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 	for( unsigned iter1 = 0; iter1 < slotNum; iter1++ ) {
 
 		// data is there, let's move them
-		if( slot->begin >= 0  && slot->end > 0 )
+		if( slot->begin < 0 )
 		{
+			reOrgSlot->begin = slot->begin;
+			reOrgSlot->end = slot->end;
+		}
+		else{
 			short recordSize = slot->end - slot->begin;
 			memcpy( reorganizedPage + offset, page + slot->begin, recordSize);
 			reOrgSlot->begin = offset;
 			reOrgSlot->end = offset + recordSize;
 			offset += recordSize;
 		}
-
-		// deleted record
-		if( slot->begin < 0 )
-		{
-			reOrgSlot->begin = slot->begin;
-			reOrgSlot->end = slot->end;
-
-			/*
-			short trueStart = 0 - slot->begin-1;
-			short recordSize = slot->end - trueStart;// as the slot begin is already -0
-			short moveBlockSize = dirInfo->freeSpaceOffset - slot->end;
-
-			memmove((char *)pageData + trueStart, (char *)pageData + slot->end, moveBlockSize);
-			shiftSlotInfo(pageData, 0 - recordSize, iter1);
-			dirInfo->freeSpaceOffset += recordSize;
-			*/
-		}
-
 		slot--;
 		reOrgSlot--;
-
-		// tombstone
-		/*
-		if( checkTombStone(page, pageN, iter1) ){
-			char* endOfPage = (char*) page + PAGE_SIZE;
-			Slot* slot = goToSlot((char*)page+PAGE_SIZE, iter1);
-			int tombStoneSize = 2*sizeof(unsigned)+sizeof(short);
-			DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
-			short dataBlockBehindSize = dirInfo->freeSpaceOffset - slot->end;
-			short recordSize = slot->end - slot->begin;
-			short shiftOffset = recordSize - tombStoneSize;
-
-			memmove((char*) page + slot->begin + tombStoneSize, (char*) page + slot->end,dataBlockBehindSize);
-			dirInfo->freeSpaceOffset -= (recordSize - tombStoneSize);
-
-			shiftSlotInfo(page, 0-shiftOffset, iter1);
-			slot->end = slot->begin + tombStoneSize;
-
-			vector<short> *freeSpace = directoryOfSlots[fileHandle.getFileName()];
-			(*freeSpace)[pageN] +=shiftOffset;
-		}
-		*/
 	}
-
-	reOrgPagedirInfo->numOfReorgSlots = 0;
+	reOrgPagedirInfo->numOfSlots = dirInfo->numOfSlots;
 	reOrgPagedirInfo->freeSpaceOffset = offset;
+
+	result = fileHandle.writePage(pageN, reorganizedPage);
 
 	vector<short> *freeSpace = directoryOfSlots[fileHandle.getFileName()];
 	(*freeSpace)[pageNumber] = PAGE_SIZE - offset - sizeof(DirectoryOfSlotsInfo) - reOrgPagedirInfo->numOfSlots*sizeof(Slot);
@@ -985,8 +927,6 @@ RC RBFM_ScanIterator::initialize(FileHandle &fileHandle,
 		  const vector<string> &attributeNames)
 {
 
-	RC result = -1;
-
 	this->fileHandle = fileHandle;
 	this->recordDescriptor = recordDescriptor;
 	this->conditionAttrName = conditionAttribute;
@@ -995,12 +935,6 @@ RC RBFM_ScanIterator::initialize(FileHandle &fileHandle,
 	this->attributeNames = attributeNames;
 
 	this->condition = value;
-
-//	cout << " RBFM_ScanIterator::initialize: fileName=" << fileHandle.getFileName()
-//			<< ", fileHandle.getNumberOfPages()="<< fileHandle.getNumberOfPages() << endl;
-
-//	if( condition == NULL )
-//		cout << " RBFM_ScanIterator::initialize:" << "condition is NULL"  << endl;
 
 	pageNum = 0;
 	slotNum = 1;
@@ -1018,84 +952,7 @@ RC RBFM_ScanIterator::initialize(FileHandle &fileHandle,
 
 	return 0;
 }
-/*
-bool RBFM_ScanIterator::checkConditionForAttribute(void* attribute, const void* condition, AttrType attrType, CompOp compOp){
-	bool result = true;
 
-	if( condition == NULL )
-	{
-		return result;
-	}
-
-	// Read field value and compare
-	if(attrType == TypeInt){
-		int attr = *(int *)attribute;
-		int cond = *(int *)condition;
-
-		cout << "checkConditionForAttribute: TypeInt" << "attr" << attr << ", cond=" << cond << endl;
-		cout << "compOp:" << compOp << endl;
-
-		switch(compOp){
-			case EQ_OP :  result = (attr == cond); break;
-			case LT_OP :  result = (attr < cond); break;    // <
-			case GT_OP :  result = (attr > cond); break;   // >
-			case LE_OP :  result = (attr <= cond); break;   // <=
-			case GE_OP :  result = (attr >= cond); break;   // >=
-			case NE_OP :  result = (attr != cond); break;   // !=
-			case NO_OP :  result = true; break;
-		}
-	}
-	else if (attrType == TypeReal){
-		int attr = *(float *)attribute;
-		int cond = *(float *)condition;
-
-		int compareResult ;
-
-		cout << "checkConditionForAttribute: TypeReal" << "attr" << attr << ", cond=" << cond << endl;
-		cout << "compOp:" << compOp << endl;
-
-		if( attr - cond > 0.00001 )
-			compareResult = 1;
-		else if( attr - cond < -0.00001 )
-			compareResult = -1;
-		else
-			compareResult = 0;
-
-		switch(compOp){
-			case EQ_OP :  result = (compareResult == 0); break;
-			case LT_OP :  result = (compareResult < 0); break;    // <
-			case GT_OP :  result = (compareResult > 0); break;   // >
-			case LE_OP :  result = (compareResult <= 0); break;   // <=
-			case GE_OP :  result = (compareResult >= 0); break;   // >=
-			case NE_OP :  result = (compareResult != 0); break;   // !=
-			case NO_OP :  result = true; break;
-		}
-	}
-	else{
-		int attrLen = *(char*)attribute;
-		string attr((char*)attribute + sizeof(int), attrLen);
-
-		int condLen = *(char*)condition;
-		string cond((char*)condition + sizeof(int), condLen);
-
-		int strCmpRes = strcmp(attr.c_str(), cond.c_str());
-		cout << "checkConditionForAttribute: strCmpRes" << strCmpRes << "attr" << attr << ", cond=" << cond << endl;
-		cout << "compOp:" << compOp << endl;
-		switch(compOp){
-			case EQ_OP :  result = (strCmpRes == 0); break;
-			case LT_OP :  result = (strCmpRes < 0 ); break;    // <
-			case GT_OP :  result = (strCmpRes > 0); break;   // >
-			case LE_OP :  result = (strCmpRes <= 0); break;   // <=
-			case GE_OP :  result = (strCmpRes >= 0); break;   // >=
-			case NE_OP :  result = (strCmpRes != 0); break;   // !=
-			case NO_OP :  result = true; break;
-		}
-	}
-
-	cout << "checkConditionForAttribute result: " << result << endl;
-	return result;
-}
-*/
 bool RBFM_ScanIterator::checkCondition(void* data, string &attrName, vector<Attribute> &recordDescriptor){
 	if(targetPointer == NULL)
 		return true;
@@ -1187,85 +1044,63 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 	Slot* slot;
 	RC result= -1;
 	RC tombStoneChk = -1;
+	totalPageNum = this->fileHandle.getNumberOfPages();
 
 	while( pageNum < totalPageNum && result ){
 
-		if( slotNum > totalSlotNum )
+		if( slotNum > dirInfo->numOfSlots )
 		{
 			slotNum = 1;
 			pageNum++;
-
 			if( pageNum >= fileHandle.getNumberOfPages() )
-				return RBFM_EOF;
-
-			fileHandle.readPage( pageNum, pageData );
-			endOfPage = pageData + PAGE_SIZE;
+				break;
+			fileHandle.readPage( pageNum, this->pageData );
+			endOfPage = this->pageData + PAGE_SIZE;
 		}
 
 		rid.pageNum = pageNum;
 		rid.slotNum = slotNum;
 
-		// read the record out
 		slot = _rbfm->goToSlot(endOfPage, slotNum);
-		short estimateRecordLen = slot->end - slot->begin;
-		if( estimateRecordLen <= 0 )
-			break;
+//		inrecreaseIteratorPos(); // let line1050 handle the scope
+		slotNum++;
 
+		if(slot->begin<0)
+			continue;
+		short estimateRecordLen = _rbfm->getEstimatedRecordDataSize(recordDescriptor);
 		void* recordData = malloc(estimateRecordLen);
 		tombStoneChk = _rbfm->readRecord(fileHandle, recordDescriptor, rid, recordData);
-
-		inrecreaseIteratorPos();
-
+//		_rbfm->printRecord(recordDescriptor,recordData);
 		if(tombStoneChk == -1)
 		{
 //			free(recordData);
 			continue;
 		}
-		/*
-		else
-			puts("hi!");
-			*/
-		// see the condition
 		if(checkCondition(recordData, conditionAttrName, recordDescriptor)){
 			result = 0;
-			int offSet = 0,outOffset= 0;
-			//memcpy(data, recordData, estimateRecordLen);
-			for(vector<string>::iterator iter1 = attributeNames.begin(); iter1!=attributeNames.end(); iter1++){
-				for(vector<Attribute>::iterator iter2 = recordDescriptor.begin(); iter2!=recordDescriptor.end(); iter2++){
-					if(*iter1 == iter2->name){
-						if(iter2->type == TypeInt){
-							memcpy((char*)data + outOffset, (char *)recordData+offSet, sizeof(int));
-							outOffset +=sizeof(int);
-						}
-						else if(iter2->type == TypeReal){
-							memcpy((char*)data + outOffset, (char *)recordData+offSet, sizeof(float));
-							outOffset += sizeof(int);
-						}
-						else{
-							int varLen = *(int *)((char*)recordData + offSet);
-							memcpy((char*)data + outOffset, &varLen, sizeof(int));
-							memcpy((char*)data + outOffset+sizeof(int), (char *)recordData+offSet+sizeof(int), varLen);
-							outOffset +=(varLen + sizeof(int));
-						}
-						offSet = 0;
-						break;
-					}
-					else{
-						if(iter2->type == TypeInt)
-							offSet += sizeof(int);
-						else if(iter2->type == TypeReal)
-							offSet +=sizeof(float);
-						else{
-							int varLen = *(int *)((char*)recordData + offSet);
-							offSet +=(varLen + sizeof(int));
-						}
-					}
-				}
+			int attrSetSize = 0;
+			short attrSize = 0;
+			void *attrBuffer = malloc(1000);//assume single feature maximum size 1000 ##DANGER##
+			for(int iter1 = 0; iter1<this->attributeNames.size(); iter1++)
+			{
+				string attrName = this->attributeNames.at(iter1);
+				this->_rbfm->getAttrFromData(recordDescriptor, recordData, attrBuffer, attrName,attrSize);
+//				cout<<"Reading attribute "<<attrName<<" Length: "<<attrSize<<endl;
+				memcpy((char*)data + attrSetSize, attrBuffer, attrSize);
+				attrSetSize += attrSize;
 			}
+			free(attrBuffer);
 		}
-
 		free(recordData);
 	}
-
 	return result;
+}
+
+RC RBFM_ScanIterator::getAttrSizeByName(string attrName, vector<Attribute> attrSet){
+	for(int iter1 = 0; iter1<attrSet.size();iter1++){
+		Attribute attr = attrSet.at(iter1);
+		if(attr.name == attrName)
+			return attr.length;
+	}
+	return -1;
 }

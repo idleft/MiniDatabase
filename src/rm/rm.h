@@ -10,7 +10,7 @@
 using namespace std;
 
 #define TABLE_CATALOG_FILE_NAME "Tables.tbl"
-#define COLUMN_CATALOG_FILE_NAME "column.tbl"
+#define COLUMN_CATALOG_FILE_NAME "Columns.tbl"
 #define INDEX_CATALOG_FILE_NAME "index.tbl"
 
 # define RM_EOF (-1)  // end of a scan operator
