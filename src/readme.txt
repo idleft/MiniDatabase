@@ -16,7 +16,7 @@
    The program should work.  But it will fail. 
    You are supposed to implement the API of the index manager defined in ix.h and pfm.h
 
-   There are 14 public test cases. Refer to the each test case for detail. 
+   Refer to the each test case for detail. 
 
 - By default you should not change those functions of the IndexManager and IX_ScanIterator class defined in ix/ix.h. 
   If you think some changes are really necessary, please contact us first.
