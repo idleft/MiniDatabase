@@ -11,16 +11,16 @@ IndexManager *indexManager;
 
 int testCase_8(const string &indexFileName, const Attribute &attribute)
 {
-    // Functions tested
-    // 1. Create Index File
-    // 2. OpenIndex File
+	// Checks whether duplicated entries are handled properly or not.
+	//
+	// Functions tested
+    // 1. Create Index
+    // 2. OpenIndex
     // 3. Insert entry
-    // 4. Scan entries, and delete entries
+    // 4. Scan entries.
     // 5. Scan close
-    // 6. Insert entries again
-    // 7. Scan entries
-    // 8. CloseIndex File
-    // 9. DestroyIndex File
+    // 6. CloseIndex
+    // 7. DestroyIndex
     // NOTE: "**" signifies the new functions being tested in this test case.
     cout << endl << "****In Test Case 8****" << endl;
 
@@ -28,11 +28,11 @@ int testCase_8(const string &indexFileName, const Attribute &attribute)
     RID rid;
     IXFileHandle ixfileHandle;
     IX_ScanIterator ix_ScanIterator;
-    float compVal;
+    int compVal;
     unsigned numOfTuples;
     unsigned numberOfPages = 4;
-
-    float key;
+    unsigned key;
+    int count;
 
     //create index file(s)
     rc = indexManager->createFile(indexFileName, numberOfPages);
@@ -47,7 +47,6 @@ int testCase_8(const string &indexFileName, const Attribute &attribute)
     }
 
     //open index file
-
     rc = indexManager->openFile(indexFileName, ixfileHandle);
     if(rc == success)
     {
@@ -61,10 +60,10 @@ int testCase_8(const string &indexFileName, const Attribute &attribute)
     }
 
     // insert entry
-    numOfTuples = 200;
+    numOfTuples = 2000;
     for(unsigned i = 1; i <= numOfTuples; i++)
     {
-        key = (float)i;
+        key = 1234;
         rid.pageNum = i;
         rid.slotNum = i;
 
@@ -77,56 +76,12 @@ int testCase_8(const string &indexFileName, const Attribute &attribute)
         }
     }
 
-    //scan
-    compVal = 200.0;
-    rc = indexManager->scan(ixfileHandle, attribute, NULL, &compVal, true, true, ix_ScanIterator);
-    if(rc == success)
+    numOfTuples = 2000;
+    for(unsigned i = 500; i < numOfTuples+500; i++)
     {
-        cout << "Scan Opened Successfully!" << endl;
-    }
-    else
-    {
-        cout << "Failed Opening Scan..." << endl;
-    	indexManager->closeFile(ixfileHandle);
-    	return fail;
-    }
-
-    // Test DeleteEntry in IndexScan Iterator
-    while(ix_ScanIterator.getNextEntry(rid, &key) == success)
-    {
-        cout << rid.pageNum << " " << rid.slotNum << endl;
-
-        key = (float)rid.pageNum;
-        rc = indexManager->deleteEntry(ixfileHandle, attribute, &key, rid);
-        if(rc != success)
-        {
-            cout << "Failed deleting entry in Scan..." << endl;
-        	ix_ScanIterator.close();
-        	return fail;
-        }
-    }
-    cout << endl;
-
-    //close scan
-    rc = ix_ScanIterator.close();
-    if(rc == success)
-    {
-        cout << "Scan Closed Successfully!" << endl;
-    }
-    else
-    {
-        cout << "Failed Closing Scan..." << endl;
-    	indexManager->closeFile(ixfileHandle);
-    	return fail;
-    }
-
-    // insert entry Again
-    numOfTuples = 500;
-    for(unsigned i = 1; i <= numOfTuples; i++)
-    {
-        key = (float)i;
+        key = 4321;
         rid.pageNum = i;
-        rid.slotNum = i;
+        rid.slotNum = i-5;
 
         rc = indexManager->insertEntry(ixfileHandle, attribute, &key, rid);
         if(rc != success)
@@ -138,8 +93,8 @@ int testCase_8(const string &indexFileName, const Attribute &attribute)
     }
 
     //scan
-    compVal = 450.0;
-    rc = indexManager->scan(ixfileHandle, attribute, &compVal, NULL, false, true, ix_ScanIterator);
+    compVal = 4321;
+    rc = indexManager->scan(ixfileHandle, attribute, &compVal, &compVal, true, true, ix_ScanIterator);
     if(rc == success)
     {
         cout << "Scan Opened Successfully!" << endl;
@@ -151,18 +106,21 @@ int testCase_8(const string &indexFileName, const Attribute &attribute)
     	return fail;
     }
 
+    //iterate
+    count = 0;
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
-        cout << rid.pageNum << " " << rid.slotNum << endl;
-
-        if(rid.pageNum <= 450 || rid.slotNum <= 450)
-        {
-            cout << "Wrong entries output...failure" << endl;
-        	ix_ScanIterator.close();
-        	return fail;
-        }
+        if(count % 1000 == 0)
+            cout << rid.pageNum << " " << rid.slotNum << endl;
+        count++;
     }
-    cout << endl;
+    cout << "Number of scanned entries: " << count << endl;
+    if (count != 2000)
+    {
+        cout << "Wrong entries output...failure" << endl;
+    	ix_ScanIterator.close();
+    	return fail;
+    }
 
     //close scan
     rc = ix_ScanIterator.close();
@@ -211,18 +169,18 @@ int main()
     //Global Initializations
     indexManager = IndexManager::instance();
 
-	const string indexFileName = "height_idx";
-	Attribute attrHeight;
-	attrHeight.length = 4;
-	attrHeight.name = "height";
-	attrHeight.type = TypeReal;
+	const string indexFileName = "age_idx";
+	Attribute attrAge;
+	attrAge.length = 4;
+	attrAge.name = "age";
+	attrAge.type = TypeInt;
 
-	RC result = testCase_8(indexFileName, attrHeight);
+	RC result = testCase_8(indexFileName, attrAge);
     if (result == success) {
     	cout << "IX_Test Case 8 passed" << endl;
     	return success;
     } else {
-    	cout << "IX_Test Case 8 failed" << endl;
+    	cout << "IX_Test Case 8 failed. Duplicated entries were not handled properly." << endl;
     	return fail;
     }
 

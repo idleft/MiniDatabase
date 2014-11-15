@@ -55,6 +55,13 @@ int testCase_2(const string &indexFileName, const Attribute &attribute)
     }
 
 	rc = ixfileHandle.collectCounterValues(readPageCount, writePageCount, appendPageCount);
+    if(rc != success)
+    {
+        cout << "collectCounterValues() failed." << endl;
+        indexManager->closeFile(ixfileHandle);
+        return fail;
+    }
+	
 	cout << endl << "Before Insert - readPageCount:" << readPageCount << " writePageCount:" << writePageCount << " appendPageCount:" << appendPageCount << endl;
 	
     // insert entry
@@ -70,6 +77,12 @@ int testCase_2(const string &indexFileName, const Attribute &attribute)
     }
 
 	rc = ixfileHandle.collectCounterValues(readPageCount1, writePageCount1, appendPageCount1);
+	if(rc != success)
+    {
+        cout << "collectCounterValues() failed." << endl;
+        indexManager->closeFile(ixfileHandle);
+        return fail;
+    }
 	cout << "After Insert - readPageCount:" << readPageCount1 << " writePageCount:" << writePageCount1 << " appendPageCount:" << appendPageCount1 << endl;
 
 	readDiff = readPageCount1 - readPageCount;
@@ -87,6 +100,12 @@ int testCase_2(const string &indexFileName, const Attribute &attribute)
 	
 
 	rc = ixfileHandle.collectCounterValues(readPageCount, writePageCount, appendPageCount);
+	if(rc != success)
+    {
+        cout << "collectCounterValues() failed." << endl;
+        indexManager->closeFile(ixfileHandle);
+        return fail;
+    }
 	cout << endl << "Before scan - readPageCount:" << readPageCount << " writePageCount:" << writePageCount << " appendPageCount:" << appendPageCount << endl;
 	
 	// Conduct a scan
@@ -109,6 +128,12 @@ int testCase_2(const string &indexFileName, const Attribute &attribute)
     }
 
 	rc = ixfileHandle.collectCounterValues(readPageCount1, writePageCount1, appendPageCount1);
+	if(rc != success)
+    {
+        cout << "collectCounterValues() failed." << endl;
+        indexManager->closeFile(ixfileHandle);
+        return fail;
+    }
 	cout << "After scan - readPageCount:" << readPageCount1 << " writePageCount:" << writePageCount1 << " appendPageCount:" << appendPageCount1 << endl;
 	
 	readDiff = readPageCount1 - readPageCount;
@@ -125,6 +150,12 @@ int testCase_2(const string &indexFileName, const Attribute &attribute)
 	
 	
 	rc = ixfileHandle.collectCounterValues(readPageCount, writePageCount, appendPageCount);
+	if(rc != success)
+    {
+        cout << "collectCounterValues() failed." << endl;
+        indexManager->closeFile(ixfileHandle);
+        return fail;
+    }
 	cout << endl << "Before Delete - readPageCount:" << readPageCount << " writePageCount:" << writePageCount << " appendPageCount:" << appendPageCount << endl;
 	
     // delete entry
@@ -137,6 +168,12 @@ int testCase_2(const string &indexFileName, const Attribute &attribute)
     }
 
 	rc = ixfileHandle.collectCounterValues(readPageCount1, writePageCount1, appendPageCount1);
+	if(rc != success)
+    {
+        cout << "collectCounterValues() failed." << endl;
+        indexManager->closeFile(ixfileHandle);
+        return fail;
+    }
 	cout << "After Delete - readPageCount:" << readPageCount1 << " writePageCount:" << writePageCount1 << " appendPageCount:" << appendPageCount1 << endl;
 
 	readDiff = readPageCount1 - readPageCount;

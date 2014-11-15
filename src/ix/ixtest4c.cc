@@ -9,25 +9,39 @@
 
 IndexManager *indexManager;
 
-int testCase_4B(const string &indexFileName, const Attribute &attribute)
+int testCase_4C(const string &indexFileName, const Attribute &attribute)
 {
     // Functions tested
+    // 1. Create Index File
     // 2. Open Index File
-    // 4. Scan entries NO_OP -- open**
+    // 3. Insert entry
+    // 4. Scan entries EXACT MATCH **
     // 5. Scan close **
     // 6. Close Index File
-    // 7. Destroy Index File
     // NOTE: "**" signifies the new functions being tested in this test case.
-    cout << endl << "****In Test Case 4B****" << endl;
+    cout << endl << "****In Test Case 4C****" << endl;
 
     RID rid;
     RC rc;
     IXFileHandle ixfileHandle;
     IX_ScanIterator ix_ScanIterator;
-    unsigned key;
+    unsigned key = 200;
+    unsigned numberOfPages = 4;
     int inRidPageNumSum = 0;
     int outRidPageNumSum = 0;
-    unsigned numOfTuples = 1000;
+    unsigned numOfTuples = 200;
+
+    // create index file
+    rc = indexManager->createFile(indexFileName, numberOfPages);
+    if(rc == success)
+    {
+        cout << "Index File Created!" << endl;
+    }
+    else
+    {
+        cout << "Failed Creating Index File..." << endl;
+        return fail;
+    }
 
     // open index file
     rc = indexManager->openFile(indexFileName, ixfileHandle);
@@ -38,22 +52,27 @@ int testCase_4B(const string &indexFileName, const Attribute &attribute)
     else
     {
         cout << "Failed Opening Index File..." << endl;
-        indexManager->destroyFile(indexFileName);
         return fail;
     }
 
-    // compute inRidPageNumSum without inserting entries
+    // insert entry
     for(unsigned i = 0; i <= numOfTuples; i++)
     {
-        key = i+1;//just in case somebody starts pageNum and recordId from 1
-        rid.pageNum = key;
-        rid.slotNum = key+1;
+        rid.pageNum = i+1;
+        rid.slotNum = i+2;
 
+        rc = indexManager->insertEntry(ixfileHandle, attribute, &key, rid);
+        if(rc != success)
+        {
+            cout << "Failed Inserting Entry..." << endl;
+            indexManager->closeFile(ixfileHandle);
+            return fail;
+        }
         inRidPageNumSum += rid.pageNum;
     }
 
-    // scan
-    rc = indexManager->scan(ixfileHandle, attribute, NULL, NULL, true, true, ix_ScanIterator);
+    // Scan
+    rc = indexManager->scan(ixfileHandle, attribute, &key, &key, true, true, ix_ScanIterator);
     if(rc == success)
     {
         cout << "Scan Opened Successfully!" << endl;
@@ -67,7 +86,7 @@ int testCase_4B(const string &indexFileName, const Attribute &attribute)
 
     while(ix_ScanIterator.getNextEntry(rid, &key) == success)
     {
-        if (rid.pageNum % 200 == 0) {
+    	if (rid.pageNum % 20 == 0) {
         	cout << rid.pageNum << " " << rid.slotNum << endl;
     	}
         outRidPageNumSum += rid.pageNum;
@@ -80,7 +99,7 @@ int testCase_4B(const string &indexFileName, const Attribute &attribute)
     	return fail;
     }
 
-    // close scan
+    // Close Scan
     rc = ix_ScanIterator.close();
     if(rc == success)
     {
@@ -93,7 +112,7 @@ int testCase_4B(const string &indexFileName, const Attribute &attribute)
     	return fail;
     }
 
-    // close index file
+    // Close Index
     rc = indexManager->closeFile(ixfileHandle);
     if(rc == success)
     {
@@ -102,25 +121,12 @@ int testCase_4B(const string &indexFileName, const Attribute &attribute)
     else
     {
         cout << "Failed Closing Index File..." << endl;
-    	indexManager->destroyFile(indexFileName);
-    	return fail;
-    }
-
-    // Destroy Index
-    rc = indexManager->destroyFile(indexFileName);
-    if(rc == success)
-    {
-        cout << "Index File Destroyed Successfully!" << endl;
-    }
-    else
-    {
-        cout << "Failed Destroying Index File..." << endl;
-        return fail;
     }
 
     return success;
 
 }
+
 
 int main()
 {
@@ -133,12 +139,12 @@ int main()
 	attrAge.name = "age";
 	attrAge.type = TypeInt;
 
-	RC result = testCase_4B(indexFileName, attrAge);;
+	RC result = testCase_4C(indexFileName, attrAge);
     if (result == success) {
-    	cout << "IX_Test Case 4b passed" << endl;
+    	cout << "IX_Test Case 4C passed" << endl;
     	return success;
     } else {
-    	cout << "IX_Test Case 4b failed" << endl;
+    	cout << "IX_Test Case 4C failed" << endl;
     	return fail;
     }
 

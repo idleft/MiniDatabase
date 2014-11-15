@@ -13,7 +13,7 @@ int testCase_extra_1(const string &indexFileName, const Attribute &attribute)
 {
 	// Extra test case for Undergrad. Mandatory for Grad.
 	// Checks whether Varchar type is handled properly or not.
-	// Pass: +5 points for Undergrad. No score deduction for Grad.
+	// Pass: 5 points for Undergrad. No score deduction for Grad.
 	// Fail: no extra points for Undergrad. Points will be deducted for Grad.
 	//
     // Functions Tested:
