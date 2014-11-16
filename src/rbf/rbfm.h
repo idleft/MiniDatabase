@@ -29,6 +29,7 @@ typedef struct
 {
 	short numOfSlots;
 	short freeSpaceOffset;
+	short freeSpaceNum;
 	unsigned nextPageId;
 } DirectoryOfSlotsInfo;
 

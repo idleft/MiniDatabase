@@ -87,7 +87,7 @@ class IndexManager {
   static IndexManager *_index_manager;
   PagedFileManager *_pfm;
   RecordBasedFileManager *_rbfm;
-  Attribute intAttribute;
+  Attribute pageIdAttr, slotIdAttr;
 };
 
 
@@ -120,8 +120,9 @@ private:
 
 typedef struct{
 	unsigned next;
+	unsigned level;
 	unsigned N;
-} MetaHeader;
+} IdxMetaHeader;
 // print out the error message for a given return code
 void IX_PrintError (RC rc);
 

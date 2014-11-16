@@ -239,6 +239,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 			(*slotDirectory)[pageNum] -= (sizeOfRecord + sizeof(Slot));
 
 //			cout<<"insertRecord pageNum=" << pageNum << endl;
+//			cout<<(*slotDirectory)[pageNum]<<" "<<info->freeSpaceNum<<endl;
 
 			result = fileHandle.writePage(pageNum, page);
 			if( result == 0 )
@@ -304,6 +305,7 @@ RC RecordBasedFileManager::appendRecord(char *page, const void *record, short si
 	slot->end = freeSpaceOffset + sizeOfRecord;
 
 	info->freeSpaceOffset = slot->end;
+	info->freeSpaceNum-=(sizeOfRecord + sizeof(Slot));
 
 	if( slotNum > (unsigned)info->numOfSlots )
 		info->numOfSlots++;
@@ -321,6 +323,7 @@ RC RecordBasedFileManager::newPageForRecord(const void* record, void * page, int
 	DirectoryOfSlotsInfo *info =  goToDirectoryOfSlotsInfo(endOfPage);
 	info->numOfSlots = 1;
 	info->freeSpaceOffset = sizeOfRecord;
+	info->freeSpaceNum = PAGE_SIZE - sizeOfRecord - sizeof(directoryOfSlotsInfo) - sizeof(Slot)*2;
 
 	// add Slot Information
 	Slot* slot = goToSlot( endOfPage, 1 );
@@ -646,19 +649,19 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 	return result;
 }
 
-RC RecordBasedFileManager::shiftSlotInfo(void* pageData, short shiftOffset, short slotNum){
-	// shift all slot behind with offset, not include
-	char* endOfPage = (char *) pageData + PAGE_SIZE;
-	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
-	Slot* slot;
-	short slotN = dirInfo->numOfSlots;
-	for(int iter1 = slotNum+1; iter1<=slotN; iter1++){
-		slot = goToSlot(endOfPage,iter1);
-		slot->begin+=shiftOffset;
-		slot->end+=shiftOffset;
-	}
-	return 0;
-}
+//RC RecordBasedFileManager::shiftSlotInfo(void* pageData, short shiftOffset, short slotNum){
+//	// shift all slot behind with offset, not include
+//	char* endOfPage = (char *) pageData + PAGE_SIZE;
+//	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
+//	Slot* slot;
+//	short slotN = dirInfo->numOfSlots;
+//	for(int iter1 = slotNum+1; iter1<=slotN; iter1++){
+//		slot = goToSlot(endOfPage,iter1);
+//		slot->begin+=shiftOffset;
+//		slot->end+=shiftOffset;
+//	}
+//	return 0;
+//}
 
 RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid)
 {
@@ -710,6 +713,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 		}
 
 		result = fileHandle.writePage( rid.pageNum, pageData );
+//		cout<<freeSpace->at(rid.pageNum)<<" "<<dirInfo->freeSpaceNum<<endl;
 	}
 	free(newRecordData);
 	free(pageData);
@@ -837,6 +841,7 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 	}
 	reOrgPagedirInfo->numOfSlots = dirInfo->numOfSlots;
 	reOrgPagedirInfo->freeSpaceOffset = offset;
+	reOrgPagedirInfo->freeSpaceNum = PAGE_SIZE - offset - sizeof(DirectoryOfSlotsInfo) - reOrgPagedirInfo->numOfSlots*sizeof(Slot);
 
 	result = fileHandle.writePage(pageN, reorganizedPage);
 

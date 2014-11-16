@@ -1,5 +1,6 @@
 
 #include "ix.h"
+#include "math.h"
 
 IndexManager* IndexManager::_index_manager = 0;
 
@@ -13,9 +14,13 @@ IndexManager* IndexManager::instance()
 
 IndexManager::IndexManager()
 {
-	intAttribute.length = 4;
-	intAttribute.name = "ridInt";
-	intAttribute.type = TypeInt;
+	pageIdAttr.length = 4;
+	pageIdAttr.name = "pageId";
+	pageIdAttr.type = TypeInt;
+
+	slotIdAttr.length = 4;
+	slotIdAttr.name = "slotId";
+	slotIdAttr.type = TypeInt;
 }
 
 IndexManager::~IndexManager()
@@ -44,7 +49,7 @@ RC IndexManager::createFile(const string &fileName, const unsigned &numberOfPage
 	// Deal with the first page of meta data
 	data = malloc(PAGE_SIZE);
 	memset(data, 0, PAGE_SIZE);
-	MetaHeader *metaHeader = (MetaHeader *)data;
+	IdxMetaHeader *metaHeader = (IdxMetaHeader *)data;
 	metaHeader->N = numberOfPages;
 	metaHeader->next = 0;
 	file = fopen(&metaFileName[0],"rb+");
@@ -98,16 +103,39 @@ RC IndexManager::closeFile(IXFileHandle &ixfileHandle)
 		return -1;
 }
 
+unsigned getIdxPgId(int bucketId, IdxMetaHeader* idxMetaHeader)
+{
+	unsigned res = 0;
+	unsigned currentListLength = idxMetaHeader->N*pow(2,idxMetaHeader->level);
+	res = bucketId%currentListLength;
+	if(res<idxMetaHeader->next){
+		idxMetaHeader->level++;
+		currentListLength = idxMetaHeader->N*pow(2,idxMetaHeader->level);
+		res = bucketId%currentListLength;
+	}
+	return res;
+}
+
 RC IndexManager::insertEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid)
 {
-	unsigned bucketId;
+	unsigned bucketId,idxPgId;
 	vector<Attribute> entryAttrSet;
+	void *idxMetaPage;
+	IdxMetaHeader *idxMetaHeader;
+
+	idxMetaPage = malloc(PAGE_SIZE);
+	ixfileHandle.metaFileHandle.readPage(-1,idxMetaPage);
+	idxMetaHeader = (IdxMetaHeader*)idxMetaPage;
+
 	entryAttrSet.push_back(attribute);
-	entryAttrSet.push_back(intAttribute);
-	entryAttrSet.push_back(intAttribute);
+	entryAttrSet.push_back(pageIdAttr);
+	entryAttrSet.push_back(slotIdAttr);
 
 	bucketId = hash(attribute, key);
 
+	idxPgId = getIdxPgId(bucketId, idxMetaHeader);
+
+	// need page free space record
 
 	return -1;
 }
