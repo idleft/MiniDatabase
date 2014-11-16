@@ -13,6 +13,9 @@ IndexManager* IndexManager::instance()
 
 IndexManager::IndexManager()
 {
+	intAttribute.length = 4;
+	intAttribute.name = "ridInt";
+	intAttribute.type = TypeInt;
 }
 
 IndexManager::~IndexManager()
@@ -23,15 +26,29 @@ RC IndexManager::createFile(const string &fileName, const unsigned &numberOfPage
 {
 	RC rc1,rc2;
 	string metaFileName, idxFileName;
+	void *data;
+	FILE *file;
 	metaFileName = fileName + METASUFFIX;
 	idxFileName = fileName + BUCKETSUFFIX;
 	rc1 = _pfm->createFile(&metaFileName[0]);
 	rc2 = _pfm->createFile(&idxFileName[0]);
 
-	void *data = malloc(PAGE_SIZE*numberOfPages);
+	// Deal with the initial bucket number
+	data = malloc(PAGE_SIZE*numberOfPages);
 	memset(data, 0, PAGE_SIZE*numberOfPages);
-	FILE *file = fopen(&idxFileName[0],"rb+");
+	file = fopen(&idxFileName[0],"rb+");
 	fwrite(data, 1, PAGE_SIZE*numberOfPages, file);
+	fclose(file);
+	free(data);
+
+	// Deal with the first page of meta data
+	data = malloc(PAGE_SIZE);
+	memset(data, 0, PAGE_SIZE);
+	MetaHeader *metaHeader = (MetaHeader *)data;
+	metaHeader->N = numberOfPages;
+	metaHeader->next = 0;
+	file = fopen(&metaFileName[0],"rb+");
+	fwrite(data, 1, PAGE_SIZE, file);
 	fclose(file);
 	free(data);
 
@@ -83,6 +100,11 @@ RC IndexManager::closeFile(IXFileHandle &ixfileHandle)
 
 RC IndexManager::insertEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid)
 {
+	vector<Attribute> entryAttrSet;
+	entryAttrSet.push_back(attribute);
+	entryAttrSet.push_back(intAttribute);
+	entryAttrSet.push_back(intAttribute);
+
 	return -1;
 }
 
