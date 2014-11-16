@@ -27,23 +27,24 @@ RC PagedFileManager::createFile(const char *fileName)
 	if( fileName != NULL )
 	{
 		FILE* file;
-
 		file = fopen( fileName, "rb");
 		if( file != NULL )
 		{
 			fclose( file );
 			return -1;
 		}
-
 		file = fopen( fileName, "wb");
 		if( file != NULL )
 		{
+			//add one more page at the beginning
+			void *data = malloc(PAGE_SIZE);
+			memset(data,0,PAGE_SIZE);
+			fwrite(data,1,PAGE_SIZE,file);
+			free(data);
 			fclose( file );
 			return 0;
 		}
-
 	}
-
     return -1;
 }
 
@@ -137,7 +138,7 @@ RC FileHandle::readPage(PageNum pageNum, void *data)
 	if( file == NULL )
 		return -1;
 
-	if( fseek(file, pageNum * PAGE_SIZE, SEEK_SET ) != 0 )
+	if( fseek(file, (pageNum+1) * PAGE_SIZE, SEEK_SET ) != 0 )
 		return -1;
 
 	size_t result = fread( data, 1, PAGE_SIZE, file );
@@ -156,7 +157,7 @@ RC FileHandle::writePage(PageNum pageNum, const void *data)
 	if( pageNum > getNumberOfPages() )
 		return -1;
 
-	if( fseek(file, pageNum * PAGE_SIZE, SEEK_SET) != 0 )
+	if( fseek(file, (pageNum+1) * PAGE_SIZE, SEEK_SET) != 0 )
 		return -1;
 
 	size_t result = fwrite( data, 1, PAGE_SIZE, file);
@@ -192,7 +193,7 @@ unsigned FileHandle::getNumberOfPages()
 
     unsigned numOfPages = (unsigned)size / PAGE_SIZE;
 
-    return numOfPages;
+    return numOfPages-1;
 }
 
 void FileHandle::setFile(FILE* file)
