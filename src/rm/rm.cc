@@ -386,8 +386,6 @@ RC RelationManager::scan(const string &tableName,
 	{
 		vector<Attribute>	catalogAttributes;
 		result = getAttributes( tableName, catalogAttributes );
-//		for(int iter1 = 0; iter1< catalogAttributes.size(); iter1++)
-//			cout<<"attr: "<<catalogAttributes.at(iter1).name<<endl;
 		if( result == 0 )
 			result = rm_ScanIterator.initialize(catalogAttributes, conditionAttribute, compOp, value, attributeNames);
 	}
@@ -532,14 +530,10 @@ RC RelationManager::loadCatalog()
 		// [tableID][tableName][catFileName][numOfColums]
 		memcpy( &tableID, data,  sizeof(int));
 
-//		cout << "tableID=" << tableID << endl;
-
 		data = data + sizeof(int);
 
 		int tableNameLen;
 		memcpy( &tableNameLen, data, sizeof(int));
-//		cout << "tableNameLen=" << tableNameLen << endl;
-
 		data = data+sizeof(int);
 
 		string tableName = string(data, tableNameLen);
@@ -633,10 +627,6 @@ RC RelationManager::createCatalogFile(const string& tableName, const vector<Attr
 	(*tableRID)[TABLE_ID] = rid;
 
 	tableRIDMap[tableName] = tableRID; // modified to fix the pointer to object
-//	cout<< "For table name :"<< tableName << " TABLE_ID=" << TABLE_ID << " Size: "<< tableRIDMap[tableName]->size() << endl;
-
-//	cout << "RelationManager::createCatalogFile : tableRIDMap.size()=" << tableRIDMap.size() << endl;
-
 	result = _rbfm->closeFile( fileHandle );
 	if( result != 0 )
 		return result;
@@ -649,7 +639,6 @@ RC RelationManager::createCatalogFile(const string& tableName, const vector<Attr
 	map<int, RID> *columnRID = new map<int, RID>();
 	for(int i = 0; i < (int)attrVector.size(); i++)
 	{
-//		cout<<"Insert attr "<<attrVector.at(i).name<<endl;
 		result = insertColumnEntry( TABLE_ID, tableName, i+1, attrVector.at(i).name, attrVector.at(i).type, attrVector.at(i).length, fileHandle, rid);
 		(*columnRID)[i] = rid;
 	}
@@ -723,7 +712,6 @@ RC RelationManager::insertColumnEntry(int tableID, string tableName, int columnS
 
 	memcpy( data + offset, tableName.c_str(), varCharLen);
 	offset += varCharLen;
-//	cout << "tableName=" << tableName.c_str() << endl;
 
 	memcpy( data + offset, &columnStart, sizeof(int));
 	offset += sizeof(int);
@@ -761,9 +749,6 @@ unsigned RelationManager::getCatalogSize(vector<Attribute> catalog)
 	for(int i=0; i < (int)catalog.size(); i++)
 	{
 		length += catalog.at(i).length;
-
-//		cout << "i=" << i << " size=" << length << endl;
-
 		if( catalog.at(i).type == TypeVarChar )
 			length +=  sizeof(int);
 
@@ -779,19 +764,13 @@ RC RM_ScanIterator::initialize(vector<Attribute> recordDescriptor,
 	      const vector<string> &attributeNames)
 {
 	return _rbfm_scanIterator.initialize(fileHandle, recordDescriptor, conditionAttribute, compOp, value, attributeNames);
-/*
-	RBFM_ScanIterator rbfm_it;
 
-	return _rbfm->scan(fileHandle, recordDescriptor, conditionAttribute, compOp, value, attributeNames, rbfm_it);
-*/
 }
 
 // "data" follows the same format as RelationManager::insertTuple()
 RC RM_ScanIterator::getNextTuple(RID &rid, void *data)
 {
-//	cout << "RM_ScanIterator::getNextTuple" << endl;
 	RC result  = _rbfm_scanIterator.getNextRecord(rid, data);
-//	cout << "getNextTuple result=" << result << endl;
 	return result;
 };
 

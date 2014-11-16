@@ -78,8 +78,6 @@ RC RecordBasedFileManager::openFile(const string &fileName, FileHandle &fileHand
 	RC result = -1;
 
 	result = pfm->openFile( fileName.c_str(), fileHandle );
-//	printf("$%s$",fileName.c_str());
-//	cout<<fileName.c_str()<<endl;
 	if( result == 0 ) {
 		if( directoryOfSlots.find(fileName) == directoryOfSlots.end() )	// fileName does not exist in directory of slots
 		{
@@ -158,8 +156,6 @@ RC RecordBasedFileManager::closeFile(FileHandle &fileHandle)
 	if( fileHandle.getFile() == NULL )
 		return result;
 
-//	cout << fileHandle.getFileName() << endl;
-
 	if( directoryOfSlots.find( fileHandle.getFileName() ) == directoryOfSlots.end() )
 		return result;
 
@@ -207,7 +203,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 	RC result = -1;
 	PageNum pageNum = 0;
 
-	if( fileHandle.getFile() == NULL ) //IERROR Run case 6, sisgtrp
+	if( fileHandle.getFile() == NULL )
 		return result;
 
 	if( directoryOfSlots.find(fileHandle.getFileName())
@@ -226,7 +222,6 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 	memset(page, 0, PAGE_SIZE);
 
 	// find first blank slot
-//	for(; slotDirectory!=NULL && pageNum < slotDirectory->size(); pageNum++ )
 	for(; pageNum < slotDirectory->size(); pageNum++ )
 	{
 		if( (sizeOfRecord +  sizeof(Slot)) <= (*slotDirectory)[pageNum] )
@@ -286,9 +281,6 @@ RC RecordBasedFileManager::appendPageWithRecord(FileHandle &fileHandle, const vo
 	{
 		vector<short>* freeSpace = directoryOfSlots[fileHandle.getFileName()];
 		freeSpace->push_back( PAGE_SIZE - sizeOfRecord - sizeof(directoryOfSlotsInfo) - sizeof(Slot)*2);
-//		for(int iter1 = 0; iter1<freeSpace->size(); iter1++)
-//			cout <<"size: "<< freeSpace->at(iter1) << endl;
-
 	}
 
 	free(page);

@@ -100,10 +100,14 @@ RC IndexManager::closeFile(IXFileHandle &ixfileHandle)
 
 RC IndexManager::insertEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid)
 {
+	unsigned bucketId;
 	vector<Attribute> entryAttrSet;
 	entryAttrSet.push_back(attribute);
 	entryAttrSet.push_back(intAttribute);
 	entryAttrSet.push_back(intAttribute);
+
+	bucketId = hash(attribute, key);
+
 
 	return -1;
 }
