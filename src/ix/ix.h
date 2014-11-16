@@ -12,6 +12,11 @@ class IX_ScanIterator;
 class IXFileHandle;
 const string METASUFFIX = ".meta", BUCKETSUFFIX = ".idx";
 
+typedef struct{
+	unsigned next;
+	unsigned level;
+	unsigned N;
+} IdxMetaHeader;
 class IndexManager {
  public:
   static IndexManager* instance();
@@ -79,6 +84,10 @@ class IndexManager {
   // Get the number of all pages (primary + overflow)
   RC getNumberOfAllPages(IXFileHandle &ixfileHandle, unsigned &numberOfAllPages);
 
+  unsigned getIdxPgId(unsigned bucketId, IdxMetaHeader* idxMetaHeader);
+  int getKeyRecordSize(const Attribute &attr, const void *key);
+
+
  protected:
   IndexManager   ();                            // Constructor
   ~IndexManager  ();                            // Destructor
@@ -118,11 +127,6 @@ private:
 
 };
 
-typedef struct{
-	unsigned next;
-	unsigned level;
-	unsigned N;
-} IdxMetaHeader;
 // print out the error message for a given return code
 void IX_PrintError (RC rc);
 

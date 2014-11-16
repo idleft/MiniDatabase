@@ -131,7 +131,8 @@ FileHandle::~FileHandle()
 
 
 RC FileHandle::readPage(PageNum pageNum, void *data)
-{
+{//pageNum non neg need to start from 0
+	std::cout<<pageNum<<" "<<getNumberOfPages()<<std::endl;
 	if( pageNum >= getNumberOfPages() )
 		return -1;
 

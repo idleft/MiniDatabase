@@ -682,7 +682,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 	// calculate cfreespace = PAGE_SIZE - dirInfo.freeOffset - (dirinfo.slotnum+2)*sizeof(int)
 
 	Slot* slot = goToSlot(endOfPage,rid.slotNum);
-	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
+//	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
 
 //	cout<<2.3<<endl;
 	short oldRecordSize = slot->end - slot->begin;

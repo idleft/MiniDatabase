@@ -39,10 +39,10 @@ RC IndexManager::createFile(const string &fileName, const unsigned &numberOfPage
 	rc2 = _pfm->createFile(&idxFileName[0]);
 
 	// Deal with the initial bucket number
-	data = malloc(PAGE_SIZE*numberOfPages);
-	memset(data, 0, PAGE_SIZE*numberOfPages);
+	data = malloc(PAGE_SIZE*(numberOfPages+1));
+	memset(data, 0, PAGE_SIZE*(numberOfPages+1));
 	file = fopen(&idxFileName[0],"rb+");
-	fwrite(data, 1, PAGE_SIZE*numberOfPages, file);
+	fwrite(data, 1, PAGE_SIZE*(numberOfPages+1), file);
 	fclose(file);
 	free(data);
 
@@ -51,6 +51,7 @@ RC IndexManager::createFile(const string &fileName, const unsigned &numberOfPage
 	memset(data, 0, PAGE_SIZE);
 	IdxMetaHeader *metaHeader = (IdxMetaHeader *)data;
 	metaHeader->N = numberOfPages;
+	metaHeader->level = 0;
 	metaHeader->next = 0;
 	file = fopen(&metaFileName[0],"rb+");
 	fwrite(data, 1, PAGE_SIZE, file);
@@ -87,7 +88,7 @@ RC IndexManager::openFile(const string &fileName, IXFileHandle &ixFileHandle)
 	rc1 = _pfm->openFile(&metaFileName[0], ixFileHandle.metaFileHandle);
 	rc2 = _pfm->openFile(&idxFilename[0],ixFileHandle.idxFileHandle);
 	if(rc1==0&&rc2==0)
-			return 0;
+		return 0;
 	else
 		return -1;
 }
@@ -103,7 +104,7 @@ RC IndexManager::closeFile(IXFileHandle &ixfileHandle)
 		return -1;
 }
 
-unsigned getIdxPgId(int bucketId, IdxMetaHeader* idxMetaHeader)
+unsigned IndexManager:: getIdxPgId(unsigned bucketId, IdxMetaHeader* idxMetaHeader)
 {
 	unsigned res = 0;
 	unsigned currentListLength = idxMetaHeader->N*pow(2,idxMetaHeader->level);
@@ -116,28 +117,72 @@ unsigned getIdxPgId(int bucketId, IdxMetaHeader* idxMetaHeader)
 	return res;
 }
 
+int IndexManager:: getKeyRecordSize(const Attribute &attr, const void *key)
+{
+	int res = 0;
+	if(attr.type == TypeVarChar){
+		int varLen = *((int *)key);
+		res = sizeof(int) + varLen;
+	}
+	else if(attr.type == TypeInt)
+		res = sizeof(int);
+	else
+		res = sizeof(float);
+	// plus the rid.pageNum & rid.slotNum
+	res += 2*sizeof(unsigned);
+	return res;
+}
+
 RC IndexManager::insertEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid)
 {
+	RC res = -1;
 	unsigned bucketId,idxPgId;
-	vector<Attribute> entryAttrSet;
-	void *idxMetaPage;
+	vector<Attribute> keyAttrSet;
+	void *idxMetaPage,*pageData,*keyRecordData;
+	char *endOfPage;
 	IdxMetaHeader *idxMetaHeader;
+	DirectoryOfSlotsInfo *pageDirInfo;
+	int keyRecordSize;
+	RID keyRecordRID;
 
 	idxMetaPage = malloc(PAGE_SIZE);
-	ixfileHandle.metaFileHandle.readPage(-1,idxMetaPage);
+	pageData = malloc(PAGE_SIZE);
+	endOfPage = (char*)pageData + PAGE_SIZE;
+
+	res = ixfileHandle.metaFileHandle.readPage(-1,idxMetaPage);
+
+	if(res<0)
+		return -1;
+
 	idxMetaHeader = (IdxMetaHeader*)idxMetaPage;
 
-	entryAttrSet.push_back(attribute);
-	entryAttrSet.push_back(pageIdAttr);
-	entryAttrSet.push_back(slotIdAttr);
+	keyAttrSet.push_back(attribute);
+	keyAttrSet.push_back(pageIdAttr);
+	keyAttrSet.push_back(slotIdAttr);
+	keyRecordSize = getKeyRecordSize(attribute, key);
+
+	// generate key record data
+	keyRecordData = malloc(keyRecordSize);
+	memcpy(keyRecordData, key, keyRecordSize-2*sizeof(unsigned));
+	*((unsigned *)((char*)keyRecordData+ keyRecordSize-2*sizeof(unsigned))) = rid.pageNum;
+	*((unsigned *)((char*)keyRecordData+ keyRecordSize-sizeof(unsigned))) = rid.slotNum;
 
 	bucketId = hash(attribute, key);
 
 	idxPgId = getIdxPgId(bucketId, idxMetaHeader);
 
-	// need page free space record
+	// get the page id see if over flow page needed
+	ixfileHandle.idxFileHandle.readPage(idxPgId, pageData);
+	pageDirInfo = _rbfm->goToDirectoryOfSlotsInfo(endOfPage);
 
-	return -1;
+	if(pageDirInfo->freeSpaceNum > keyRecordSize){
+		res = _rbfm->insertRecord(ixfileHandle.idxFileHandle, keyAttrSet, keyRecordData, keyRecordRID);
+	}
+	else{
+		// find a suitable over flow page
+	}
+
+	return res;
 }
 
 RC IndexManager::deleteEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid)
