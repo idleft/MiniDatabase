@@ -163,7 +163,7 @@ public:
 	  result =  result - sizeof(DirectoryOfSlotsInfo);
 
 	  if( result == NULL )
-		  printf( "DirectoryInfo is null\n");
+		  cout << "DirectoryInfo is null" << endl;
 
 	  return (DirectoryOfSlotsInfo *)result;
   }
