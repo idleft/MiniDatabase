@@ -72,8 +72,8 @@ RC IndexManager::destroyFile(const string &fileName)
 	string metaFileName, idxFileName;
 	metaFileName = fileName + METASUFFIX;
 	idxFileName = fileName + BUCKETSUFFIX;
-	rc1 = _pfm->destroyFile(&metaFileName[0]);
-	rc2 = _pfm->destroyFile(&idxFileName[0]);
+	rc1 = _pfm->destroyFile(metaFileName.c_str());
+	rc2 = _pfm->destroyFile(idxFileName.c_str());
 	if(rc1==0&&rc2==0)
 		return 0;
 	else
