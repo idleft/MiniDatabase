@@ -47,6 +47,7 @@ int testCase_2(const string &indexFileName, const Attribute &attribute)
     if(rc == success)
     {
         cout << "Index File, " << indexFileName << " Opened!" << endl;
+        cout<<"Primary Page Num "<<ixfileHandle.idxFileHandle.getNumberOfPages()<<endl;
     }
     else
     {

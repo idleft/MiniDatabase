@@ -18,6 +18,7 @@ int testCase_4C(const string &indexFileName, const Attribute &attribute)
     // 4. Scan entries EXACT MATCH **
     // 5. Scan close **
     // 6. Close Index File
+    // 7. Destroy Index File
     // NOTE: "**" signifies the new functions being tested in this test case.
     cout << endl << "****In Test Case 4C****" << endl;
 
@@ -121,8 +122,18 @@ int testCase_4C(const string &indexFileName, const Attribute &attribute)
     else
     {
         cout << "Failed Closing Index File..." << endl;
+    	indexManager->destroyFile(indexFileName);
+    	return fail;
     }
 
+    // destroy index file
+    rc = indexManager->destroyFile(indexFileName);
+    if(rc != success)
+    {
+        cout << "Failed Destroying Index File..." << endl;
+        return fail;
+    }
+    
     return success;
 
 }

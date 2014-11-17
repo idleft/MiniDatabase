@@ -29,6 +29,7 @@ public:
     RC openFile      (const char *fileName, FileHandle &fileHandle); // Open a file
     RC closeFile     (FileHandle &fileHandle);                       // Close a file
     bool fileExists		(const char *filename);
+    RC debugInfo();
 
 protected:
     PagedFileManager();                                   // Constructor
@@ -57,10 +58,16 @@ public:
     std::string getFileName();
 
     void clear();
+    RC collectCounterValues(unsigned &readPageCount, unsigned &writePageCount, unsigned &appendPageCount);
+
 
 private:
     FILE *file;
     std::string fileName;
+    unsigned readPageCounter;
+	unsigned writePageCounter;
+	unsigned appendPageCounter;
+
  };
 
  #endif

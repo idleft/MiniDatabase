@@ -21,29 +21,35 @@ PagedFileManager::~PagedFileManager()
 	_pf_manager = NULL;
 }
 
+RC PagedFileManager::debugInfo(){
+	std::cout<<"Debug in"<<std::endl;
+	return 0;
+}
 
 RC PagedFileManager::createFile(const char *fileName)
 {
 	if( fileName != NULL )
 	{
 		FILE* file;
-
 		file = fopen( fileName, "rb");
 		if( file != NULL )
 		{
 			fclose( file );
 			return -1;
 		}
-
 		file = fopen( fileName, "wb");
 		if( file != NULL )
 		{
+			//add one more page at the beginning
+			// updated remove 11.16
+//			void *data = malloc(PAGE_SIZE);
+//			memset(data,0,PAGE_SIZE);
+//			fwrite(data,1,PAGE_SIZE,file);
+//			free(data);
 			fclose( file );
 			return 0;
 		}
-
 	}
-
     return -1;
 }
 
@@ -67,6 +73,7 @@ RC PagedFileManager::openFile(const char *fileName, FileHandle &fileHandle)
 	// does file exist?
 
 	// file does not exist
+	printf("Try to oopen file : %s\n",fileName);
 	file = fopen( fileName, "rb+" );
 	if( file == NULL )
 	{
@@ -116,6 +123,9 @@ FileHandle::FileHandle()
 {
 	this->file = NULL;
 	this->fileName = "";
+	readPageCounter = 0;
+	writePageCounter = 0;
+	appendPageCounter = 0;
 }
 
 
@@ -127,17 +137,20 @@ FileHandle::~FileHandle()
 
 
 RC FileHandle::readPage(PageNum pageNum, void *data)
-{
+{//pageNum non neg need to start from 0
+//	std::cout<<pageNum<<" "<<getNumberOfPages()<<std::endl;
 	if( pageNum >= getNumberOfPages() )
 		return -1;
 
 	if( file == NULL )
 		return -1;
 
-	if( fseek(file, pageNum * PAGE_SIZE, SEEK_SET ) != 0 )
+	if( fseek(file, pageNum* PAGE_SIZE, SEEK_SET ) != 0 )
 		return -1;
 
 	size_t result = fread( data, 1, PAGE_SIZE, file );
+
+	readPageCounter+=1;
 
 	return (result == PAGE_SIZE ? 0 : -1);
 }
@@ -151,10 +164,12 @@ RC FileHandle::writePage(PageNum pageNum, const void *data)
 	if( pageNum > getNumberOfPages() )
 		return -1;
 
-	if( fseek(file, pageNum * PAGE_SIZE, SEEK_SET) != 0 )
+	if( fseek(file, pageNum* PAGE_SIZE, SEEK_SET) != 0 )
 		return -1;
 
 	size_t result = fwrite( data, 1, PAGE_SIZE, file);
+
+	writePageCounter+=1;
 
     return result == PAGE_SIZE ? 0 : -1;
 }
@@ -168,6 +183,8 @@ RC FileHandle::appendPage(const void *data)
 	fseek(file, 0, SEEK_END);
 
 	size_t result = fwrite( data, 1, PAGE_SIZE, file );
+
+	appendPageCounter+=1;
 
     return result == PAGE_SIZE ? 0 : -1;
 }
@@ -210,6 +227,15 @@ void FileHandle::clear()
 	this->fileName.clear();
 	this->file = NULL;
 }
+
+RC FileHandle::collectCounterValues(unsigned &readPageCount, unsigned &writePageCount, unsigned &appendPageCount)
+{
+	readPageCount = this->readPageCounter;
+	writePageCount = this->writePageCounter;
+	appendPageCount = this->appendPageCounter;
+	return 0;
+}
+
 
 
 

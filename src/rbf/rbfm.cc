@@ -13,7 +13,7 @@ RecordBasedFileManager* RecordBasedFileManager::instance()
 
 RecordBasedFileManager::RecordBasedFileManager()
 {
-	pfm = PagedFileManager::instance();
+	_pfm = PagedFileManager::instance();
 }
 
 RecordBasedFileManager::~RecordBasedFileManager()
@@ -23,24 +23,34 @@ RecordBasedFileManager::~RecordBasedFileManager()
 	for (it=directoryOfSlots.begin(); it!=directoryOfSlots.end(); ++it)
 		delete it->second;
 
-	pfm = NULL;
+	_pfm = NULL;
 	_rbf_manager = NULL;
+}
+void printVector(vector<short> *vec){
+	cout<<"****** Begin of print vector"<<endl;
+	for(int iter1 = 0; iter1<vec->size(); iter1++)
+		cout<<vec->at(iter1)<<endl;
+	cout<<"****** End of print vector"<<endl;
+}
+
+RC RecordBasedFileManager::debug(FileHandle fileHandle){
+	printVector(directoryOfSlots[fileHandle.getFileName()]);
 }
 
 RC RecordBasedFileManager::createFile(const string &fileName)
 {
-	int result = pfm->createFile( fileName.c_str() );
+	int result = _pfm->createFile( &fileName[0] );
 
 	if( result == 0 )
 	{
-		result = pfm->createFile(  (fileName+"_desc").c_str() );
+		result = _pfm->createFile(  (fileName+"_desc").c_str() );
 	}
 
 	FileHandle descFileHandle;
 
 	if( result == 0 )
 	{
-		result = pfm->openFile( (fileName+"_desc").c_str(), descFileHandle );
+		result = _pfm->openFile( (fileName+"_desc").c_str(), descFileHandle );
 	}
 
 
@@ -51,7 +61,7 @@ RC RecordBasedFileManager::createFile(const string &fileName)
 
 		result = descFileHandle.appendPage( page );
 		if( result == 0 )
-			pfm->closeFile ( descFileHandle );
+			_pfm->closeFile ( descFileHandle );
 
 		free( page );
 	}
@@ -62,10 +72,10 @@ RC RecordBasedFileManager::createFile(const string &fileName)
 }
 
 RC RecordBasedFileManager::destroyFile(const string &fileName) {
-	RC result = pfm->destroyFile( fileName.c_str() );
+	RC result = _pfm->destroyFile( fileName.c_str() );
 
 	if( result == 0 )
-		result = pfm->destroyFile( (fileName+"_desc").c_str() );
+		result = _pfm->destroyFile( (fileName+"_desc").c_str() );
 
 	if( result == 0 )
 		directoryOfSlots.erase(fileName);
@@ -76,32 +86,24 @@ RC RecordBasedFileManager::destroyFile(const string &fileName) {
 RC RecordBasedFileManager::openFile(const string &fileName, FileHandle &fileHandle)
 {
 	RC result = -1;
-
-	result = pfm->openFile( fileName.c_str(), fileHandle );
-//	printf("$%s$",fileName.c_str());
-//	cout<<fileName.c_str()<<endl;
+	result = _pfm->openFile( &fileName[0], fileHandle );
 	if( result == 0 ) {
 		if( directoryOfSlots.find(fileName) == directoryOfSlots.end() )	// fileName does not exist in directory of slots
 		{
 			// read description
 			FileHandle descFileHandle;
-			result =  pfm->openFile( (fileName + "_desc").c_str() , descFileHandle );
+			result =  _pfm->openFile( (fileName + "_desc").c_str() , descFileHandle );
 			if( result != 0 )
 				return -1;
-
 			vector<short>* freeSpace = new vector<short>();
-
 			for (unsigned pageNo = 0; pageNo < descFileHandle.getNumberOfPages(); pageNo++)
 			{
 				result = readHeader( descFileHandle, pageNo, freeSpace );
 				if( result != 0 )
 					return -1;
 			}
-
-			result = pfm->closeFile( descFileHandle );
-
+			result = _pfm->closeFile( descFileHandle );
 			directoryOfSlots[fileName] = freeSpace;
-
 		}
 	}
 
@@ -135,8 +137,7 @@ RC RecordBasedFileManager::writeHeader(FileHandle &headerFileHandle, unsigned pa
 	int offset = sizeof(short);
 
 	while( (currentHeader < freeSpace->size()) &&
-			(numOfPages < HEADER_PAGE_SIZE) )
-	{
+			(numOfPages < HEADER_PAGE_SIZE) ){
 		*(short*)(page + offset) = (*freeSpace)[currentHeader];
 		numOfPages++;
 		currentHeader++;
@@ -157,9 +158,6 @@ RC RecordBasedFileManager::closeFile(FileHandle &fileHandle)
 
 	if( fileHandle.getFile() == NULL )
 		return result;
-
-//	cout << fileHandle.getFileName() << endl;
-
 	if( directoryOfSlots.find( fileHandle.getFileName() ) == directoryOfSlots.end() )
 		return result;
 
@@ -175,7 +173,7 @@ RC RecordBasedFileManager::closeFile(FileHandle &fileHandle)
 	string fileName = fileHandle.getFileName();
 	string descFileName = string(fileName) + string(desc);
 
-	pfm->openFile( descFileName.c_str(), headerFileHandle );
+	_pfm->openFile( descFileName.c_str(), headerFileHandle );
 
 	char* page = (char*)malloc(PAGE_SIZE);
 //	unsigned pageNo = 0;
@@ -193,11 +191,11 @@ RC RecordBasedFileManager::closeFile(FileHandle &fileHandle)
 			return result;
 	}
 
-	result = pfm->closeFile( headerFileHandle );
+	result = _pfm->closeFile( headerFileHandle );
 	if( result != 0 )
 		return result;
 
-	result = pfm->closeFile( fileHandle );
+	result = _pfm->closeFile( fileHandle );
 
 	return result;
 }
@@ -207,7 +205,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 	RC result = -1;
 	PageNum pageNum = 0;
 
-	if( fileHandle.getFile() == NULL ) //IERROR Run case 6, sisgtrp
+	if( fileHandle.getFile() == NULL )
 		return result;
 
 	if( directoryOfSlots.find(fileHandle.getFileName())
@@ -226,7 +224,6 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 	memset(page, 0, PAGE_SIZE);
 
 	// find first blank slot
-//	for(; slotDirectory!=NULL && pageNum < slotDirectory->size(); pageNum++ )
 	for(; pageNum < slotDirectory->size(); pageNum++ )
 	{
 		if( (sizeOfRecord +  sizeof(Slot)) <= (*slotDirectory)[pageNum] )
@@ -244,6 +241,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 			(*slotDirectory)[pageNum] -= (sizeOfRecord + sizeof(Slot));
 
 //			cout<<"insertRecord pageNum=" << pageNum << endl;
+//			cout<<(*slotDirectory)[pageNum]<<" "<<info->freeSpaceNum<<endl;
 
 			result = fileHandle.writePage(pageNum, page);
 			if( result == 0 )
@@ -286,13 +284,36 @@ RC RecordBasedFileManager::appendPageWithRecord(FileHandle &fileHandle, const vo
 	{
 		vector<short>* freeSpace = directoryOfSlots[fileHandle.getFileName()];
 		freeSpace->push_back( PAGE_SIZE - sizeOfRecord - sizeof(directoryOfSlotsInfo) - sizeof(Slot)*2);
-//		for(int iter1 = 0; iter1<freeSpace->size(); iter1++)
-//			cout <<"size: "<< freeSpace->at(iter1) << endl;
-
 	}
 
 	free(page);
 	return result;
+}
+
+RC RecordBasedFileManager::appendEmptyPage(FileHandle &fileHandle){
+
+	RC res = -1;
+	void *pageData;
+	char *endOfPage;
+
+	DirectoryOfSlotsInfo *dirInfo;
+	pageData = malloc(PAGE_SIZE);
+	memset(pageData, 0, PAGE_SIZE);
+	endOfPage = (char*) pageData+PAGE_SIZE;
+
+	dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
+	dirInfo->freeSpaceNum = PAGE_SIZE - sizeof(DirectoryOfSlotsInfo);
+
+	res = fileHandle.appendPage(pageData);
+	// append page to file
+	if( res == 0 )
+	{
+		vector<short>* freeSpace = directoryOfSlots[fileHandle.getFileName()];
+		freeSpace->push_back( PAGE_SIZE - sizeof(directoryOfSlotsInfo));
+	}
+
+	free(pageData);
+	return res;
 }
 
 RC RecordBasedFileManager::appendRecord(char *page, const void *record, short sizeOfRecord, unsigned slotNum)
@@ -312,6 +333,7 @@ RC RecordBasedFileManager::appendRecord(char *page, const void *record, short si
 	slot->end = freeSpaceOffset + sizeOfRecord;
 
 	info->freeSpaceOffset = slot->end;
+	info->freeSpaceNum-=(sizeOfRecord + sizeof(Slot));
 
 	if( slotNum > (unsigned)info->numOfSlots )
 		info->numOfSlots++;
@@ -329,6 +351,7 @@ RC RecordBasedFileManager::newPageForRecord(const void* record, void * page, int
 	DirectoryOfSlotsInfo *info =  goToDirectoryOfSlotsInfo(endOfPage);
 	info->numOfSlots = 1;
 	info->freeSpaceOffset = sizeOfRecord;
+	info->freeSpaceNum = PAGE_SIZE - sizeOfRecord - sizeof(directoryOfSlotsInfo) - sizeof(Slot)*2;
 
 	// add Slot Information
 	Slot* slot = goToSlot( endOfPage, 1 );
@@ -579,25 +602,25 @@ RC RecordBasedFileManager::deleteRecords(FileHandle &fileHandle)
 
 //	cout << "fileName:" << cfileName << endl;
 
-	result = pfm->closeFile( fileHandle );
+	result = _pfm->closeFile( fileHandle );
 	if( result != 0 )
 		return result;
 
 //	cout << "deleteRecords: closeFile:" << result << endl;
 
-	result = pfm->destroyFile( cfileName );
+	result = _pfm->destroyFile( cfileName );
 	if( result != 0 )
 		return result;
 
 //	cout << "deleteRecords: destroyFile:" << result << endl;
 
-	result = pfm->createFile( cfileName );
+	result = _pfm->createFile( cfileName );
 	if( result != 0 )
 		return result;
 
 //	cout << "deleteRecords: createFile:" << result << endl;
 
-	result = pfm->openFile( cfileName, fileHandle );
+	result = _pfm->openFile( cfileName, fileHandle );
 	if( result != 0 )
 		return result;
 
@@ -654,19 +677,19 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 	return result;
 }
 
-RC RecordBasedFileManager::shiftSlotInfo(void* pageData, short shiftOffset, short slotNum){
-	// shift all slot behind with offset, not include
-	char* endOfPage = (char *) pageData + PAGE_SIZE;
-	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
-	Slot* slot;
-	short slotN = dirInfo->numOfSlots;
-	for(int iter1 = slotNum+1; iter1<=slotN; iter1++){
-		slot = goToSlot(endOfPage,iter1);
-		slot->begin+=shiftOffset;
-		slot->end+=shiftOffset;
-	}
-	return 0;
-}
+//RC RecordBasedFileManager::shiftSlotInfo(void* pageData, short shiftOffset, short slotNum){
+//	// shift all slot behind with offset, not include
+//	char* endOfPage = (char *) pageData + PAGE_SIZE;
+//	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
+//	Slot* slot;
+//	short slotN = dirInfo->numOfSlots;
+//	for(int iter1 = slotNum+1; iter1<=slotN; iter1++){
+//		slot = goToSlot(endOfPage,iter1);
+//		slot->begin+=shiftOffset;
+//		slot->end+=shiftOffset;
+//	}
+//	return 0;
+//}
 
 RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid)
 {
@@ -687,7 +710,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 	// calculate cfreespace = PAGE_SIZE - dirInfo.freeOffset - (dirinfo.slotnum+2)*sizeof(int)
 
 	Slot* slot = goToSlot(endOfPage,rid.slotNum);
-	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
+//	DirectoryOfSlotsInfo* dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
 
 //	cout<<2.3<<endl;
 	short oldRecordSize = slot->end - slot->begin;
@@ -718,6 +741,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 		}
 
 		result = fileHandle.writePage( rid.pageNum, pageData );
+//		cout<<freeSpace->at(rid.pageNum)<<" "<<dirInfo->freeSpaceNum<<endl;
 	}
 	free(newRecordData);
 	free(pageData);
@@ -844,6 +868,7 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 	}
 	reOrgPagedirInfo->numOfSlots = dirInfo->numOfSlots;
 	reOrgPagedirInfo->freeSpaceOffset = offset;
+	reOrgPagedirInfo->freeSpaceNum = PAGE_SIZE - offset - sizeof(DirectoryOfSlotsInfo) - reOrgPagedirInfo->numOfSlots*sizeof(Slot);
 
 	result = fileHandle.writePage(pageNumber, reorganizedPage);
 
@@ -958,7 +983,6 @@ bool RBFM_ScanIterator::checkCondition(void* data, string &attrName, vector<Attr
 	short fieldOffset = 0;
 	int varLen = 0;
 	// Find the right type and position of compare field
-	int tmp = recordDescriptor.size();
 	for(vector<Attribute>::iterator iter1 = recordDescriptor.begin(); !result&&iter1!=recordDescriptor.end();iter1++){
 		if(iter1->name == attrName){
 			attrType = iter1->type;
