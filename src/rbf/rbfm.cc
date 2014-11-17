@@ -13,7 +13,7 @@ RecordBasedFileManager* RecordBasedFileManager::instance()
 
 RecordBasedFileManager::RecordBasedFileManager()
 {
-	pfm = PagedFileManager::instance();
+	_pfm = PagedFileManager::instance();
 }
 
 RecordBasedFileManager::~RecordBasedFileManager()
@@ -23,24 +23,34 @@ RecordBasedFileManager::~RecordBasedFileManager()
 	for (it=directoryOfSlots.begin(); it!=directoryOfSlots.end(); ++it)
 		delete it->second;
 
-	pfm = NULL;
+	_pfm = NULL;
 	_rbf_manager = NULL;
+}
+void printVector(vector<short> *vec){
+	cout<<"****** Begin of print vector"<<endl;
+	for(int iter1 = 0; iter1<vec->size(); iter1++)
+		cout<<vec->at(iter1)<<endl;
+	cout<<"****** End of print vector"<<endl;
+}
+
+RC RecordBasedFileManager::debug(FileHandle fileHandle){
+	printVector(directoryOfSlots[fileHandle.getFileName()]);
 }
 
 RC RecordBasedFileManager::createFile(const string &fileName)
 {
-	int result = pfm->createFile( fileName.c_str() );
+	int result = _pfm->createFile( &fileName[0] );
 
 	if( result == 0 )
 	{
-		result = pfm->createFile(  (fileName+"_desc").c_str() );
+		result = _pfm->createFile(  (fileName+"_desc").c_str() );
 	}
 
 	FileHandle descFileHandle;
 
 	if( result == 0 )
 	{
-		result = pfm->openFile( (fileName+"_desc").c_str(), descFileHandle );
+		result = _pfm->openFile( (fileName+"_desc").c_str(), descFileHandle );
 	}
 
 
@@ -51,7 +61,7 @@ RC RecordBasedFileManager::createFile(const string &fileName)
 
 		result = descFileHandle.appendPage( page );
 		if( result == 0 )
-			pfm->closeFile ( descFileHandle );
+			_pfm->closeFile ( descFileHandle );
 
 		free( page );
 	}
@@ -62,10 +72,10 @@ RC RecordBasedFileManager::createFile(const string &fileName)
 }
 
 RC RecordBasedFileManager::destroyFile(const string &fileName) {
-	RC result = pfm->destroyFile( fileName.c_str() );
+	RC result = _pfm->destroyFile( fileName.c_str() );
 
 	if( result == 0 )
-		result = pfm->destroyFile( (fileName+"_desc").c_str() );
+		result = _pfm->destroyFile( (fileName+"_desc").c_str() );
 
 	if( result == 0 )
 		directoryOfSlots.erase(fileName);
@@ -76,30 +86,24 @@ RC RecordBasedFileManager::destroyFile(const string &fileName) {
 RC RecordBasedFileManager::openFile(const string &fileName, FileHandle &fileHandle)
 {
 	RC result = -1;
-
-	result = pfm->openFile( fileName.c_str(), fileHandle );
+	result = _pfm->openFile( &fileName[0], fileHandle );
 	if( result == 0 ) {
 		if( directoryOfSlots.find(fileName) == directoryOfSlots.end() )	// fileName does not exist in directory of slots
 		{
 			// read description
 			FileHandle descFileHandle;
-			result =  pfm->openFile( (fileName + "_desc").c_str() , descFileHandle );
+			result =  _pfm->openFile( (fileName + "_desc").c_str() , descFileHandle );
 			if( result != 0 )
 				return -1;
-
 			vector<short>* freeSpace = new vector<short>();
-
 			for (unsigned pageNo = 0; pageNo < descFileHandle.getNumberOfPages(); pageNo++)
 			{
 				result = readHeader( descFileHandle, pageNo, freeSpace );
 				if( result != 0 )
 					return -1;
 			}
-
-			result = pfm->closeFile( descFileHandle );
-
+			result = _pfm->closeFile( descFileHandle );
 			directoryOfSlots[fileName] = freeSpace;
-
 		}
 	}
 
@@ -133,8 +137,7 @@ RC RecordBasedFileManager::writeHeader(FileHandle &headerFileHandle, unsigned pa
 	int offset = sizeof(short);
 
 	while( (currentHeader < freeSpace->size()) &&
-			(numOfPages < HEADER_PAGE_SIZE) )
-	{
+			(numOfPages < HEADER_PAGE_SIZE) ){
 		*(short*)(page + offset) = (*freeSpace)[currentHeader];
 		numOfPages++;
 		currentHeader++;
@@ -155,7 +158,6 @@ RC RecordBasedFileManager::closeFile(FileHandle &fileHandle)
 
 	if( fileHandle.getFile() == NULL )
 		return result;
-
 	if( directoryOfSlots.find( fileHandle.getFileName() ) == directoryOfSlots.end() )
 		return result;
 
@@ -171,7 +173,7 @@ RC RecordBasedFileManager::closeFile(FileHandle &fileHandle)
 	string fileName = fileHandle.getFileName();
 	string descFileName = string(fileName) + string(desc);
 
-	pfm->openFile( descFileName.c_str(), headerFileHandle );
+	_pfm->openFile( descFileName.c_str(), headerFileHandle );
 
 	char* page = (char*)malloc(PAGE_SIZE);
 //	unsigned pageNo = 0;
@@ -189,11 +191,11 @@ RC RecordBasedFileManager::closeFile(FileHandle &fileHandle)
 			return result;
 	}
 
-	result = pfm->closeFile( headerFileHandle );
+	result = _pfm->closeFile( headerFileHandle );
 	if( result != 0 )
 		return result;
 
-	result = pfm->closeFile( fileHandle );
+	result = _pfm->closeFile( fileHandle );
 
 	return result;
 }
@@ -286,6 +288,32 @@ RC RecordBasedFileManager::appendPageWithRecord(FileHandle &fileHandle, const vo
 
 	free(page);
 	return result;
+}
+
+RC RecordBasedFileManager::appendEmptyPage(FileHandle &fileHandle){
+
+	RC res = -1;
+	void *pageData;
+	char *endOfPage;
+
+	DirectoryOfSlotsInfo *dirInfo;
+	pageData = malloc(PAGE_SIZE);
+	memset(pageData, 0, PAGE_SIZE);
+	endOfPage = (char*) pageData+PAGE_SIZE;
+
+	dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
+	dirInfo->freeSpaceNum = PAGE_SIZE - sizeof(DirectoryOfSlotsInfo);
+
+	res = fileHandle.appendPage(pageData);
+	// append page to file
+	if( res == 0 )
+	{
+		vector<short>* freeSpace = directoryOfSlots[fileHandle.getFileName()];
+		freeSpace->push_back( PAGE_SIZE - sizeof(directoryOfSlotsInfo));
+	}
+
+	free(pageData);
+	return res;
 }
 
 RC RecordBasedFileManager::appendRecord(char *page, const void *record, short sizeOfRecord, unsigned slotNum)
@@ -574,25 +602,25 @@ RC RecordBasedFileManager::deleteRecords(FileHandle &fileHandle)
 
 //	cout << "fileName:" << cfileName << endl;
 
-	result = pfm->closeFile( fileHandle );
+	result = _pfm->closeFile( fileHandle );
 	if( result != 0 )
 		return result;
 
 //	cout << "deleteRecords: closeFile:" << result << endl;
 
-	result = pfm->destroyFile( cfileName );
+	result = _pfm->destroyFile( cfileName );
 	if( result != 0 )
 		return result;
 
 //	cout << "deleteRecords: destroyFile:" << result << endl;
 
-	result = pfm->createFile( cfileName );
+	result = _pfm->createFile( cfileName );
 	if( result != 0 )
 		return result;
 
 //	cout << "deleteRecords: createFile:" << result << endl;
 
-	result = pfm->openFile( cfileName, fileHandle );
+	result = _pfm->openFile( cfileName, fileHandle );
 	if( result != 0 )
 		return result;
 

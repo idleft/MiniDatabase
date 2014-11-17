@@ -51,6 +51,7 @@ int testCase_1(const string &indexFileName)
     }
 
     rc = indexManager->getNumberOfAllPages(ixfileHandle, numberOfPagesFromFunction);
+    cout<<"All page Num "<<numberOfPagesFromFunction<<endl;
     if(rc == success)
     {
         if (numberOfPagesFromFunction < numberOfPages) {
@@ -66,6 +67,7 @@ int testCase_1(const string &indexFileName)
     
     numberOfPagesFromFunction = 0;
     rc = indexManager->getNumberOfPrimaryPages(ixfileHandle, numberOfPagesFromFunction);
+    cout<<"All Primary page Num "<<numberOfPagesFromFunction<<endl;
     if(rc == success)
     {
         if (numberOfPagesFromFunction != numberOfPages) {

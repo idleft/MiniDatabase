@@ -33,7 +33,7 @@ typedef struct
 	unsigned nextPageId;
 } DirectoryOfSlotsInfo;
 
-#define HEADER_PAGE_SIZE 2000
+#define HEADER_PAGE_SIZE 1000
 
 // Attribute
 typedef enum { TypeInt = 0, TypeReal, TypeVarChar } AttrType;
@@ -186,10 +186,13 @@ public:
 
   RC getAttrFromData(const vector<Attribute> &recordDescriptor, void* recordData, void* data, const string attributeName, short& attrSize);
 
+  RC appendEmptyPage(FileHandle &fileHandle);
 
   bool checkTombStone(void* data, int pageId, int slotId);
 
   int getEstimatedRecordDataSize(vector<Attribute> recordDesciptor);
+
+  RC debug(FileHandle fileHandle);
 
 
 /**************************************************************************************************************************************************************
@@ -247,9 +250,9 @@ protected:
   ~RecordBasedFileManager();
 
 private:
-  PagedFileManager * pfm;
   static RecordBasedFileManager *_rbf_manager;
   DirectoryOfSlotsInfo	directoryOfSlotsInfo;	// # of slots
+  PagedFileManager *_pfm =PagedFileManager::instance();
 };
 
 #endif

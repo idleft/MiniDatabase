@@ -21,6 +21,10 @@ PagedFileManager::~PagedFileManager()
 	_pf_manager = NULL;
 }
 
+RC PagedFileManager::debugInfo(){
+	std::cout<<"Debug in"<<std::endl;
+	return 0;
+}
 
 RC PagedFileManager::createFile(const char *fileName)
 {
@@ -37,10 +41,11 @@ RC PagedFileManager::createFile(const char *fileName)
 		if( file != NULL )
 		{
 			//add one more page at the beginning
-			void *data = malloc(PAGE_SIZE);
-			memset(data,0,PAGE_SIZE);
-			fwrite(data,1,PAGE_SIZE,file);
-			free(data);
+			// updated remove 11.16
+//			void *data = malloc(PAGE_SIZE);
+//			memset(data,0,PAGE_SIZE);
+//			fwrite(data,1,PAGE_SIZE,file);
+//			free(data);
 			fclose( file );
 			return 0;
 		}
@@ -68,6 +73,7 @@ RC PagedFileManager::openFile(const char *fileName, FileHandle &fileHandle)
 	// does file exist?
 
 	// file does not exist
+	printf("Try to oopen file : %s\n",fileName);
 	file = fopen( fileName, "rb+" );
 	if( file == NULL )
 	{
@@ -132,14 +138,14 @@ FileHandle::~FileHandle()
 
 RC FileHandle::readPage(PageNum pageNum, void *data)
 {//pageNum non neg need to start from 0
-	std::cout<<pageNum<<" "<<getNumberOfPages()<<std::endl;
+//	std::cout<<pageNum<<" "<<getNumberOfPages()<<std::endl;
 	if( pageNum >= getNumberOfPages() )
 		return -1;
 
 	if( file == NULL )
 		return -1;
 
-	if( fseek(file, (pageNum+1) * PAGE_SIZE, SEEK_SET ) != 0 )
+	if( fseek(file, pageNum* PAGE_SIZE, SEEK_SET ) != 0 )
 		return -1;
 
 	size_t result = fread( data, 1, PAGE_SIZE, file );
@@ -158,7 +164,7 @@ RC FileHandle::writePage(PageNum pageNum, const void *data)
 	if( pageNum > getNumberOfPages() )
 		return -1;
 
-	if( fseek(file, (pageNum+1) * PAGE_SIZE, SEEK_SET) != 0 )
+	if( fseek(file, pageNum* PAGE_SIZE, SEEK_SET) != 0 )
 		return -1;
 
 	size_t result = fwrite( data, 1, PAGE_SIZE, file);
@@ -194,7 +200,7 @@ unsigned FileHandle::getNumberOfPages()
 
     unsigned numOfPages = (unsigned)size / PAGE_SIZE;
 
-    return numOfPages-1;
+    return numOfPages;
 }
 
 void FileHandle::setFile(FILE* file)

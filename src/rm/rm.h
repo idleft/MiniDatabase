@@ -124,8 +124,8 @@ protected:
 private:
   static RelationManager *_rm;
   map< string, vector<Attribute> > tableAttributesCache;
-  RecordBasedFileManager *_rbfm;
-  PagedFileManager *_pfm;
+  RecordBasedFileManager *_rbfm = RecordBasedFileManager::instance();
+  PagedFileManager *_pfm = PagedFileManager::instance();
 
   map< string, map<int,RID> *> tableRIDMap;
   map< int, map<int,RID> *> columnRIDMap;

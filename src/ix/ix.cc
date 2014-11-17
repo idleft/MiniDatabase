@@ -14,6 +14,8 @@ IndexManager* IndexManager::instance()
 
 IndexManager::IndexManager()
 {
+	_rbfm = RecordBasedFileManager::instance();
+
 	pageIdAttr.length = 4;
 	pageIdAttr.name = "pageId";
 	pageIdAttr.type = TypeInt;
@@ -33,18 +35,21 @@ RC IndexManager::createFile(const string &fileName, const unsigned &numberOfPage
 	string metaFileName, idxFileName;
 	void *data;
 	FILE *file;
+	FileHandle idxFileHandle;
 	metaFileName = fileName + METASUFFIX;
 	idxFileName = fileName + BUCKETSUFFIX;
-	rc1 = _pfm->createFile(&metaFileName[0]);
-	rc2 = _pfm->createFile(&idxFileName[0]);
+	rc1 = _rbfm->createFile(metaFileName);
+	rc2 = _rbfm->createFile(idxFileName);
 
-	// Deal with the initial bucket number
-	data = malloc(PAGE_SIZE*(numberOfPages+1));
-	memset(data, 0, PAGE_SIZE*(numberOfPages+1));
-	file = fopen(&idxFileName[0],"rb+");
-	fwrite(data, 1, PAGE_SIZE*(numberOfPages+1), file);
-	fclose(file);
-	free(data);
+	if(rc1!=0||rc2!=0)
+		return -1;
+
+	// Prepare data
+	_rbfm->openFile(idxFileName, idxFileHandle);
+	for(int iter1 = 0; iter1<numberOfPages; iter1++)
+		_rbfm->appendEmptyPage(idxFileHandle);
+	_rbfm->debug(idxFileHandle);
+	_rbfm->closeFile(idxFileHandle);
 
 	// Deal with the first page of meta data
 	data = malloc(PAGE_SIZE);
@@ -58,10 +63,7 @@ RC IndexManager::createFile(const string &fileName, const unsigned &numberOfPage
 	fclose(file);
 	free(data);
 
-	if(rc1==0&&rc2==0)
-		return 0;
-	else
-		return -1;
+	return 0;
 }
 
 RC IndexManager::destroyFile(const string &fileName)
@@ -85,8 +87,8 @@ RC IndexManager::openFile(const string &fileName, IXFileHandle &ixFileHandle)
 	metaFileName = fileName + METASUFFIX;
 	idxFilename = fileName + BUCKETSUFFIX;
 
-	rc1 = _pfm->openFile(&metaFileName[0], ixFileHandle.metaFileHandle);
-	rc2 = _pfm->openFile(&idxFilename[0],ixFileHandle.idxFileHandle);
+	rc1 = _rbfm->openFile(metaFileName, ixFileHandle.metaFileHandle);
+	rc2 = _rbfm->openFile(idxFilename,ixFileHandle.idxFileHandle);
 	if(rc1==0&&rc2==0)
 		return 0;
 	else
@@ -96,10 +98,10 @@ RC IndexManager::openFile(const string &fileName, IXFileHandle &ixFileHandle)
 RC IndexManager::closeFile(IXFileHandle &ixfileHandle)
 {
 	RC rc1,rc2;
-	rc1 = _pfm->closeFile(ixfileHandle.metaFileHandle);
-	rc2 = _pfm->closeFile(ixfileHandle.idxFileHandle);
+	rc1 = _rbfm->closeFile(ixfileHandle.metaFileHandle);
+	rc2 = _rbfm->closeFile(ixfileHandle.idxFileHandle);
 	if(rc1==0&&rc2==0)
-			return 0;
+		return 0;
 	else
 		return -1;
 }
@@ -144,12 +146,12 @@ RC IndexManager::insertEntry(IXFileHandle &ixfileHandle, const Attribute &attrib
 	DirectoryOfSlotsInfo *pageDirInfo;
 	int keyRecordSize;
 	RID keyRecordRID;
-
+	// Get the index meta data
 	idxMetaPage = malloc(PAGE_SIZE);
 	pageData = malloc(PAGE_SIZE);
 	endOfPage = (char*)pageData + PAGE_SIZE;
 
-	res = ixfileHandle.metaFileHandle.readPage(-1,idxMetaPage);
+	res = ixfileHandle.metaFileHandle.readPage(0,idxMetaPage);
 
 	if(res<0)
 		return -1;
@@ -180,7 +182,12 @@ RC IndexManager::insertEntry(IXFileHandle &ixfileHandle, const Attribute &attrib
 	}
 	else{
 		// find a suitable over flow page
+		cout<<"Over flow not implemented yet"<<endl;
 	}
+
+	free(idxMetaPage);
+	free(pageData);
+	free(keyRecordData);
 
 	return res;
 }

@@ -29,6 +29,7 @@ public:
     RC openFile      (const char *fileName, FileHandle &fileHandle); // Open a file
     RC closeFile     (FileHandle &fileHandle);                       // Close a file
     bool fileExists		(const char *filename);
+    RC debugInfo();
 
 protected:
     PagedFileManager();                                   // Constructor
