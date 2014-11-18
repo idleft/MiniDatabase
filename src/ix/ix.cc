@@ -1,6 +1,7 @@
 
 #include "ix.h"
-#include "math.h"
+#include <math.h>
+#include <string.h>
 
 IndexManager* IndexManager::_index_manager = 0;
 
@@ -23,6 +24,7 @@ IndexManager::IndexManager()
 	slotIdAttr.length = 4;
 	slotIdAttr.name = "slotId";
 	slotIdAttr.type = TypeInt;
+
 }
 
 IndexManager::~IndexManager()
@@ -158,6 +160,8 @@ RC IndexManager::insertEntry(IXFileHandle &ixfileHandle, const Attribute &attrib
 
 	idxMetaHeader = (IdxMetaHeader*)idxMetaPage;
 
+	setCurrentIndexMetaHeader(idxMetaHeader);
+
 	keyAttrSet.push_back(attribute);
 	keyAttrSet.push_back(pageIdAttr);
 	keyAttrSet.push_back(slotIdAttr);
@@ -199,6 +203,36 @@ RC IndexManager::deleteEntry(IXFileHandle &ixfileHandle, const Attribute &attrib
 
 unsigned IndexManager::hash(const Attribute &attribute, const void *key)
 {
+	unsigned hash, a=31415, b=27183;
+
+	IdxMetaHeader *idxMetaHeader;
+
+	idxMetaHeader = getCurrentIndexMetaHeader();
+
+	if ( attribute.type == TypeInt )
+	{
+		int intKey = *((int*)(char*)key);
+		hash = (unsigned) intKey % idxMetaHeader->N;
+		return hash;
+	}
+	else if ( attribute.type == TypeReal )
+	{
+		float floatKey = *((float*)(char*)key);
+		hash = (unsigned) floatKey % idxMetaHeader->N;
+		return hash;
+	}
+	else if( attribute.type == TypeVarChar )
+	{
+		char *varcharKey;
+//		varcharKey = static_cast<char*>(key);
+		varcharKey = (char*)key;
+
+		for( hash = 0; varcharKey != '\0'; varcharKey++, a = a*b % (idxMetaHeader->N - 1) )
+			hash = (unsigned)( a*b + varcharKey ) % idxMetaHeader->N;
+
+		return hash;
+	}
+
 	return 0;
 }
 
@@ -286,4 +320,25 @@ RC IXFileHandle::collectCounterValues(unsigned &readPageCount, unsigned &writePa
 
 void IX_PrintError (RC rc)
 {
+	switch( rc )
+	{
+		case 0:
+			cout << "Success" << endl;
+			break;
+		case 1:
+			cout << "Not Found" << endl;
+			break;
+		case 2:
+			cout << "Key Already Exists" << endl;
+			break;
+		case 3:
+			break;
+		case 4:
+			break;
+		case 5:
+			break;
+
+		default :
+			break;
+	}
 }

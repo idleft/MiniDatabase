@@ -87,6 +87,14 @@ class IndexManager {
   unsigned getIdxPgId(unsigned bucketId, IdxMetaHeader* idxMetaHeader);
   int getKeyRecordSize(const Attribute &attr, const void *key);
 
+  IdxMetaHeader* getCurrentIndexMetaHeader()
+  {
+	  return currentIndexMetaHeader;
+  }
+  void setCurrentIndexMetaHeader(IdxMetaHeader* metaHeader)
+  {
+	  currentIndexMetaHeader = metaHeader;
+  }
 
  protected:
   IndexManager   ();                            // Constructor
@@ -97,6 +105,7 @@ class IndexManager {
   PagedFileManager *_pfm;
   RecordBasedFileManager *_rbfm;
   Attribute pageIdAttr, slotIdAttr;
+  IdxMetaHeader* currentIndexMetaHeader;
 };
 
 
