@@ -209,16 +209,18 @@ unsigned IndexManager::hash(const Attribute &attribute, const void *key)
 
 	idxMetaHeader = getCurrentIndexMetaHeader();
 
+	unsigned currentMapping =  pow(2, idxMetaHeader->level) * idxMetaHeader->N;
+
 	if ( attribute.type == TypeInt )
 	{
 		int intKey = *((int*)(char*)key);
-		hash = (unsigned) intKey % idxMetaHeader->N;
+		hash = (unsigned) intKey % currentMapping;
 		return hash;
 	}
 	else if ( attribute.type == TypeReal )
 	{
 		float floatKey = *((float*)(char*)key);
-		hash = (unsigned) floatKey % idxMetaHeader->N;
+		hash = (unsigned) floatKey % currentMapping;
 		return hash;
 	}
 	else if( attribute.type == TypeVarChar )
@@ -228,7 +230,7 @@ unsigned IndexManager::hash(const Attribute &attribute, const void *key)
 		varcharKey = (char*)key;
 
 		for( hash = 0; varcharKey != '\0'; varcharKey++, a = a*b % (idxMetaHeader->N - 1) )
-			hash = (unsigned)( a*b + varcharKey ) % idxMetaHeader->N;
+			hash = (unsigned)( a*b + varcharKey ) % currentMapping;
 
 		return hash;
 	}
