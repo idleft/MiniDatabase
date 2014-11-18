@@ -229,7 +229,7 @@ unsigned IndexManager::hash(const Attribute &attribute, const void *key)
 //		varcharKey = static_cast<char*>(key);
 		varcharKey = (char*)key;
 
-		for( hash = 0; varcharKey != '\0'; varcharKey++, a = a*b % (idxMetaHeader->N - 1) )
+		for( hash = 0; varcharKey != '\0'; varcharKey++, a = a*b % (currentMapping - 1) )
 			hash = (unsigned)( a*b + varcharKey ) % currentMapping;
 
 		return hash;
