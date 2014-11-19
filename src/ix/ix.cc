@@ -214,13 +214,15 @@ unsigned IndexManager::hash(const Attribute &attribute, const void *key)
 	if ( attribute.type == TypeInt )
 	{
 		int intKey = *((int*)(char*)key);
-		hash = (unsigned) hash32(intKey) % currentMapping;
+		hash = (unsigned) hash32(intKey);
+		cout << "hash:" << hash << endl;
 		return hash;
 	}
 	else if ( attribute.type == TypeReal )
 	{
 		float floatKey = *((float*)(char*)key);
-		hash = (unsigned) hash32(floatKey) % currentMapping;
+		hash = (unsigned) hash32(floatKey);
+		cout << "hash:" << hash << endl;
 		return hash;
 	}
 	else if( attribute.type == TypeVarChar )
@@ -232,6 +234,7 @@ unsigned IndexManager::hash(const Attribute &attribute, const void *key)
 		for( hash = 0; varcharKey != '\0'; varcharKey++, a = a*b % (currentMapping - 1) )
 			hash = (unsigned)( a*b + varcharKey ) % currentMapping;
 
+		cout << "hash:" << hash << endl;
 		return hash;
 	}
 
