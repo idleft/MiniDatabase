@@ -214,13 +214,13 @@ unsigned IndexManager::hash(const Attribute &attribute, const void *key)
 	if ( attribute.type == TypeInt )
 	{
 		int intKey = *((int*)(char*)key);
-		hash = (unsigned) intKey % currentMapping;
+		hash = (unsigned) hash32(intKey) % currentMapping;
 		return hash;
 	}
 	else if ( attribute.type == TypeReal )
 	{
 		float floatKey = *((float*)(char*)key);
-		hash = (unsigned) floatKey % currentMapping;
+		hash = (unsigned) hash32(floatKey) % currentMapping;
 		return hash;
 	}
 	else if( attribute.type == TypeVarChar )

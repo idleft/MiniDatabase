@@ -12,6 +12,8 @@ class IX_ScanIterator;
 class IXFileHandle;
 const string METASUFFIX = ".meta", BUCKETSUFFIX = ".idx";
 
+#define hash32(x) ((x)*2654435761)
+
 typedef struct{
 	unsigned next;
 	unsigned level;
