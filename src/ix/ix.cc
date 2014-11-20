@@ -213,7 +213,8 @@ unsigned IndexManager::hash(const Attribute &attribute, const void *key)
 	if ( attribute.type == TypeInt )
 	{
 		int intKey = *((int*)(char*)key);
-		hash = (unsigned) hash32shift(intKey);
+		hash = (unsigned) hashInt(intKey);
+//		hash = (unsigned) hash32shift(intKey);
 		cout << "hash:" << hash << endl;
 
 		return hash;
@@ -232,13 +233,20 @@ unsigned IndexManager::hash(const Attribute &attribute, const void *key)
 		varcharKey = (char*)key;
 
 		size_t len = attribute.length;		// length of char* (attribute.length)
-		hash = generateHash( varcharKey, len );
+//		hash = generateHash( varcharKey, len );
+		hash = stringHash(varcharKey, len);
 
 		cout << "hash:" << hash << endl;
 
 	}
 
 	return 0;
+}
+
+unsigned IndexManager::hashInt(int key)
+{
+	key ^= (key << 17) | (key >> 16);
+	return key;
 }
 
 int IndexManager::hash32shift(int key)
@@ -257,6 +265,17 @@ unsigned int IndexManager::floatHash(float f)
     unsigned int ui;
     memcpy( &ui, &f, sizeof(float) );
     return ui & 0xfffff000;
+}
+
+unsigned IndexManager::stringHash(char* string, size_t len)
+{
+	unsigned int hash = 0;
+	int c;
+	while( c = *string++ )
+		hash += c;
+
+	hash = hash % len;
+	return hash;
 }
 
 unsigned int IndexManager::generateHash(const char *string, size_t len)
@@ -330,7 +349,7 @@ RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attr
 		*/
 	}
 
-	idxMetaHeader = malloc(PAGE_SIZE);
+	idxMetaHeader = (IdxMetaHeader*)malloc(PAGE_SIZE);
 	result = ixfileHandle.metaFileHandle.readPage( primaryPageNumber, idxMetaHeader );
 
 	cout << "overflow Page No." << idxMetaHeader->overflowPageNum << "linked to [primary | overflow] page" << endl;

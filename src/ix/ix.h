@@ -86,10 +86,12 @@ class IndexManager {
   // Generate and return the hash value (unsigned) for the given key
   unsigned hash(const Attribute &attribute, const void *key);
   
+  unsigned hashInt(int key);
   int hash32shift(int key);
   unsigned floatHash( float f );
   
   unsigned int generateHash(const char *string, size_t len);
+  unsigned stringHash(char* string, size_t len);
 
   unsigned getOverFlowPageRecordNumber(IXFileHandle ixFileHandle, unsigned overflowPageId);
 
