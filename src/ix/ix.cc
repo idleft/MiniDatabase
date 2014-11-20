@@ -68,6 +68,11 @@ RC IndexManager::createFile(const string &fileName, const unsigned &numberOfPage
 	return 0;
 }
 
+DirectoryOfIdxInfo* IndexManager::goToDirectoryOfIdx(void *pageData){
+	char* res = (char*)pageData + PAGE_SIZE - sizeof(DirectoryOfIdxInfo);
+	return (DirectoryOfIdxInfo*) res;
+}
+
 RC IndexManager::destroyFile(const string &fileName)
 {
 	RC rc1,rc2;
@@ -247,10 +252,10 @@ int IndexManager::hash32shift(int key)
 	  return key;
 }
 
-unsigned int IndexManager::floatHash( float f )
+unsigned int IndexManager::floatHash(float f)
 {
     unsigned int ui;
-    memcpy( &ui, &f, sizeof( float ) );
+    memcpy( &ui, &f, sizeof(float) );
     return ui & 0xfffff000;
 }
 
@@ -262,11 +267,87 @@ unsigned int IndexManager::generateHash(const char *string, size_t len)
     return hash ^ (hash >> 16);
 }
 
+unsigned IndexManager::getOverFlowPageRecordNumber(IXFileHandle ixFileHandle, unsigned overflowPageId){
+	// Xikui 11/18/2014
+	unsigned overflowRecordNum = 0;
+	unsigned curPgeId = overflowPageId;
+	if(curPgeId == 0 )
+		overflowRecordNum = 0;
+	else{
+		DirectoryOfIdxInfo *dirInfo;
+		void *metaPageData = malloc(PAGE_SIZE);
+		dirInfo = goToDirectoryOfIdx(metaPageData);
+		while(curPgeId!=0){
+			overflowRecordNum += dirInfo->numOfIdx;
+			curPgeId = dirInfo->nextPageId;
+		}
+		free(metaPageData);
+	}
+	return overflowRecordNum;
+}
+
 RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attribute &attribute, const unsigned &primaryPageNumber) 
 {
+	RC result = -1;
 
+	IdxMetaHeader *idxMetaHeader;
+	IdxRecordHeader *idxRecordHeader;
 
-	return -1;
+	IX_ScanIterator ix_ScanIterator;
+
+	cout << "Number of total entries in the page (+ overflow pages) : " << endl;
+	cout << "primary Page No." << primaryPageNumber << endl;
+
+	void *pageData;
+	pageData = malloc(PAGE_SIZE);
+
+	result = ixfileHandle.idxFileHandle.readPage( primaryPageNumber, pageData );
+	if( result != 0 )
+		return result;
+
+	DirectoryOfIdxInfo *idxDirInfo;
+	idxDirInfo = goToDirectoryOfIdx( pageData );
+
+	vector<Attribute> keyAttrSet;
+	keyAttrSet.push_back(attribute);
+	keyAttrSet.push_back(pageIdAttr);
+	keyAttrSet.push_back(slotIdAttr);
+
+	int estimateRecordLen = _rbfm->getEstimatedRecordDataSize( keyAttrSet );
+	void *recordData = malloc( estimateRecordLen );
+
+	cout << "# of entries :" << idxDirInfo->numOfIdx << endl;
+	cout << "entries:";
+
+	RID rid;
+	for(int i = 0; i < idxDirInfo->numOfIdx; i++)
+	{
+		// how can I find rid for each index record?
+		/*
+		result = _rbfm->readRecord( ixfileHandle, attribute, rid, recordData );
+		if( result != 0 )
+			return result;
+		*/
+	}
+
+	idxMetaHeader = malloc(PAGE_SIZE);
+	result = ixfileHandle.metaFileHandle.readPage( primaryPageNumber, idxMetaHeader );
+
+	cout << "overflow Page No." << idxMetaHeader->overflowPageNum << "linked to [primary | overflow] page" << endl;
+	unsigned overflowRecordNum = getOverFlowPageRecordNumber( ixfileHandle, idxMetaHeader->overflowPageNum);
+	cout << "# of entries : " << overflowRecordNum << endl;
+	cout << "entries:";
+	for(int i = 0; i < idxDirInfo->numOfIdx; i++)
+	{
+		/*
+		// how can I find rid for each overflow page record?
+		result = _rbfm->readRecord( ixfileHandle, attribute, rid, recordData );
+		if( result != 0 )
+			return result;
+		*/
+	}
+
+	return result;
 }
 
 RC IndexManager::getNumberOfPrimaryPages(IXFileHandle &ixfileHandle, unsigned &numberOfPrimaryPages) 

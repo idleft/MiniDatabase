@@ -14,10 +14,27 @@ const string METASUFFIX = ".meta", BUCKETSUFFIX = ".idx";
 
 #define hash32(x) ((x)*2654435761)
 
+typedef struct
+{
+	short idxRecordLength;
+	short nextOffset;
+	unsigned recordPageId;
+	unsigned recordSlotId;
+} IdxRecordHeader;
+
+typedef struct
+{
+	short numOfIdx;
+	short freeSpaceOffset;
+	short freeSpaceNum;
+	unsigned nextPageId;
+} DirectoryOfIdxInfo;
+
 typedef struct{
 	unsigned next;
 	unsigned level;
 	unsigned N;
+	unsigned overflowPageNum; // in that page
 } IdxMetaHeader;
 class IndexManager {
  public:
@@ -25,6 +42,8 @@ class IndexManager {
 
   // Create index file(s) to manage an index
   RC createFile(const string &fileName, const unsigned &numberOfPages);
+
+  DirectoryOfIdxInfo* goToDirectoryOfIdx(void *pageData);
 
   // Delete index file(s)
   RC destroyFile(const string &fileName);
@@ -71,6 +90,8 @@ class IndexManager {
   unsigned floatHash( float f );
   
   unsigned int generateHash(const char *string, size_t len);
+
+  unsigned getOverFlowPageRecordNumber(IXFileHandle ixFileHandle, unsigned overflowPageId);
 
   // Print all index entries in a primary page including associated overflow pages
   // Format should be:
