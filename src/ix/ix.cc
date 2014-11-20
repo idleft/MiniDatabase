@@ -48,7 +48,7 @@ RC IndexManager::createFile(const string &fileName, const unsigned &numberOfPage
 
 	// Prepare data
 	_rbfm->openFile(idxFileName, idxFileHandle);
-	for(int iter1 = 0; iter1<numberOfPages; iter1++)
+	for(int iter1 = 0; iter1 < numberOfPages; iter1++)
 		_rbfm->appendEmptyPage(idxFileHandle);
 	_rbfm->debug(idxFileHandle);
 	_rbfm->closeFile(idxFileHandle);
@@ -203,25 +203,20 @@ RC IndexManager::deleteEntry(IXFileHandle &ixfileHandle, const Attribute &attrib
 
 unsigned IndexManager::hash(const Attribute &attribute, const void *key)
 {
-	unsigned hash, a=31415, b=27183;
-
-	IdxMetaHeader *idxMetaHeader;
-
-	idxMetaHeader = getCurrentIndexMetaHeader();
-
-	unsigned currentMapping =  pow(2, idxMetaHeader->level) * idxMetaHeader->N;
+	unsigned hash;
 
 	if ( attribute.type == TypeInt )
 	{
 		int intKey = *((int*)(char*)key);
-		hash = (unsigned) hash32(intKey);
+		hash = (unsigned) hash32shift(intKey);
 		cout << "hash:" << hash << endl;
+
 		return hash;
 	}
 	else if ( attribute.type == TypeReal )
 	{
 		float floatKey = *((float*)(char*)key);
-		hash = (unsigned) hash32(floatKey);
+		hash = (unsigned) floatHash(floatKey);
 		cout << "hash:" << hash << endl;
 		return hash;
 	}
@@ -231,18 +226,46 @@ unsigned IndexManager::hash(const Attribute &attribute, const void *key)
 //		varcharKey = static_cast<char*>(key);
 		varcharKey = (char*)key;
 
-		for( hash = 0; varcharKey != '\0'; varcharKey++, a = a*b % (currentMapping - 1) )
-			hash = (unsigned)( a*b + varcharKey ) % currentMapping;
+		size_t len = attribute.length;		// length of char* (attribute.length)
+		hash = generateHash( varcharKey, len );
 
 		cout << "hash:" << hash << endl;
-		return hash;
+
 	}
 
 	return 0;
 }
 
+int IndexManager::hash32shift(int key)
+{
+	  key = ~key + (key << 15); // key = (key << 15) - key - 1;
+	  key = key ^ (key >> 12);
+	  key = key + (key << 2);
+	  key = key ^ (key >> 4);
+	  key = key * 2057; // key = (key + (key << 3)) + (key << 11);
+	  key = key ^ (key >> 16);
+	  return key;
+}
+
+unsigned int IndexManager::floatHash( float f )
+{
+    unsigned int ui;
+    memcpy( &ui, &f, sizeof( float ) );
+    return ui & 0xfffff000;
+}
+
+unsigned int IndexManager::generateHash(const char *string, size_t len)
+{
+    unsigned int hash = 0;
+    for(size_t i = 0; i < len; ++i)
+        hash = 65599 * hash + string[i];
+    return hash ^ (hash >> 16);
+}
+
 RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attribute &attribute, const unsigned &primaryPageNumber) 
 {
+
+
 	return -1;
 }
 

@@ -67,7 +67,11 @@ class IndexManager {
   // Generate and return the hash value (unsigned) for the given key
   unsigned hash(const Attribute &attribute, const void *key);
   
+  int hash32shift(int key);
+  unsigned floatHash( float f );
   
+  unsigned int generateHash(const char *string, size_t len);
+
   // Print all index entries in a primary page including associated overflow pages
   // Format should be:
   // Number of total entries in the page (+ overflow pages) : ?? 
@@ -88,6 +92,7 @@ class IndexManager {
 
   unsigned getIdxPgId(unsigned bucketId, IdxMetaHeader* idxMetaHeader);
   int getKeyRecordSize(const Attribute &attr, const void *key);
+
 
   IdxMetaHeader* getCurrentIndexMetaHeader()
   {
