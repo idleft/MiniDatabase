@@ -433,11 +433,7 @@ RC IndexManager::deleteEntry(IXFileHandle &ixfileHandle, const Attribute &attrib
 	metaPageData = malloc(PAGE_SIZE);
 	idxMetaHeader = (IdxMetaHeader*)metaPageData;
 
-	// [2014-11-20] ejshin1, add reading idxMetaHeader routine
-	res = ixfileHandle.metaFileHandle.readPage(0, idxMetaHeader);
-	if(res<0)
-		return -1;
-	// [2014-11-20] ejshin1, add reading idxMetaHeader routine
+	ixfileHandle.metaFileHandle.readPage(0, metaPageData);
 
 	hashKey = hash(attribute, key);
 	idxPgId = getIdxPgId(hashKey, idxMetaHeader);
@@ -853,19 +849,24 @@ RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attr
 RC IndexManager::getNumberOfPrimaryPages(IXFileHandle &ixfileHandle, unsigned &numberOfPrimaryPages) 
 {
 	// Xikui 11/15/2014
-	int pageNum = 0;
-	pageNum = ixfileHandle.idxFileHandle.getNumberOfPages();
-	numberOfPrimaryPages = pageNum;
+	// 11.20 update to use meta data
+	void *metaPageData = malloc(PAGE_SIZE);
+	ixfileHandle.metaFileHandle.readPage(0,metaPageData);
+	IdxMetaHeader *idxMetaHeader = (IdxMetaHeader*)metaPageData;
+	numberOfPrimaryPages = idxMetaHeader->primaryPgNum;
+	free(metaPageData);
 	return 0;
 }
 
 RC IndexManager::getNumberOfAllPages(IXFileHandle &ixfileHandle, unsigned &numberOfAllPages) 
 {
 	// Xikui 11/15/2014
-	int pageNum = 0;
-	pageNum+=ixfileHandle.idxFileHandle.getNumberOfPages();
-	pageNum+=ixfileHandle.metaFileHandle.getNumberOfPages();
-	numberOfAllPages = pageNum;
+	// 11.20 update to use meta data
+	void *metaPageData = malloc(PAGE_SIZE);
+	ixfileHandle.metaFileHandle.readPage(0,metaPageData);
+	IdxMetaHeader *idxMetaHeader = (IdxMetaHeader *)metaPageData;
+	numberOfAllPages = idxMetaHeader->primaryPgNum + idxMetaHeader->overFlowPgNum;
+	free(metaPageData);
 	return 0;
 }
 
@@ -966,7 +967,6 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 	else
 		return 0;
 }
-
 //int IX_ScanIterator::getKeyDataSize(Attribute attr, void *keyRecordData){
 //	// Xikui 11/17/2014
 //	int recordDataLen = 0;
