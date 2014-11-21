@@ -798,7 +798,8 @@ RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attr
 	}
 
 	cout << "overflow Page No." << idxMetaHeader->overFlowPgNum << " linked to [primary | overflow] page" << endl;
-	unsigned overflowRecordNum = getOverFlowPageRecordNumber( ixfileHandle, idxMetaHeader->overFlowPgNum );
+	unsigned overflowRecordNum = 0 ;
+//	getOverFlowPageRecordNumber( ixfileHandle, idxMetaHeader->overFlowPgNum );
 	cout << "# of entries : " << overflowRecordNum << endl;
 	if( overflowRecordNum != 0 )
 	{
