@@ -6,13 +6,19 @@
 
 #include "../rbf/rbfm.h"
 #include "../rbf/pfm.h"
-# define IX_EOF (-1)  // end of the index scan
 
+# define IX_EOF (-1)  // end of the index scan
+# define MAX_OVERFLOW_PAGE_INFO (500) // max overflow page info can stored in one meta page
+# define MAX_INDEX_PAGE_SLOT_NUM (200)
 class IX_ScanIterator;
 class IXFileHandle;
 const string METASUFFIX = ".meta", BUCKETSUFFIX = ".idx";
-
-#define hash32(x) ((x)*2654435761)
+//
+//typedef struct{
+//	unsigned recordNum;
+//	unsigned nextPageId;
+//} OverflowPageInfo;
+//
 
 typedef struct
 {
@@ -24,26 +30,34 @@ typedef struct
 
 typedef struct
 {
+	short slotIdxNum;
+	short nextIdxOffset;
+} IdxSlot;
+
+typedef struct
+{
 	short numOfIdx;
 	short freeSpaceOffset;
 	short freeSpaceNum;
 	unsigned nextPageId;
 } DirectoryOfIdxInfo;
 
+
 typedef struct{
 	unsigned next;
 	unsigned level;
 	unsigned N;
-	unsigned overflowPageNum; // in that page
+	unsigned primaryPgNum; // bucketNum
+	unsigned overFlowPgNum;
+	unsigned physicalPrimaryPgNum;
 } IdxMetaHeader;
+
 class IndexManager {
  public:
   static IndexManager* instance();
 
   // Create index file(s) to manage an index
   RC createFile(const string &fileName, const unsigned &numberOfPages);
-
-  DirectoryOfIdxInfo* goToDirectoryOfIdx(void *pageData);
 
   // Delete index file(s)
   RC destroyFile(const string &fileName);
@@ -92,9 +106,6 @@ class IndexManager {
   
   unsigned int generateHash(const char *string, size_t len);
   unsigned stringHash(char* string, size_t len);
-
-  unsigned getOverFlowPageRecordNumber(IXFileHandle ixFileHandle, unsigned overflowPageId);
-
   // Print all index entries in a primary page including associated overflow pages
   // Format should be:
   // Number of total entries in the page (+ overflow pages) : ?? 
@@ -115,6 +126,22 @@ class IndexManager {
 
   unsigned getIdxPgId(unsigned bucketId, IdxMetaHeader* idxMetaHeader);
   int getKeyRecordSize(const Attribute &attr, const void *key);
+//  RC getKeyRecordAttrSet(Attribute attribute, vector<Attribute> &keyAttrSet);
+//  OverflowPageInfo* goToOverflowPageInfo(void *metaPageData, unsigned overflowPageId);
+  unsigned getOverFlowPageRecordNumber(IXFileHandle ixFileHandle, unsigned overflowPageId);
+  unsigned getOverflowPageId(IXFileHandle ixfileHandle, unsigned nextPageId, int keyRecordSize, bool &splitPage);
+  DirectoryOfIdxInfo* goToDirectoryOfIdx(void *pageData);
+  IdxSlot* goToIdxSlot(void* pageData, unsigned slotId);
+  RC insertIdxToPage(FileHandle &fileHandle, const Attribute &keyAttribute,
+			const void *key, const RID &keyRID, RID &idxRID, unsigned pageId, unsigned hashKey);
+  unsigned getSlotId(unsigned hashKey);
+  bool checkEqualKey(Attribute attr, const void *key, void *cmpKey);
+  RC removePage(FileHandle prePageFileHandle, DirectoryOfIdxInfo *curDirInfo, unsigned prePgId);
+  RC emptyPage(FileHandle pageFileHandle, unsigned pgId);
+
+  RC appendEmptyPage(FileHandle &fileHandle);
+  RC flagInsertEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid, bool splitFlag);
+  unsigned getKeySize(IdxRecordHeader *idxRecordHeader);
 
 
   IdxMetaHeader* getCurrentIndexMetaHeader()
@@ -125,7 +152,6 @@ class IndexManager {
   {
 	  currentIndexMetaHeader = metaHeader;
   }
-
  protected:
   IndexManager   ();                            // Constructor
   ~IndexManager  ();                            // Destructor
@@ -133,19 +159,10 @@ class IndexManager {
  private:
   static IndexManager *_index_manager;
   PagedFileManager *_pfm;
-  RecordBasedFileManager *_rbfm;
+//  RecordBasedFileManager *_rbfm;
   Attribute pageIdAttr, slotIdAttr;
   IdxMetaHeader* currentIndexMetaHeader;
-};
-
-
-class IX_ScanIterator {
- public:
-  IX_ScanIterator();  							// Constructor
-  ~IX_ScanIterator(); 							// Destructor
-
-  RC getNextEntry(RID &rid, void *key);  		// Get next matching entry
-  RC close();             						// Terminate index scan
+  unsigned SIZE_OF_IDX_HEADER;
 };
 
 
@@ -165,6 +182,44 @@ private:
     unsigned appendPageCounter;
 
 };
+
+class IX_ScanIterator {
+ public:
+  IX_ScanIterator();  							// Constructor
+  ~IX_ScanIterator(); 							// Destructor
+  bool checkValueSpan(Attribute attribute, const void *lowKey, const void *highKey, bool lowKeyInclusive, bool highKeyInclusive, void *keyRecordData);
+  int getKeyDataSize(Attribute attr, void *keyRecordData);
+
+
+  RC initialize(IXFileHandle &ixfileHandle,
+  	    const Attribute &attribute,
+  	    const void      *lowKey,
+  	    const void      *highKey,
+  	    bool			lowKeyInclusive,
+  	    bool        	highKeyInclusive);
+  RC getNextEntry(RID &rid, void *key);  		// Get next matching entry
+  RC close();             						// Terminate index scan
+
+ private:
+  IXFileHandle ixfileHandle;
+  Attribute attribute;
+  const void *lowKey;
+  const void *highKey;
+  bool lowKeyInclusive;
+  bool highKeyInclusive;
+
+  // curPageId for both primary page and overflow page, bucketId
+  // for primary page only
+  unsigned curBucketId, curRecId,curPageId,totalBucketNum;
+  void* pageData;
+  Attribute keyAttri;
+  short curInPageOffset;
+
+  DirectoryOfIdxInfo *dirInfo;
+  IndexManager *_ixm;
+};
+
+
 
 // print out the error message for a given return code
 void IX_PrintError (RC rc);
