@@ -697,6 +697,7 @@ unsigned IndexManager::getOverFlowPageRecordNumber(IXFileHandle ixFileHandle, un
 	else{
 		DirectoryOfIdxInfo *dirInfo;
 		void *metaPageData = malloc(PAGE_SIZE);
+		ixFileHandle.idxFileHandle.readPage(curPgeId, metaPageData);
 		dirInfo = goToDirectoryOfIdx(metaPageData);
 		while(curPgeId!=0){
 			overflowRecordNum += dirInfo->numOfIdx;
@@ -742,7 +743,7 @@ RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attr
 	int estimateRecordLen = _rbfm->getEstimatedRecordDataSize( keyAttrSet );
 	void *recordData = malloc( estimateRecordLen );
 */
-	cout << "# of entries :" << idxDirInfo->numOfIdx << endl;
+	cout << "# of entries : " << idxDirInfo->numOfIdx << endl;
 
 	if( idxDirInfo->numOfIdx != 0 )
 	{
@@ -752,6 +753,7 @@ RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attr
 		if( result != 0 )
 		{
 			 closeFile( ixfileHandle );
+			 return result;
 		}
 
 		RID rid;
@@ -799,19 +801,24 @@ RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attr
 	if( overflowRecordNum != 0 )
 	{
 		cout << "entries:";
-/*
-	result =  indexManager->scan( ixfileHandle.metaFileHandle, attribute, NULL, NULL, true, true, ix_ScanIterator );
-	if( result != 0 )
-	{
-		  indexManager->closeFile( ixfileHandle.metaFileHandle );
-	}
 
-	while( ix_ScanIterator.getNextEntry( rid, &key )  == success )
-	{
-		cout << "[" << key << "/" << rid.pageNum << "," << rid.slotNum << "] ";
-	}
-*/
+		result =  scan( ixfileHandle, attribute, NULL, NULL, true, true, ix_ScanIterator );
+		if( result != 0 )
+		{
+			  closeFile( ixfileHandle );
+			  return result;
+		}
+
+		RID rid;
+		unsigned key;
+
+		while( ix_ScanIterator.getNextEntryForOverflowPage( rid, &key )  == 0 )
+		{
+			cout << "[" << key << "/" << rid.pageNum << "," << rid.slotNum << "] ";
+		}
+
 		cout << endl;
+
 	}
 
 /*
@@ -843,7 +850,7 @@ RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attr
 		}
 	}
 */
-	return result;
+	return 0;
 }
 
 RC IndexManager::getNumberOfPrimaryPages(IXFileHandle &ixfileHandle, unsigned &numberOfPrimaryPages) 
@@ -967,6 +974,51 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 	else
 		return 0;
 }
+
+RC IX_ScanIterator::getNextEntryForOverflowPage(RID &rid, void *key)
+{
+	// Xikui 11/17/2014
+	// 11/19 updated to fit idx page
+	RC res = -1;
+	IdxRecordHeader *idxRecordHeader;
+	while(res == -1 && curBucketId < totalBucketNum){
+
+		while(curRecId<=dirInfo->numOfIdx && res == -1){
+			idxRecordHeader = (IdxRecordHeader*)((char*)pageData + curInPageOffset);
+			if(idxRecordHeader->idxRecordLength < 0){
+				curInPageOffset += (0-idxRecordHeader->idxRecordLength);
+				continue;
+			}
+			else{
+				curRecId++;
+				res = 0;
+				curInPageOffset += idxRecordHeader->idxRecordLength;
+				memcpy(key, (char*)pageData+ curInPageOffset, idxRecordHeader->idxRecordLength - sizeof(IdxRecordHeader));
+				if(checkValueSpan(attribute, lowKey, highKey, lowKeyInclusive, highKeyInclusive, key))
+					res = 0;
+				else
+					continue;
+				rid.pageNum = idxRecordHeader->recordPageId;
+				rid.slotNum = idxRecordHeader->recordSlotId;
+			}
+		}
+		if(curRecId > dirInfo->numOfIdx){
+			if(dirInfo->nextPageId == 0){
+				curBucketId+=1;
+//				if(curBucketId < totalBucketNum)
+//					ixfileHandle.idxFileHandle.readPage(curBucketId, pageData);
+			}
+			else{
+				ixfileHandle.metaFileHandle.readPage(dirInfo->nextPageId, pageData);
+			}
+		}
+	}
+	if(res==-1)
+		return IX_EOF;
+	else
+		return 0;
+}
+
 //int IX_ScanIterator::getKeyDataSize(Attribute attr, void *keyRecordData){
 //	// Xikui 11/17/2014
 //	int recordDataLen = 0;

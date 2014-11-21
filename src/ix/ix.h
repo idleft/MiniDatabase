@@ -143,7 +143,6 @@ class IndexManager {
   RC flagInsertEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid, bool splitFlag);
   unsigned getKeySize(IdxRecordHeader *idxRecordHeader);
 
-
   IdxMetaHeader* getCurrentIndexMetaHeader()
   {
 	  return currentIndexMetaHeader;
@@ -199,6 +198,8 @@ class IX_ScanIterator {
   	    bool        	highKeyInclusive);
   RC getNextEntry(RID &rid, void *key);  		// Get next matching entry
   RC close();             						// Terminate index scan
+
+  RC getNextEntryForOverflowPage(RID &rid, void *key);	// print purpose only
 
  private:
   IXFileHandle ixfileHandle;
