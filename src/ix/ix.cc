@@ -692,24 +692,24 @@ OverflowPageInfo* IndexManager::goToOverflowPageInfo(void *metaPageData, unsigne
 	return (OverflowPageInfo *)overflowPageInfo;
 }*/
 
-//unsigned IndexManager::getOverFlowPageRecordNumber(IXFileHandle ixFileHandle, unsigned overflowPageId){
-//	// Xikui 11/18/2014
-//	unsigned overflowRecordNum = 0;
-//	unsigned curPgeId = overflowPageId;
-//	if(curPgeId == 0 )
-//		overflowRecordNum = 0;
-//	else{
-//		DirectoryOfIdxInfo *dirInfo;
-//		void *metaPageData = malloc(PAGE_SIZE);
-//		dirInfo = goToDirectoryOfIdx(metaPageData);
-//		while(curPgeId!=0){
-//			overflowRecordNum += dirInfo->numOfIdx;
-//			curPgeId = dirInfo->nextPageId;
-//		}
-//		free(metaPageData);
-//	}
-//	return overflowRecordNum;
-//}
+unsigned IndexManager::getOverFlowPageRecordNumber(IXFileHandle ixFileHandle, unsigned overflowPageId){
+	// Xikui 11/18/2014
+	unsigned overflowRecordNum = 0;
+	unsigned curPgeId = overflowPageId;
+	if(curPgeId == 0 )
+		overflowRecordNum = 0;
+	else{
+		DirectoryOfIdxInfo *dirInfo;
+		void *metaPageData = malloc(PAGE_SIZE);
+		dirInfo = goToDirectoryOfIdx(metaPageData);
+		while(curPgeId!=0){
+			overflowRecordNum += dirInfo->numOfIdx;
+			curPgeId = dirInfo->nextPageId;
+		}
+		free(metaPageData);
+	}
+	return overflowRecordNum;
+}
 
 RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attribute &attribute, const unsigned &primaryPageNumber) 
 {
@@ -798,8 +798,7 @@ RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attr
 	}
 
 	cout << "overflow Page No." << idxMetaHeader->overFlowPgNum << " linked to [primary | overflow] page" << endl;
-	unsigned overflowRecordNum = 0 ;
-//	getOverFlowPageRecordNumber( ixfileHandle, idxMetaHeader->overFlowPgNum );
+	unsigned overflowRecordNum = getOverFlowPageRecordNumber( ixfileHandle, idxMetaHeader->overFlowPgNum );
 	cout << "# of entries : " << overflowRecordNum << endl;
 	if( overflowRecordNum != 0 )
 	{
