@@ -73,7 +73,7 @@ RC PagedFileManager::openFile(const char *fileName, FileHandle &fileHandle)
 	// does file exist?
 
 	// file does not exist
-	printf("Try to oopen file : %s\n",fileName);
+	printf("Try to open file : %s\n",fileName);
 	file = fopen( fileName, "rb+" );
 	if( file == NULL )
 	{
