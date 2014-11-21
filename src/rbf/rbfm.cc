@@ -200,6 +200,7 @@ RC RecordBasedFileManager::closeFile(FileHandle &fileHandle)
 	return result;
 }
 
+
 RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid) {
 
 	RC result = -1;
@@ -230,28 +231,17 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 		{
 			// add record to the page
 			fileHandle.readPage( pageNum, page );
-
 			const char* endOfPage = page + PAGE_SIZE;
 			DirectoryOfSlotsInfo *info = getDirectoryOfSlotsInfo(endOfPage);
-
 			unsigned slotNum = info->numOfSlots + 1;
-
 			appendRecord(page, record, sizeOfRecord, slotNum);
-
 			(*slotDirectory)[pageNum] -= (sizeOfRecord + sizeof(Slot));
-
-//			cout<<"insertRecord pageNum=" << pageNum << endl;
-//			cout<<(*slotDirectory)[pageNum]<<" "<<info->freeSpaceNum<<endl;
-
 			result = fileHandle.writePage(pageNum, page);
 			if( result == 0 )
 			{
 				rid.pageNum = pageNum;
 				rid.slotNum = slotNum;
 			}
-
-//			cout<<"insertRecord writePage=" << result << endl;
-
 			free(record);
 			free(page);
 
@@ -290,31 +280,7 @@ RC RecordBasedFileManager::appendPageWithRecord(FileHandle &fileHandle, const vo
 	return result;
 }
 
-RC RecordBasedFileManager::appendEmptyPage(FileHandle &fileHandle){
 
-	RC res = -1;
-	void *pageData;
-	char *endOfPage;
-
-	DirectoryOfSlotsInfo *dirInfo;
-	pageData = malloc(PAGE_SIZE);
-	memset(pageData, 0, PAGE_SIZE);
-	endOfPage = (char*) pageData+PAGE_SIZE;
-
-	dirInfo = goToDirectoryOfSlotsInfo(endOfPage);
-	dirInfo->freeSpaceNum = PAGE_SIZE - sizeof(DirectoryOfSlotsInfo);
-
-	res = fileHandle.appendPage(pageData);
-	// append page to file
-	if( res == 0 )
-	{
-		vector<short>* freeSpace = directoryOfSlots[fileHandle.getFileName()];
-		freeSpace->push_back( PAGE_SIZE - sizeof(directoryOfSlotsInfo));
-	}
-
-	free(pageData);
-	return res;
-}
 
 RC RecordBasedFileManager::appendRecord(char *page, const void *record, short sizeOfRecord, unsigned slotNum)
 {
@@ -333,7 +299,8 @@ RC RecordBasedFileManager::appendRecord(char *page, const void *record, short si
 	slot->end = freeSpaceOffset + sizeOfRecord;
 
 	info->freeSpaceOffset = slot->end;
-	info->freeSpaceNum-=(sizeOfRecord + sizeof(Slot));
+//	info->freeSpaceNum-=(sizeOfRecord + sizeof(Slot));
+//	info->recordNumber++;
 
 	if( slotNum > (unsigned)info->numOfSlots )
 		info->numOfSlots++;
@@ -351,7 +318,8 @@ RC RecordBasedFileManager::newPageForRecord(const void* record, void * page, int
 	DirectoryOfSlotsInfo *info =  goToDirectoryOfSlotsInfo(endOfPage);
 	info->numOfSlots = 1;
 	info->freeSpaceOffset = sizeOfRecord;
-	info->freeSpaceNum = PAGE_SIZE - sizeOfRecord - sizeof(directoryOfSlotsInfo) - sizeof(Slot)*2;
+//	info->freeSpaceNum = PAGE_SIZE - sizeOfRecord - sizeof(directoryOfSlotsInfo) - sizeof(Slot)*2;
+//	info->recordNumber = 1;
 
 	// add Slot Information
 	Slot* slot = goToSlot( endOfPage, 1 );
@@ -631,7 +599,7 @@ RC RecordBasedFileManager::deleteRecords(FileHandle &fileHandle)
 RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid)
 {
 	RC result = -1;
-
+	DirectoryOfSlotsInfo *dirInfo;
 	if( fileHandle.getFile() == NULL )
 			return result;
 	if( directoryOfSlots.find( fileHandle.getFileName() ) ==
@@ -734,10 +702,13 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 		}
 		else{// not enough space, set tombstone, add point to new record
 			RID newRid;
+			DirectoryOfSlotsInfo *dirInfo;
 //			cout<<"not enough space"<<endl;
 			result = insertRecord(fileHandle, recordDescriptor, data, newRid);
 			fileHandle.readPage(rid.pageNum,pageData);
 			setRecordTombStone((char*)pageData+slot->begin, newRid.pageNum, newRid.slotNum);
+			dirInfo = goToDirectoryOfSlotsInfo((char *)pageData + PAGE_SIZE);
+//			dirInfo->recordNumber --;
 		}
 
 		result = fileHandle.writePage( rid.pageNum, pageData );
@@ -868,7 +839,7 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 	}
 	reOrgPagedirInfo->numOfSlots = dirInfo->numOfSlots;
 	reOrgPagedirInfo->freeSpaceOffset = offset;
-	reOrgPagedirInfo->freeSpaceNum = PAGE_SIZE - offset - sizeof(DirectoryOfSlotsInfo) - reOrgPagedirInfo->numOfSlots*sizeof(Slot);
+//	reOrgPagedirInfo->freeSpaceNum = PAGE_SIZE - offset - sizeof(DirectoryOfSlotsInfo) - reOrgPagedirInfo->numOfSlots*sizeof(Slot);
 
 	result = fileHandle.writePage(pageNumber, reorganizedPage);
 
@@ -900,7 +871,9 @@ RC RecordBasedFileManager::reorganizeFile(FileHandle &fileHandle, const vector<A
 
 RBFM_ScanIterator::RBFM_ScanIterator()
 {
+	_rbfm = RecordBasedFileManager::instance();
 	compOp = NO_OP;
+	totalPageNum = 0;
 	condition = NULL;
 	this->conditionAttrType = TypeInt;
 	this->conditionAttrNum = 0;
@@ -1093,7 +1066,7 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 //		_rbfm->printRecord(recordDescriptor,recordData);
 		if(tombStoneChk == -1)
 		{
-//			free(recordData);
+			free(recordData);
 			continue;
 		}
 		if(checkCondition(recordData, conditionAttrName, recordDescriptor)){
