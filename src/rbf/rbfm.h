@@ -29,8 +29,9 @@ typedef struct
 {
 	short numOfSlots;
 	short freeSpaceOffset;
-	short freeSpaceNum;
-	unsigned nextPageId;
+//	short freeSpaceNum;
+//	unsigned nextPageId;
+//	short recordNumber;
 } DirectoryOfSlotsInfo;
 
 #define HEADER_PAGE_SIZE 1000
@@ -163,7 +164,7 @@ public:
 	  result =  result - sizeof(DirectoryOfSlotsInfo);
 
 	  if( result == NULL )
-		  cout << "DirectoryInfo is null" << endl;
+		  printf( "DirectoryInfo is null\n");
 
 	  return (DirectoryOfSlotsInfo *)result;
   }
@@ -186,11 +187,11 @@ public:
 
   RC getAttrFromData(const vector<Attribute> &recordDescriptor, void* recordData, void* data, const string attributeName, short& attrSize);
 
-  RC appendEmptyPage(FileHandle &fileHandle);
-
   bool checkTombStone(void* data, int pageId, int slotId);
 
   int getEstimatedRecordDataSize(vector<Attribute> recordDesciptor);
+
+  RC insertRecordToPage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid, unsigned pageId);
 
   RC debug(FileHandle fileHandle);
 
@@ -252,7 +253,7 @@ protected:
 private:
   static RecordBasedFileManager *_rbf_manager;
   DirectoryOfSlotsInfo	directoryOfSlotsInfo;	// # of slots
-  PagedFileManager *_pfm =PagedFileManager::instance();
+  PagedFileManager *_pfm;
 };
 
 #endif
