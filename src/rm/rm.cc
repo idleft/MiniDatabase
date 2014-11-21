@@ -264,18 +264,10 @@ RC RelationManager::deleteTuple(const string &tableName, const RID &rid)
 
 	result = _rbfm->deleteRecord(fileHandle, tableAttributes, rid);
 	if( result != 0 )
-	{
-//		free( record );
-		_rbfm->closeFile( fileHandle );
 		return result;
-	}
 
     result = _rbfm->closeFile(fileHandle);
-    {
-//    	free( record );
-    	return result;
-    }
-
+    return result;
 }
 
 RC RelationManager::updateTuple(const string &tableName, const void *data, const RID &rid)
