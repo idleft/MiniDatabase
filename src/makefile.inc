@@ -5,4 +5,4 @@ CODEROOT = /Users/xikui/Documents/workspace/cs222/
 CC = g++
 
 #CPPFLAGS = -Wall -I$(CODEROOT) -O3  # maximal optimization
-CPPFLAGS = -Wall -I$(CODEROOT) -g     # with debugging info
+CPPFLAGS = -std=c++0x -Wall -I$(CODEROOT) -g     # with debugging info
