@@ -1,6 +1,13 @@
 
 #include "ix.h"
 #include "math.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <iostream>
+#include <functional>
+#include <string>
+#include <sstream>
 
 IndexManager* IndexManager::_index_manager = 0;
 
@@ -592,44 +599,96 @@ bool IndexManager::checkEqualKey(Attribute attr, const void *key, void *cmpKey){
 
 unsigned IndexManager::hash(const Attribute &attribute, const void *key)
 {
-	unsigned hash;
-
-	size_t len = attribute.length;
+	std::hash<std::string> hash_fn;
 
 	if ( attribute.type == TypeInt )
 	{
-//		int intKey = *((int*)(char*)key);
+		int intKey = *((int*)key);
 //		hash = (unsigned) hashInt(intKey);
 //		hash = (unsigned) hash32shift(intKey);
-		hash = stringHash((char*)key, len);
+		/* hash 1st
+		unsigned char myChar;
+		myChar = (unsigned char)intKey;
+		cout << "Int myChar" << myChar << endl;
+		*/
+//		hash = stringHash(&myChar);
 
-		cout << "hash:" << hash << endl;
+		std::stringstream ss;
+		ss << intKey;
+		string str = ss.str();
 
-		return hash;
+		std::size_t str_hash = hash_fn(str);
+
+		cout << "cpp11 hashing=" << str_hash << endl;
+
+		return str_hash;
+//		cout << "hash:" << hash << endl;
+
 	}
 	else if ( attribute.type == TypeReal )
 	{
-//		float floatKey = *((float*)(char*)key);
+		float floatKey = *((float*)(char*)key);
+		/*
+		unsigned char myChar;
+		myChar = (unsigned char)floatKey;
 
-		hash = stringHash((char*)key, len);
+		hash = stringHash(&myChar);
+		*/
 //		hash = (unsigned) floatHash(floatKey);
-		cout << "hash:" << hash << endl;
-		return hash;
+		std::stringstream ss;
+		ss << floatKey;
+		string str = ss.str();
+
+		cout << "before hashing float=" << floatKey << endl;
+		cout << "before hashing str=" << str << endl;
+
+		std::size_t str_hash = hash_fn(str);
+
+		cout << "cpp11 hashing=" << str_hash << endl;
+
+		return str_hash;
 	}
 	else if( attribute.type == TypeVarChar )
 	{
 		char *varcharKey;
-//		varcharKey = static_cast<char*>(key);
 		varcharKey = (char*)key;
 
+//		unsigned char *ucBuffer = (unsigned char*)&varcharKey;
 //		hash = generateHash( varcharKey, len );
-		hash = stringHash(varcharKey, len);
+//		hash = stringHash(ucBuffer);
 
-		cout << "hash:" << hash << endl;
+		std::stringstream ss;
+		ss << varcharKey;
+		string str = ss.str();
+
+		cout << "before hashing char=" << varcharKey << endl;
+		cout << "before hashing str=" << str << endl;
+
+		std::size_t str_hash = hash_fn(str);
+
+		cout << "cpp11 hashing=" << str_hash << endl;
+
+		return str_hash;
 	}
 
 	return 0;
 }
+
+unsigned int IndexManager::RSHash(const std::string& str)
+{
+   unsigned int b    = 378551;
+   unsigned int a    = 63689;
+   unsigned int hash = 0;
+
+   for(std::size_t i = 0; i < str.length(); i++)
+   {
+      hash = hash * a + str[i];
+      a    = a * b;
+   }
+
+   return hash;
+}
+
 unsigned IndexManager::hashInt(int key)
 {
 
@@ -638,13 +697,7 @@ unsigned IndexManager::hashInt(int key)
 
 	return key % idxMetaHeader->N;
 }
-/*
-unsigned IndexManager::hashInt(int key)
-{
-	key ^= (key << 17) | (key >> 16);
-	return key;
-}
-*/
+
 int IndexManager::hash32shift(int key)
 {
 	  key = ~key + (key << 15); // key = (key << 15) - key - 1;
@@ -663,15 +716,15 @@ unsigned int IndexManager::floatHash(float f)
     return ui & 0xfffff000;
 }
 
-unsigned IndexManager::stringHash(char* string, size_t len)
+unsigned long IndexManager::stringHash(unsigned char *str)
 {
-	unsigned int hash = 0;
-	int c;
-	while( c = *string++ )
-		hash += c;
+  unsigned long hash = 5381;
+  int c;
 
-	hash = hash % len;
-	return hash;
+  while (c = *str++)
+	  hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+
+  return hash;
 }
 
 unsigned int IndexManager::generateHash(const char *string, size_t len)
@@ -739,13 +792,59 @@ RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attr
 	keyAttrSet.push_back(attribute);
 	keyAttrSet.push_back(pageIdAttr);
 	keyAttrSet.push_back(slotIdAttr);
-/*
-	int estimateRecordLen = _rbfm->getEstimatedRecordDataSize( keyAttrSet );
-	void *recordData = malloc( estimateRecordLen );
-*/
-	cout << "# of entries : " << idxDirInfo->numOfIdx << endl;
 
-	if( idxDirInfo->numOfIdx != 0 )
+	short numOfIndices = idxDirInfo->numOfIdx;
+	cout << "# of entries : " << numOfIndices << endl;
+
+	if( numOfIndices == 0 )
+	{
+		cout << "numOfIndices is 0" << endl;
+	}
+	else {
+		cout << "entries:";
+
+		result = scan( ixfileHandle, attribute, NULL, NULL, true, true, ix_ScanIterator );
+		if( result != 0 )
+		{
+			 closeFile( ixfileHandle );
+			 return result;
+		}
+
+		RID rid;
+		char key[PAGE_SIZE];
+
+		while( ix_ScanIterator.getNextEntry( rid, &key )  == 0 )
+		{
+			cout << "[";
+
+			if( attribute.type == TypeInt )
+			{
+				cout << (int)*key;
+			}
+			else if( attribute.type == TypeReal )
+			{
+				cout << (float)*key;
+			}
+			else if( attribute.type == TypeVarChar )
+			{
+				int varLength = *((int*)((char*)key));
+
+				for(int j = 0; j < varLength; j++)
+				{
+					printf("%c", (char*)key);
+				}
+			}
+
+			cout << "/" << rid.pageNum << "," << rid.slotNum << "] ";
+		}
+		cout << endl;
+	}
+
+	/*
+	cout << "overflow Page No." << idxMetaHeader->overFlowPgNum << " linked to [primary | overflow] page" << endl;
+	unsigned overflowRecordNum = getOverFlowPageRecordNumber( ixfileHandle, idxMetaHeader->overFlowPgNum );
+	cout << "# of entries : " << overflowRecordNum << endl;
+	if( overflowRecordNum != 0 )
 	{
 		cout << "entries:";
 
@@ -757,99 +856,37 @@ RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attr
 		}
 
 		RID rid;
-		unsigned key;
+		char key[PAGE_SIZE];
 
 		while( ix_ScanIterator.getNextEntry( rid, &key )  == 0 )
 		{
-			cout << "[" << key << "/" << rid.pageNum << "," << rid.slotNum << "] ";
+			cout << "[";
+
+			if( attribute.type == TypeInt )
+			{
+				cout << (int)*key;
+			}
+			else if( attribute.type == TypeReal )
+			{
+				cout << (float)*key;
+			}
+			else if( attribute.type == TypeVarChar )
+			{
+				int varLength = *((int*)((char*)key));
+
+				for(int j = 0; j < varLength; j++)
+				{
+					printf("%c", (char*)key);
+				}
+			}
+
+			cout << "/" << rid.pageNum << "," << rid.slotNum << "] ";
 		}
 
-	/*
-	RID rid;
-	void* key;
-
-	int curInPageOffset = 0;
-	int curRecId = 1;
-
-	while( curRecId <= idxDirInfo->numOfIdx ){
-		idxRecordHeader = (IdxRecordHeader*)((char*)pageData + curInPageOffset);
-		cout << 1 << endl;
-		if(idxRecordHeader->idxRecordLength < 0){
-			curInPageOffset += (0-idxRecordHeader->idxRecordLength);
-			continue;
-		}
-		else
-		{
-			curRecId++;
-			curInPageOffset += idxRecordHeader->idxRecordLength;
-			key = malloc(PAGE_SIZE);
-			memcpy((char*)key, (char*)pageData + curInPageOffset, idxRecordHeader->idxRecordLength- sizeof(IdxRecordHeader));
-			rid.pageNum = idxRecordHeader->recordPageId;
-			rid.slotNum = idxRecordHeader->recordSlotId;
-
-			cout << "[" << key << "/" << rid.pageNum << "," << rid.slotNum << "] ";
-			free(key);
-		}
+		cout << endl;
 	}
 	*/
-		cout << endl;
-	}
 
-	cout << "overflow Page No." << idxMetaHeader->overFlowPgNum << " linked to [primary | overflow] page" << endl;
-	unsigned overflowRecordNum = getOverFlowPageRecordNumber( ixfileHandle, idxMetaHeader->overFlowPgNum );
-	cout << "# of entries : " << overflowRecordNum << endl;
-	if( overflowRecordNum != 0 )
-	{
-		cout << "entries:";
-
-		result =  scan( ixfileHandle, attribute, NULL, NULL, true, true, ix_ScanIterator );
-		if( result != 0 )
-		{
-			  closeFile( ixfileHandle );
-			  return result;
-		}
-
-		RID rid;
-		unsigned key;
-
-		while( ix_ScanIterator.getNextEntryForOverflowPage( rid, &key )  == 0 )
-		{
-			cout << "[" << key << "/" << rid.pageNum << "," << rid.slotNum << "] ";
-		}
-
-		cout << endl;
-
-	}
-
-/*
-	curInPageOffset = 0;
-	curRecId = 1;
-
-	while( curRecId <= idxMetaDirInfo->numOfIdx ){
-		idxRecordHeader = (IdxRecordHeader*)((char*)idxMetaHeader + curInPageOffset);
-		if(idxRecordHeader->idxRecordLength < 0){
-			curInPageOffset += (0-idxRecordHeader->idxRecordLength);
-			continue;
-		}
-		else
-		{
-			curRecId++;
-			cout << 2 << endl;
-			curInPageOffset += idxRecordHeader->idxRecordLength;
-			cout << 3 << endl;
-			key = malloc(idxRecordHeader->idxRecordLength-sizeof(IdxRecordHeader));
-			cout << 4 << endl;
-			memcpy(key, (char*)idxMetaHeader + curInPageOffset, idxRecordHeader->idxRecordLength- sizeof(IdxRecordHeader));
-			cout << 5 << endl;
-			rid.pageNum = idxRecordHeader->recordPageId;
-			rid.slotNum = idxRecordHeader->recordSlotId;
-			cout << 6 << endl;
-
-			cout << "[" << key << "/" << rid.pageNum << "," << rid.slotNum << "] ";
-			free(key);
-		}
-	}
-*/
 	return 0;
 }
 
@@ -949,7 +986,7 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 				curRecId++;
 				res = 0;
 				curInPageOffset += idxRecordHeader->idxRecordLength;
-				memcpy(key, (char*)pageData+ curInPageOffset, idxRecordHeader->idxRecordLength - sizeof(IdxRecordHeader));
+				memcpy((char*)key, (char*)pageData+ curInPageOffset, idxRecordHeader->idxRecordLength - sizeof(IdxRecordHeader));
 				if(checkValueSpan(attribute, lowKey, highKey, lowKeyInclusive, highKeyInclusive, key))
 					res = 0;
 				else
