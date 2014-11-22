@@ -1,8 +1,8 @@
 ## For students: change this path to the root of your code
-CODEROOT = /Users/xikui/Documents/workspace/cs222/
+CODEROOT = ..
 
 #CC = gcc
-CC = g++
+CC = g++ 
 
 #CPPFLAGS = -Wall -I$(CODEROOT) -O3  # maximal optimization
 CPPFLAGS = -std=c++0x -Wall -I$(CODEROOT) -g     # with debugging info
