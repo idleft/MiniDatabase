@@ -599,79 +599,148 @@ bool IndexManager::checkEqualKey(Attribute attr, const void *key, void *cmpKey){
 
 unsigned IndexManager::hash(const Attribute &attribute, const void *key)
 {
-	std::hash<std::string> hash_fn;
+	AttrType attrType = attribute.type;
 
-	if ( attribute.type == TypeInt )
-	{
-		int intKey = *((int*)key);
+	std::hash<unsigned int> hash_uint;
+	std::hash<float> hash_float;
+	std::hash<std::string> hash_str;
+
+	std::size_t hash;
+
+	switch( attrType ) {
+		case TypeInt:
+		{
+			unsigned intKey = *(unsigned*)key;
+			cout << "intKey = " << intKey << '\n';
+//			cout << "static_cast<unsigned int>(key)=" << static_cast<unsigned int>(*key) << endl;
+			hash = hash_uint(static_cast<unsigned int>(*(int*)key));
+			break;
+		}
+		case TypeReal:
+		{
+			float floatKey = *(float *)key;
+			printf("%3f\n", floatKey );
+			cout << "floatKey = " << floatKey << '\n';
+			hash = hash_float(static_cast<float>(*(float *)key));
+			break;
+		}
+		case TypeVarChar:
+		{
+			std::string strKey((char *)key);
+			cout << "strKey = " << strKey << '\n';
+			hash = hash_str(strKey);
+			break;
+		}
+		default:
+			hash = 0;
+			break;
+	}
+
+	cout << "hash:" << hash <<endl;
+	return (unsigned)hash;
+
+//	unsigned hash;
+//
+//	if ( attribute.type == TypeInt )
+//	{
+//		int intKey = *(int *)key;
+//		cout << "cpp11 intKey=" << intKey << endl;
+//
+//		return intKey  % 10;
+///*
 //		hash = (unsigned) hashInt(intKey);
-//		hash = (unsigned) hash32shift(intKey);
-		/* hash 1st
-		unsigned char myChar;
-		myChar = (unsigned char)intKey;
-		cout << "Int myChar" << myChar << endl;
-		*/
+//
+//		cout << "cpp11 hash int =" << hash << endl;
+//		*/
+////		hash = (unsigned) hash32shift(intKey);
+//
+//		/* hash 1st
+//		unsigned char myChar;
+//		myChar = (unsigned char)intKey;
+//		cout << "Int myChar" << myChar << endl;
+//		*/
+////		hash = stringHash(&myChar);
+//
+///*
+//		std::stringstream ss;
+//		ss << intKey;
+//		string str = ss.str();
+//
+//		cout << "cpp11 intKey=" << intKey << endl;
+//		cout << "cpp11 str=" << str << endl;
+//		*/
+//		/*
+//		std::size_t str_hash = hash_fn(str);
+//
+//		cout << "cpp11 int hashing=" << str_hash << endl;
+//
+//		return str_hash;
+//		*/
+//
+////		return hash;
+//
+//	}
+//	else if ( attribute.type == TypeReal )
+//	{
+//		float floatKey = *(float*)key;
+//
+//		cout << "cpp11 floatKey=" << floatKey << endl;
+//		/*
+//		unsigned char myChar;
+//		myChar = (unsigned char)floatKey;
+//
 //		hash = stringHash(&myChar);
-
-		std::stringstream ss;
-		ss << intKey;
-		string str = ss.str();
-
-		std::size_t str_hash = hash_fn(str);
-
-		cout << "cpp11 hashing=" << str_hash << endl;
-
-		return str_hash;
-//		cout << "hash:" << hash << endl;
-
-	}
-	else if ( attribute.type == TypeReal )
-	{
-		float floatKey = *((float*)(char*)key);
-		/*
-		unsigned char myChar;
-		myChar = (unsigned char)floatKey;
-
-		hash = stringHash(&myChar);
-		*/
-//		hash = (unsigned) floatHash(floatKey);
-		std::stringstream ss;
-		ss << floatKey;
-		string str = ss.str();
-
-		cout << "before hashing float=" << floatKey << endl;
-		cout << "before hashing str=" << str << endl;
-
-		std::size_t str_hash = hash_fn(str);
-
-		cout << "cpp11 hashing=" << str_hash << endl;
-
-		return str_hash;
-	}
-	else if( attribute.type == TypeVarChar )
-	{
-		char *varcharKey;
-		varcharKey = (char*)key;
-
-//		unsigned char *ucBuffer = (unsigned char*)&varcharKey;
+//		*/
+////		hash = (unsigned) floatHash(floatKey);
+////
+////		return hash;
+//		/*
+//		std::stringstream ss;
+//		ss << floatKey;
+//		string str = ss.str();
+//
+//		cout << "before hashing float=" << floatKey << endl;
+//		cout << "before hashing str=" << str << endl;
+//
+////		std::hash<float> hash_float;
+////		std::size_t str_hash = hash_float(floatKey);
+//
+//		std::size_t str_hash = hash_fn(str);
+//		cout << "cpp11 hashing=" << str_hash << endl;
+//
+//		return str_hash;
+//		*/
+//	}
+//	else if( attribute.type == TypeVarChar )
+//	{
+//		char *varcharKey = (char*)key;
+//
+//		cout << "*varcharKey=" << varcharKey << endl;
+////		unsigned char *ucBuffer = (unsigned char*)&varcharKey;
+//		size_t len = attribute.length;
+//		/*
 //		hash = generateHash( varcharKey, len );
-//		hash = stringHash(ucBuffer);
+//
+//		return hash;
+//		*/
+////		hash = stringHash(ucBuffer);
+//		/*
+//		std::stringstream ss;
+//		ss << varcharKey;
+//		string str = ss.str();
+//
+//		cout << "before hashing char=" << varcharKey << endl;
+//		cout << "before hashing str=" << str << endl;
+//
+//		std::size_t str_hash = hash_fn(str);
+//
+////		cout << "cpp11 hashing=" << str_hash << endl;
+//
+//		return str_hash;
+//		*/
+//	}
 
-		std::stringstream ss;
-		ss << varcharKey;
-		string str = ss.str();
-
-		cout << "before hashing char=" << varcharKey << endl;
-		cout << "before hashing str=" << str << endl;
-
-		std::size_t str_hash = hash_fn(str);
-
-		cout << "cpp11 hashing=" << str_hash << endl;
-
-		return str_hash;
-	}
-
-	return 0;
+//	return 0;
 }
 
 unsigned int IndexManager::RSHash(const std::string& str)
@@ -811,7 +880,7 @@ RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attr
 		}
 
 		RID rid;
-		char key[PAGE_SIZE];
+		char key[PAGE_SIZE]={0,};
 
 		while( ix_ScanIterator.getNextEntry( rid, &key )  == 0 )
 		{
@@ -884,6 +953,9 @@ RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attr
 
 		cout << endl;
 	}
+
+	free(pageData);
+	free(idxMetaHeader);
 
 	return 0;
 }

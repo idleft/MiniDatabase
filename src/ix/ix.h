@@ -104,6 +104,8 @@ class IndexManager {
   int hash32shift(int key);
   unsigned floatHash( float f );
   
+  int hashForString(string word);
+
   unsigned long stringHash(unsigned char* string);
   unsigned int generateHash(const char *string, size_t len);
   unsigned int RSHash(const std::string& str);
