@@ -104,8 +104,9 @@ class IndexManager {
   int hash32shift(int key);
   unsigned floatHash( float f );
   
+  unsigned long stringHash(unsigned char* string);
   unsigned int generateHash(const char *string, size_t len);
-  unsigned stringHash(char* string, size_t len);
+  unsigned int RSHash(const std::string& str);
   // Print all index entries in a primary page including associated overflow pages
   // Format should be:
   // Number of total entries in the page (+ overflow pages) : ?? 

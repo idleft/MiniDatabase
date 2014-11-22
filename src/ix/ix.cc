@@ -437,7 +437,7 @@ RC IndexManager::deleteEntry(IXFileHandle &ixfileHandle, const Attribute &attrib
 	RC res;
 
 	// load meta data
-	metaPageData = malloc(PAGE_SIZE);
+	metaPageData =malloc(PAGE_SIZE);
 	idxMetaHeader = (IdxMetaHeader*)metaPageData;
 
 	ixfileHandle.metaFileHandle.readPage(0, metaPageData);
@@ -750,7 +750,7 @@ unsigned IndexManager::getOverFlowPageRecordNumber(IXFileHandle ixFileHandle, un
 	else{
 		DirectoryOfIdxInfo *dirInfo;
 		void *metaPageData = malloc(PAGE_SIZE);
-		ixFileHandle.idxFileHandle.readPage(curPgeId, metaPageData);
+//		ixFileHandle.idxFileHandle.readPage(curPgeId, metaPageData);
 		dirInfo = goToDirectoryOfIdx(metaPageData);
 		while(curPgeId!=0){
 			overflowRecordNum += dirInfo->numOfIdx;
