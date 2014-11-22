@@ -750,7 +750,7 @@ unsigned IndexManager::getOverFlowPageRecordNumber(IXFileHandle ixFileHandle, un
 	else{
 		DirectoryOfIdxInfo *dirInfo;
 		void *metaPageData = malloc(PAGE_SIZE);
-//		ixFileHandle.idxFileHandle.readPage(curPgeId, metaPageData);
+		ixFileHandle.idxFileHandle.readPage(curPgeId, metaPageData);
 		dirInfo = goToDirectoryOfIdx(metaPageData);
 		while(curPgeId!=0){
 			overflowRecordNum += dirInfo->numOfIdx;
@@ -840,7 +840,6 @@ RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attr
 		cout << endl;
 	}
 
-	/*
 	cout << "overflow Page No." << idxMetaHeader->overFlowPgNum << " linked to [primary | overflow] page" << endl;
 	unsigned overflowRecordNum = getOverFlowPageRecordNumber( ixfileHandle, idxMetaHeader->overFlowPgNum );
 	cout << "# of entries : " << overflowRecordNum << endl;
@@ -885,7 +884,6 @@ RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attr
 
 		cout << endl;
 	}
-	*/
 
 	return 0;
 }
