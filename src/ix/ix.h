@@ -50,6 +50,7 @@ typedef struct{
 	unsigned primaryPgNum; // bucketNum
 	unsigned overFlowPgNum;
 	unsigned physicalPrimaryPgNum;
+	unsigned physicalOverflowPgNum;
 } IdxMetaHeader;
 
 class IndexManager {
@@ -132,7 +133,7 @@ class IndexManager {
 //  RC getKeyRecordAttrSet(Attribute attribute, vector<Attribute> &keyAttrSet);
 //  OverflowPageInfo* goToOverflowPageInfo(void *metaPageData, unsigned overflowPageId);
   unsigned getOverFlowPageRecordNumber(IXFileHandle ixFileHandle, unsigned overflowPageId);
-  unsigned getOverflowPageId(IXFileHandle ixfileHandle, unsigned nextPageId, int keyRecordSize, bool &splitPage);
+  unsigned getOverflowPageId(IXFileHandle ixfileHandle, unsigned nextPageId, int keyRecordSize, int &splitPage);
   DirectoryOfIdxInfo* goToDirectoryOfIdx(void *pageData);
   IdxSlot* goToIdxSlot(void* pageData, unsigned slotId);
   RC insertIdxToPage(FileHandle &fileHandle, const Attribute &keyAttribute,
@@ -146,6 +147,8 @@ class IndexManager {
   RC flagInsertEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid, bool splitFlag);
   unsigned getKeySize(IdxRecordHeader *idxRecordHeader);
 
+  void debug(IXFileHandle ixFileHandle);
+  
   IdxMetaHeader* getCurrentIndexMetaHeader()
   {
 	  return currentIndexMetaHeader;
@@ -200,9 +203,9 @@ class IX_ScanIterator {
   	    bool			lowKeyInclusive,
   	    bool        	highKeyInclusive);
   RC getNextEntry(RID &rid, void *key);  		// Get next matching entry
+  RC getNextEntryForOverflowPage(RID &rid, void *key); 	// Get next entry for overflow page only
   RC close();             						// Terminate index scan
 
-  RC getNextEntryForOverflowPage(RID &rid, void *key);	// print purpose only
 
  private:
   IXFileHandle ixfileHandle;
@@ -211,10 +214,10 @@ class IX_ScanIterator {
   const void *highKey;
   bool lowKeyInclusive;
   bool highKeyInclusive;
-
+  unsigned SIZE_OF_IDX_HEADER;
   // curPageId for both primary page and overflow page, bucketId
   // for primary page only
-  unsigned curBucketId, curRecId,curPageId,totalBucketNum;
+  unsigned curBucketId, curRecId,totalBucketNum;
   void* pageData;
   Attribute keyAttri;
   short curInPageOffset;
