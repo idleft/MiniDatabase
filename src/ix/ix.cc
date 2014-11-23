@@ -734,11 +734,6 @@ RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attr
 	cout << "Number of total entries in the page (+ overflow pages) : " <<  idxDirInfo->numOfIdx + idxMetaHeader->overFlowPgNum << endl;
 	cout << "primary Page No." << primaryPageNumber << endl;
 
-	vector<Attribute> keyAttrSet;
-	keyAttrSet.push_back(attribute);
-	keyAttrSet.push_back(pageIdAttr);
-	keyAttrSet.push_back(slotIdAttr);
-
 	short numOfIndices = idxDirInfo->numOfIdx;
 	cout << "# of entries : " << numOfIndices << endl;
 
@@ -789,11 +784,13 @@ RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attr
 	cout << "overflow Page No." << idxMetaHeader->overFlowPgNum << " linked to [primary | overflow] page" << endl;
 	unsigned overflowRecordNum = getOverFlowPageRecordNumber( ixfileHandle, idxMetaHeader->overFlowPgNum );
 	cout << "# of entries : " << overflowRecordNum << endl;
+
+	IX_ScanIterator ix_oScanIterator;
 	if( overflowRecordNum != 0 )
 	{
 		cout << "entries:";
 
-		result = scan( ixfileHandle, attribute, NULL, NULL, true, true, ix_ScanIterator );
+		result = scan( ixfileHandle, attribute, NULL, NULL, true, true, ix_oScanIterator );
 		if( result != 0 )
 		{
 			 closeFile( ixfileHandle );
@@ -803,7 +800,7 @@ RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attr
 		RID rid;
 		char key[PAGE_SIZE];
 
-		while( ix_ScanIterator.getNextEntry( rid, &key )  == 0 )
+		while( ix_oScanIterator.getNextEntry( rid, &key )  == 0 )
 		{
 			cout << "[";
 
@@ -833,6 +830,9 @@ RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attr
 
 	free(pageData);
 	free(idxMetaHeader);
+
+	cout << "9" << endl;
+
 
 	return 0;
 }
