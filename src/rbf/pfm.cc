@@ -73,11 +73,11 @@ RC PagedFileManager::openFile(const char *fileName, FileHandle &fileHandle)
 	// does file exist?
 
 	// file does not exist
-	printf("Try to open file : %s\n",fileName);
+//	printf("Try to open file : %s\n",fileName);
 	file = fopen( fileName, "rb+" );
 	if( file == NULL )
 	{
-		fclose( file );
+//		fclose( file );		// [eunjeong.shin] 11-23, bug fix, passed test case 3
 		return -1;
 	}
 
