@@ -534,7 +534,7 @@ RC IndexManager::deleteEntry(IXFileHandle &ixfileHandle, const Attribute &attrib
 					ixfileHandle.idxFileHandle.writePage(curPgId, pageData);
 				}
 				else{
-				// if not simply remove page and change the meta data
+					// if not simply remove page and change the meta data
 					emptyPage(ixfileHandle.idxFileHandle, curPgId);
 					if(idxMetaHeader->next == 0 && idxMetaHeader->level >0){
 						idxMetaHeader->next = ceil(idxMetaHeader->primaryPgNum*1.0/2) -1;
@@ -830,9 +830,6 @@ RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attr
 
 	free(pageData);
 	free(idxMetaHeader);
-
-	cout << "9" << endl;
-
 
 	return 0;
 }
