@@ -770,6 +770,8 @@ RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attr
 			{
 				int varLength = *((int*)((char*)key));
 
+				*key += sizeof(int);
+
 				for(int j = 0; j < varLength; j++)
 				{
 					printf("%c", (char*)key);
@@ -800,7 +802,7 @@ RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attr
 		RID rid;
 		char key[PAGE_SIZE];
 
-		while( ix_oScanIterator.getNextEntry( rid, &key )  == 0 )
+		while( ix_oScanIterator.getNextEntryForOverflowPage( rid, &key )  == 0 )
 		{
 			cout << "[";
 
@@ -815,6 +817,8 @@ RC IndexManager::printIndexEntriesInAPage(IXFileHandle &ixfileHandle, const Attr
 			else if( attribute.type == TypeVarChar )
 			{
 				int varLength = *((int*)((char*)key));
+
+				*key += sizeof(int);
 
 				for(int j = 0; j < varLength; j++)
 				{
