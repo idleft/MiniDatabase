@@ -254,7 +254,7 @@ RC RelationManager::deleteTuple(const string &tableName, const RID &rid)
 	FileHandle fileHandle;
 	RC result = -1;
 	vector<Attribute> tableAttributes;
-    result = _rbfm->openFile(tableName+".tbl", fileHandle);
+    result = _rbfm->openFile(tableName+".tbl",fileHandle);
     if( result != 0 )
     	return result;
 

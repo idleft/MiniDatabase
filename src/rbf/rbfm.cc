@@ -799,10 +799,11 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 	if( directoryOfSlots.find(fileHandle.getFileName()) == directoryOfSlots.end() )
 		return result;
 
-	char* page = (char*)malloc(PAGE_SIZE);
-	char* reorganizedPage = (char*)malloc(PAGE_SIZE);
+	unsigned pageN = pageNumber;
+	void* page = malloc(PAGE_SIZE);
+	void* reorganizedPage = malloc(PAGE_SIZE);
 
-	result = fileHandle.readPage(pageNumber, page);
+	result = fileHandle.readPage(pageN, page);
 
 	memcpy( reorganizedPage, page, PAGE_SIZE );
 
@@ -829,7 +830,7 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 		}
 		else{
 			short recordSize = slot->end - slot->begin;
-			memcpy( reorganizedPage + offset, page + slot->begin, recordSize);
+			memcpy( (char*)reorganizedPage + offset, (char*)page + slot->begin, recordSize);
 			reOrgSlot->begin = offset;
 			reOrgSlot->end = offset + recordSize;
 			offset += recordSize;
@@ -841,10 +842,10 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 	reOrgPagedirInfo->freeSpaceOffset = offset;
 //	reOrgPagedirInfo->freeSpaceNum = PAGE_SIZE - offset - sizeof(DirectoryOfSlotsInfo) - reOrgPagedirInfo->numOfSlots*sizeof(Slot);
 
-	result = fileHandle.writePage(pageNumber, reorganizedPage);
+	result = fileHandle.writePage(pageN, reorganizedPage);
 
 	vector<short> *freeSpace = directoryOfSlots[fileHandle.getFileName()];
-	(*freeSpace)[pageNumber] = PAGE_SIZE - offset - sizeof(DirectoryOfSlotsInfo) - reOrgPagedirInfo->numOfSlots*sizeof(Slot);
+	(*freeSpace)[pageN] = PAGE_SIZE - offset - sizeof(DirectoryOfSlotsInfo) - reOrgPagedirInfo->numOfSlots*sizeof(Slot);
 
 	free(page);
 	free(reorganizedPage);

@@ -97,6 +97,7 @@ int testCase_extra_2a(const string &indexFileName, const Attribute &attribute)
         cout << rid.pageNum << " " << rid.slotNum << endl;
 
         float key = (float)rid.pageNum;
+        cout << "Starting deleteEntry key..." << key << endl;
         rc = indexManager->deleteEntry(ixfileHandle, attribute, &key, rid);
         if(rc != success)
         {

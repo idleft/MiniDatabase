@@ -6,7 +6,6 @@
 
 #include "../rbf/rbfm.h"
 #include "../rbf/pfm.h"
-
 # define IX_EOF (-1)  // end of the index scan
 # define MAX_OVERFLOW_PAGE_INFO (500) // max overflow page info can stored in one meta page
 # define MAX_INDEX_PAGE_SLOT_NUM (200)
@@ -101,15 +100,7 @@ class IndexManager {
   // Generate and return the hash value (unsigned) for the given key
   unsigned hash(const Attribute &attribute, const void *key);
   
-  unsigned hashInt(int key);
-  int hash32shift(int key);
-  unsigned floatHash( float f );
   
-  int hashForString(string word);
-
-  unsigned long stringHash(unsigned char* string);
-  unsigned int generateHash(const char *string, size_t len);
-  unsigned int RSHash(const std::string& str);
   // Print all index entries in a primary page including associated overflow pages
   // Format should be:
   // Number of total entries in the page (+ overflow pages) : ?? 
@@ -146,17 +137,12 @@ class IndexManager {
   RC appendEmptyPage(FileHandle &fileHandle);
   RC flagInsertEntry(IXFileHandle &ixfileHandle, const Attribute &attribute, const void *key, const RID &rid, bool splitFlag);
   unsigned getKeySize(IdxRecordHeader *idxRecordHeader);
-
+  unsigned stringHash(char* string, size_t len);
   void debug(IXFileHandle ixFileHandle);
-  
-  IdxMetaHeader* getCurrentIndexMetaHeader()
-  {
-	  return currentIndexMetaHeader;
-  }
-  void setCurrentIndexMetaHeader(IdxMetaHeader* metaHeader)
-  {
-	  currentIndexMetaHeader = metaHeader;
-  }
+  RC printGoOverPage( void *pageData, Attribute attribute);
+  void debugSlotChain(IXFileHandle ixfileHandle,unsigned pgId, unsigned recordOffset);
+
+
  protected:
   IndexManager   ();                            // Constructor
   ~IndexManager  ();                            // Destructor
@@ -166,7 +152,6 @@ class IndexManager {
   PagedFileManager *_pfm;
 //  RecordBasedFileManager *_rbfm;
   Attribute pageIdAttr, slotIdAttr;
-  IdxMetaHeader* currentIndexMetaHeader;
   unsigned SIZE_OF_IDX_HEADER;
 };
 
@@ -203,9 +188,7 @@ class IX_ScanIterator {
   	    bool			lowKeyInclusive,
   	    bool        	highKeyInclusive);
   RC getNextEntry(RID &rid, void *key);  		// Get next matching entry
-  RC getNextEntryForOverflowPage(RID &rid, void *key); 	// Get next entry for overflow page only
   RC close();             						// Terminate index scan
-
 
  private:
   IXFileHandle ixfileHandle;
