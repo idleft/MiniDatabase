@@ -106,6 +106,14 @@ public:
 
   RC colDescriptorToAttri(void* data, Attribute &colAttri);
 
+  /* extension for project 4*/
+  RC createIndex(const string &tableName, const string &attributeName);
+
+  RC destroyIndex(const string &tableName, const string &attributeName);
+
+  RC indexScan(const string &tableName, const string &attributeName, const void *lowKey, const void *highKey, bool lowKeyInclusive, bool highKeyInclusive, RM_IndexScanIterator &rm_IndexScanIterator);
+  /* extension for project 4*/
+
   int TABLE_ID;
 
 // Extra credit
@@ -132,4 +140,15 @@ private:
 
 };
 
+/* extension for project 4*/
+class RM_IndexScanIterator {
+ public:
+  RM_IndexScanIterator();  	// Constructor
+  ~RM_IndexScanIterator(); 	// Destructor
+
+  // "key" follows the same format as in IndexManager::insertEntry()
+  RC getNextEntry(RID &rid, void *key);  	// Get next matching entry
+  RC close();             					// Terminate index scan
+};
+/* extension for project 4*/
 #endif
