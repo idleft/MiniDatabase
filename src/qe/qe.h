@@ -203,6 +203,20 @@ class Filter : public Iterator {
         RC getNextTuple(void *data) {return QE_EOF;};
         // For attribute in vector<Attribute>, name it as rel.attr
         void getAttributes(vector<Attribute> &attrs) const{};
+
+        bool valueCompare(void *data);
+        void moveToValueByAttrType(char* value, AttrType type);
+        Value setValue(Value rhsValue);
+
+    private:
+        Iterator *iterator;
+        IndexManager *indexManager;
+        string lhsAttr;
+        vector<Attribute> attributeVector;
+        CompOp compOp;
+        AttrType type;
+        Value rhs_value;
+
 };
 
 
