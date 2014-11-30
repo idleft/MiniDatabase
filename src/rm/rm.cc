@@ -160,33 +160,34 @@ RC RelationManager::createIndex(const string &tableName, const string &attribute
 	/* index name = table name + "_" + attribute name */
 	index = tableName + "_" + attributeName;
 
-	rc = _im->createFile( &index );
+	const unsigned numberOfPages = 4;	/* to be changed */
+	rc = _im->createFile( index, numberOfPages );
 	if( rc != 0 )
 		return -1;
 
 	IXFileHandle ixFileHandle;
-	rc = _rbfm->openFile(tableName+".tbl", ixFileHandle);
+	rc = _im->openFile( tableName+".tbl", ixFileHandle );
 	if( rc != 0 )
 	    return rc;
 
 	RM_ScanIterator rmsi;
 
-	vector<string> &attributeNames;
+	vector<string> attributeNames;
 	attributeNames.push_back(attributeName);
 
-	rc = scan( tableName, "", NO_OP, NULL, attributeNames, &rmsi );
+	rc = scan( tableName, "", NO_OP, NULL, attributeNames, rmsi );
 	if( rc != 0 )
 		return -1;
 
 	void* key = malloc(PAGE_SIZE);
 	RID rid;
 	Attribute attr;
-	rc = findAttributeFromCatalog( tableName, attributeName, &attr );
+	rc = findAttributeFromCatalog( tableName, attributeName, attr );
 	if( rc != 0 )
 		return rc;
 
-	while( rmsi->getNextTuple( &rid, key ) != RM_EOF )
-		rc = _im->insertEntry( ixFileHandle, &attr, key, rid );
+	while( rmsi.getNextTuple( rid, key ) != RM_EOF )
+		rc = _im->insertEntry( ixFileHandle, attr, key, rid );
 		if( rc != 0 )
 			return -1;
 	}
@@ -219,7 +220,7 @@ RC RelationManager::indexScan(const string &tableName, const string &attributeNa
 	index = tableName + "_" + attributeName;
 
 	IXFileHandle ixFileHandle;
-	rc = _rbfm->openFile(tableName+".tbl", ixFileHandle);
+	rc = _im->openFile( tableName+".tbl", ixFileHandle );
 	if( rc != 0 )
 	    return rc;
 
@@ -228,7 +229,7 @@ RC RelationManager::indexScan(const string &tableName, const string &attributeNa
 	if( rc != 0 )
 		return rc;
 
-	rc = _im->scan( ixFileHandle, &attribute, lowKey, highKey, lowKeyInclusive, highKeyInclusive, &rm_IndexScanIterator.ixsi);
+	rc = _im->scan( ixFileHandle, attribute, lowKey, highKey, lowKeyInclusive, highKeyInclusive, rm_IndexScanIterator.ixsi);
 	if( rc != 0 )
 		return rc;
 
