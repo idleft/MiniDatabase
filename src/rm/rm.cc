@@ -19,7 +19,7 @@ RelationManager::RelationManager()
 	createTableCatalog();
 	createColumnCatalog();
 	createIndexCatalog();
-	cout<<"Table:: "<<tableCatalog.at(0).name<<endl;
+//	cout<< "Table:: "<< tableCatalog.at(0).name <<endl;
 
 	if( _pfm->fileExists( TABLE_CATALOG_FILE_NAME  ) )
 		loadCatalog();
