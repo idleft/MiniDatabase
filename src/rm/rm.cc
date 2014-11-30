@@ -891,3 +891,13 @@ RC RM_ScanIterator::close()
 	_rbfm_scanIterator.close();
 	return _rbfm->closeFile( fileHandle );
 };
+
+RC RM_IndexScanIterator::getNextEntry(RID &rid, void* key)
+{
+	return ixsi.getNextEntry( rid, key );
+}
+
+RC RM_IndexScanIterator::close()
+{
+	return ixsi.close();
+}
