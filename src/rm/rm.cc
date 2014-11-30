@@ -154,7 +154,7 @@ RC RelationManager::colDescriptorToAttri(void* data, Attribute &colAttri){
 
 RC RelationManager::createIndex(const string &tableName, const string &attributeName)
 {
-	RC rc;
+	RC rc = 0;
 	string index;
 
 	/* index name = table name + "_" + attribute name */

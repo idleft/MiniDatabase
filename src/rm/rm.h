@@ -21,7 +21,7 @@ using namespace std;
 #define RM_ATTRIBUTE_NOT_FOUND 10
 #define RM_NOT_FOUND 11
 
-// RM_ScanIterator is an iteratr to go through tuples
+// RM_ScanIterator is an iterator to go through tuples
 // The way to use it is like the following:
 //  RM_ScanIterator rmScanIterator;
 //  rm.open(..., rmScanIterator);
