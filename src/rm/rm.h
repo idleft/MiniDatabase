@@ -17,6 +17,9 @@ using namespace std;
 
 #define MAX_SIZE_OF_CATALOG_RECORD	1024
 
+#define RM_ATTRIBUTE_NOT_FOUND 10
+#define RM_NOT_FOUND 11
+
 // RM_ScanIterator is an iteratr to go through tuples
 // The way to use it is like the following:
 //  RM_ScanIterator rmScanIterator;
@@ -106,13 +109,15 @@ public:
 
   RC colDescriptorToAttri(void* data, Attribute &colAttri);
 
-  /* extension for project 4*/
+  /* extension for project 4 */
   RC createIndex(const string &tableName, const string &attributeName);
 
   RC destroyIndex(const string &tableName, const string &attributeName);
 
   RC indexScan(const string &tableName, const string &attributeName, const void *lowKey, const void *highKey, bool lowKeyInclusive, bool highKeyInclusive, RM_IndexScanIterator &rm_IndexScanIterator);
-  /* extension for project 4*/
+
+  bool findAttributeFromCatalog(const string &tableName, const string &attributeName, Attribute &attribute);
+  /* extension for project 4 */
 
   int TABLE_ID;
 
@@ -134,13 +139,14 @@ private:
   map< string, vector<Attribute> > tableAttributesCache;
   RecordBasedFileManager *_rbfm = RecordBasedFileManager::instance();
   PagedFileManager *_pfm = PagedFileManager::instance();
+  IndexManager *_im = IndexManager::instance();
 
   map< string, map<int,RID> *> tableRIDMap;
   map< int, map<int,RID> *> columnRIDMap;
 
 };
 
-/* extension for project 4*/
+/* extension for project 4 */
 class RM_IndexScanIterator {
  public:
   RM_IndexScanIterator();  	// Constructor
@@ -149,6 +155,8 @@ class RM_IndexScanIterator {
   // "key" follows the same format as in IndexManager::insertEntry()
   RC getNextEntry(RID &rid, void *key);  	// Get next matching entry
   RC close();             					// Terminate index scan
+
+  IX_ScanIterator ixsi;
 };
-/* extension for project 4*/
+/* extension for project 4 */
 #endif

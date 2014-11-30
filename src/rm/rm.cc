@@ -152,6 +152,117 @@ RC RelationManager::colDescriptorToAttri(void* data, Attribute &colAttri){
 	return 0;
 }
 
+RC RelationManager::createIndex(const string &tableName, const string &attributeName)
+{
+	RC rc;
+	string index;
+
+	/* index name = table name + "_" + attribute name */
+	index = tableName + "_" + attributeName;
+
+	rc = _im->createFile( &index );
+	if( rc != 0 )
+		return -1;
+
+	IXFileHandle ixFileHandle;
+	rc = _rbfm->openFile(tableName+".tbl", ixFileHandle);
+	if( rc != 0 )
+	    return rc;
+
+	RM_ScanIterator rmsi;
+
+	vector<string> &attributeNames;
+	attributeNames.push_back(attributeName);
+
+	rc = scan( tableName, "", NO_OP, NULL, attributeNames, &rmsi );
+	if( rc != 0 )
+		return -1;
+
+	void* key = malloc(PAGE_SIZE);
+	RID rid;
+	Attribute attr;
+	rc = findAttributeFromCatalog( tableName, attributeName, &attr );
+	if( rc != 0 )
+		return rc;
+
+	while( rmsi->getNextTuple( &rid, key ) != RM_EOF )
+		rc = _im->insertEntry( ixFileHandle, &attr, key, rid );
+		if( rc != 0 )
+			return -1;
+	}
+
+	free(key);
+
+	return rc;
+}
+
+RC RelationManager::destroyIndex(const string &tableName, const string &attributeName)
+{
+	RC rc;
+	string index;
+	/* index name = table name + "_" + attribute name */
+	index = tableName + "_" + attributeName;
+
+	rc = _im->destroyFile( index );
+	if( rc != 0 )
+		return rc;
+
+	return rc;
+}
+
+RC RelationManager::indexScan(const string &tableName, const string &attributeName, const void *lowKey, const void *highKey, bool lowKeyInclusive, bool highKeyInclusive, RM_IndexScanIterator &rm_IndexScanIterator)
+{
+	RC rc;
+	string index;
+
+	/* index name = table name + "_" + attribute name */
+	index = tableName + "_" + attributeName;
+
+	IXFileHandle ixFileHandle;
+	rc = _rbfm->openFile(tableName+".tbl", ixFileHandle);
+	if( rc != 0 )
+	    return rc;
+
+	Attribute attribute;
+	rc = findAttributeFromCatalog( tableName, attributeName, attribute );
+	if( rc != 0 )
+		return rc;
+
+	rc = _im->scan( ixFileHandle, &attribute, lowKey, highKey, lowKeyInclusive, highKeyInclusive, &rm_IndexScanIterator.ixsi);
+	if( rc != 0 )
+		return rc;
+
+	return rc;
+}
+
+bool RelationManager::findAttributeFromCatalog(const string &tableName, const string &attributeName, Attribute &attribute)
+{
+	RC rc;
+	bool found = false;
+
+	vector<Attribute> attrs;
+	rc = getAttributes( tableName, attrs );
+	if( rc != -1 )
+		return rc;
+
+	for(Attribute attr : attrs)
+	{
+		if( attributeName.compare(attr.name) == 0 )
+		{
+			attribute.length = attr.length;
+			attribute.name = attr.name;
+			attribute.type = attr.type;
+			found = true;
+		}
+	}
+
+	if( found == false )
+		return RM_ATTRIBUTE_NOT_FOUND;
+
+	return found;
+
+}
+
 RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &attrs)
 {
 	RC result = -1;
