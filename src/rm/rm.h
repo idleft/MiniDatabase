@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "../rbf/rbfm.h"
+#include "../ix/ix.h"
 
 using namespace std;
 
@@ -51,6 +52,19 @@ private:
   RecordBasedFileManager *_rbfm;
 };
 
+/* extension for project 4 */
+class RM_IndexScanIterator {
+ public:
+  RM_IndexScanIterator();  	// Constructor
+  ~RM_IndexScanIterator(); 	// Destructor
+
+  // "key" follows the same format as in IndexManager::insertEntry()
+  RC getNextEntry(RID &rid, void *key);  	// Get next matching entry
+  RC close();             					// Terminate index scan
+
+  IX_ScanIterator ixsi;
+};
+/* extension for project 4 */
 
 // Relation Manager
 class RelationManager
@@ -145,18 +159,4 @@ private:
   map< int, map<int,RID> *> columnRIDMap;
 
 };
-
-/* extension for project 4 */
-class RM_IndexScanIterator {
- public:
-  RM_IndexScanIterator();  	// Constructor
-  ~RM_IndexScanIterator(); 	// Destructor
-
-  // "key" follows the same format as in IndexManager::insertEntry()
-  RC getNextEntry(RID &rid, void *key);  	// Get next matching entry
-  RC close();             					// Terminate index scan
-
-  IX_ScanIterator ixsi;
-};
-/* extension for project 4 */
 #endif
