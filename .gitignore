@@ -1,6 +1,6 @@
 Debug/
 .cproject
-.settings/
+.settings/*
 .project
 src/rm/mergeTest.cc
 ./src/.DS_Store
