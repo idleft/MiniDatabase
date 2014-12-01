@@ -241,16 +241,19 @@ void INLJoin::setRightIterator(char* value) {
 
 RC INLJoin::getAttributeValue( char* value, char* condition, vector<Attribute> attributeVector, string strCondition )
 {
+	RC rc = 0;
 	for( Attribute attr: attributeVector )
 	{
 		if( attr.name == strCondition )
 		{
 			copyValue( value, condition, attr.type );
-			return 0;
+			return rc;
 		}
 
 		moveToValueByAttrType( value, attr.type );
 	}
+
+	return QE_FAIL_TO_FIND_ATTRIBUTE;
 }
 
 void INLJoin::copyValue( void* dest, const void* src, AttrType attrType )
@@ -379,37 +382,42 @@ Aggregate:: Aggregate(Iterator *input,             // Iterator of input R
 
 };
 
-Aggregate:: ~Aggregate(){};
-
 RC Aggregate::getNextTuple(void *data){
 
+	RC rc = 0;
 	switch( typeOfAggregation )
 	{
 		case AGGREGATION_BASIC:
-			return getNextTuple_basic(data);
+		{
+			getNextTuple_basic(data);
+			return rc;
 			break;
+		}
 		case AGGREGATION_GROUP:
 			RC rc;
 			switch( this->op )
 			{
 				case MIN:
+					return rc;
 					break;
 				case MAX:
+					return rc;
 					break;
 				case SUM:
+					return rc;
 					break;
 				case AVG:
+					return rc;
 					break;
 				case COUNT:
+					return rc;
 					break;
 			}
-
-			return rc;
 	}
 
 };
 
-RC Aggregate::getNextTuple_basic(void *data){
+void Aggregate::getNextTuple_basic(void *data){
 
 	switch( this->op )
 	{

@@ -16,6 +16,7 @@ using namespace std;
 
 #define QE_ATTRIBUTE_NOT_SUPPORTED 20
 #define QE_NOT_FOUND 21
+#define QE_FAIL_TO_FIND_ATTRIBUTE 22
 
 #define AGGREGATION_BASIC 40
 #define AGGREGATION_GROUP 41
@@ -325,7 +326,7 @@ class Aggregate : public Iterator {
         Aggregate(Iterator *input,          // Iterator of input R
                   Attribute aggAttr,        // The attribute over which we are computing an aggregate
                   AggregateOp op            // Aggregate operation
-        ){};
+        );
 
         // Optional for everyone. 5 extra-credit points
         // Group-based hash aggregation
@@ -334,14 +335,14 @@ class Aggregate : public Iterator {
                   Attribute groupAttr,         // The attribute over which we are grouping the tuples
                   AggregateOp op,              // Aggregate operation
                   const unsigned numPartitions // Number of partitions for input (decided by the optimizer)
-        ){};
+        );
         ~Aggregate(){};
 
-        RC getNextTuple(void *data){return QE_EOF;};
+        RC getNextTuple(void *data);
         // Please name the output attribute as aggregateOp(aggAttr)
         // E.g. Relation=rel, attribute=attr, aggregateOp=MAX
         // output attrname = "MAX(rel.attr)"
-        void getAttributes(vector<Attribute> &attrs) const{};
+        void getAttributes(vector<Attribute> &attrs) const;
 
         // Group-based hash aggregation
         void calculateMinForGroup();
@@ -351,7 +352,7 @@ class Aggregate : public Iterator {
         void calculateCountForGroup();
 
         // getters
-        RC getNextTuple_basic(void *data);
+        void getNextTuple_basic(void *data);
         void getMin_basic(void *data);
         void getMax_basic(void *data);
         void getSum_basic(void *data);
