@@ -62,7 +62,6 @@ class RM_IndexScanIterator {
   RC getNextEntry(RID &rid, void *key);  	// Get next matching entry
   RC close();             					// Terminate index scan
 
- private:
   IX_ScanIterator _ix_ScanIterator;
 };
 /* extension for project 4 */

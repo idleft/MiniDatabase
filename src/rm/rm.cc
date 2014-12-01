@@ -186,7 +186,7 @@ RC RelationManager::createIndex(const string &tableName, const string &attribute
 	if( rc != 0 )
 		return rc;
 
-	while( rmsi.getNextTuple( rid, key ) != RM_EOF )
+	while( rmsi.getNextTuple( rid, key ) != RM_EOF ) {
 		rc = _im->insertEntry( ixFileHandle, attr, key, rid );
 		if( rc != 0 )
 			return -1;
