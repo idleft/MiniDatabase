@@ -41,14 +41,14 @@ Value Filter::setValue(Value rhsValue) {
 
 	switch( type ) {
 		case TypeInt:
-			memcpy( rhs_value, rhsValue, sizeof(int) );
+			memcpy( (void*)rhs_value, rhsValue.data, sizeof(int) );
 			break;
 		case TypeReal:
-			memcpy( rhs_value, rhsValue, sizeof(float) );
+			memcpy( (void*)rhs_value, rhsValue.data, sizeof(float) );
 			break;
 		case TypeVarChar:
-			int length = *((int*)rhsValue);
-			memcpy( rhs_value, rhsValue, sizeof(int) + length );
+			int length = *((int*)rhsValue.data);
+			memcpy( (void*)rhs_value, rhsValue.data, sizeof(int) + length );
 			break;
 	}
 }
