@@ -88,7 +88,7 @@ bool Filter::valueCompare(void *data) {
 	return true;
 }
 
-void Filter::moveToValueByAttrType(char* value, AttrType type) {
+void moveToValueByAttrType(char* value, AttrType type) {
 
 	int length = 0;
 	switch( type )
@@ -195,19 +195,338 @@ Aggregate:: Aggregate(Iterator *input,             // Iterator of input R
 
 };
 
-Aggregate:: ~Aggregate(){
-
-};
+Aggregate:: ~Aggregate(){};
 
 RC Aggregate::getNextTuple(void *data){
-	return QE_EOF;
+
+	switch( typeOfAggregation )
+	{
+		case AGGREGATION_BASIC:
+			return getNextTuple_basic(data);
+			break;
+		case AGGREGATION_GROUP:
+			RC rc;
+			switch( this->op )
+			{
+				case MIN:
+					break;
+				case MAX:
+					break;
+				case SUM:
+					break;
+				case AVG:
+					break;
+				case COUNT:
+					break;
+			}
+
+			return rc;
+	}
+
 };
+
+RC Aggregate::getNextTuple_basic(void *data){
+
+	switch( this->op )
+	{
+		case MIN:
+			getMin_basic(data);
+			break;
+		case MAX:
+			getMax_basic(data);
+			break;
+		case SUM:
+			getSum_basic(data);
+			break;
+		case AVG:
+			getAvg_basic(data);
+			break;
+		case COUNT:
+			getCount_basic(data);
+			break;
+	}
+}
+
+void Aggregate::getMin_basic(void *data) {
+	void* returnValue = malloc(PAGE_SIZE);
+	int minInt = INT_MAX;
+	float minFloat = FLT_MAX;
+
+	while( iterator->getNextTuple( returnValue ) != QE_EOF )
+	{
+		char *value = (char *)returnValue;
+
+		for( Attribute attr: attributeVector )
+		{
+			if( attr.name == aggAttr.name )
+				break;
+
+			moveToValueByAttrType( value, attr.type );
+		}
+
+		switch( aggAttr.type )
+		{
+			case TypeInt:
+				if( *((int *)value) < minInt )
+					minInt = *((int *)value);
+				break;
+			case TypeReal:
+				if( *((float *)value) < minFloat )
+					minFloat = *((float *)value);
+				break;
+			default:
+				cout << "Type not supported" << endl;
+		}
+	}
+
+	switch( aggAttr.type )
+	{
+		case TypeInt:
+			memcpy( data , &minInt, sizeof(int));
+			break;
+		case TypeReal:
+			memcpy( data , &minFloat, sizeof(float));
+			break;
+		default:
+			break;
+
+	}
+
+	free( returnValue );
+}
+
+void Aggregate::getMax_basic(void *data) {
+	void* returnValue = malloc(PAGE_SIZE);
+	int maxInt = INT_MIN;
+	float maxFloat = FLT_MIN;
+
+	while( iterator->getNextTuple( returnValue ) != QE_EOF )
+	{
+		char *value = (char *)returnValue;
+
+		for( Attribute attr: attributeVector )
+		{
+			if( attr.name == aggAttr.name )
+				break;
+
+			moveToValueByAttrType( value, attr.type );
+		}
+
+		switch( aggAttr.type )
+		{
+			case TypeInt:
+				if( *((int *)value) > maxInt )
+					maxInt = *((int *)value);
+				break;
+			case TypeReal:
+				if( *((float *)value) > maxFloat )
+					maxFloat = *((float *)value);
+				break;
+			default:
+				cout << "Type not supported" << endl;
+		}
+	}
+
+	switch( aggAttr.type )
+	{
+		case TypeInt:
+			memcpy( data , &maxInt, sizeof(int));
+			break;
+		case TypeReal:
+			memcpy( data , &maxFloat, sizeof(float));
+			break;
+		default:
+			break;
+
+	}
+
+	free( returnValue );
+}
+
+void Aggregate::getSum_basic(void *data) {
+	void* returnValue = malloc(PAGE_SIZE);
+	int sumInt = 0;
+	float sumFloat = 0;
+
+	while( iterator->getNextTuple( returnValue ) != QE_EOF )
+	{
+		char *value = (char *)returnValue;
+
+		for( Attribute attr: attributeVector )
+		{
+			if( attr.name == aggAttr.name )
+				break;
+
+			moveToValueByAttrType( value, attr.type );
+		}
+
+		switch( aggAttr.type )
+		{
+			case TypeInt:
+				sumInt += *((int *) value );
+				break;
+			case TypeReal:
+				sumFloat += *((float *) value );
+				break;
+			default:
+				cout << "Type not supported" << endl;
+		}
+	}
+
+	switch( aggAttr.type )
+	{
+		case TypeInt:
+			memcpy( data , &sumInt, sizeof(int));
+			break;
+		case TypeReal:
+			memcpy( data , &sumFloat, sizeof(float));
+			break;
+		default:
+			break;
+
+	}
+
+	free( returnValue );
+}
+
+void Aggregate::getAvg_basic(void *data) {
+	void* returnValue = malloc(PAGE_SIZE);
+	int sumInt = 0;
+	float sumFloat = 0;
+
+	int countInt = 0;
+	int countFloat  = 0;
+
+	float avgInt = 0;
+	float avgFloat = 0;
+
+	while( iterator->getNextTuple( returnValue ) != QE_EOF )
+	{
+		char *value = (char *)returnValue;
+
+		for( Attribute attr: attributeVector )
+		{
+			if( attr.name == aggAttr.name )
+				break;
+
+			moveToValueByAttrType( value, attr.type );
+		}
+
+		switch( aggAttr.type )
+		{
+			case TypeInt:
+			{
+				sumInt += *((int *) value );
+				countInt++;
+				break;
+			}
+			case TypeReal:
+			{
+				sumFloat += *((float *) value );
+				countFloat++;
+				break;
+			}
+			default:
+				cout << "Type not supported" << endl;
+		}
+	}
+
+	switch( aggAttr.type )
+	{
+		case TypeInt:
+		{
+			avgInt = (float)sumInt / countInt;
+			memcpy( data , &avgInt, sizeof(float));
+			break;
+		}
+		case TypeReal:
+		{
+			avgFloat = sumFloat / countFloat;
+			memcpy( data , &avgFloat, sizeof(float));
+			break;
+		}
+		default:
+			break;
+
+	}
+
+	free( returnValue );
+}
+
+void Aggregate::getCount_basic(void *data) {
+	void* returnValue = malloc(PAGE_SIZE);
+	int countInt = 0;
+	int countFloat = 0;
+
+	while( iterator->getNextTuple( returnValue ) != QE_EOF )
+	{
+		char *value = (char *)returnValue;
+
+		for( Attribute attr: attributeVector )
+		{
+			if( attr.name == aggAttr.name )
+				break;
+
+			moveToValueByAttrType( value, attr.type );
+		}
+
+		switch( aggAttr.type )
+		{
+			case TypeInt:
+				countInt ++;
+				break;
+			case TypeReal:
+				countFloat ++;
+				break;
+			default:
+				cout << "Type not supported" << endl;
+		}
+	}
+
+	switch( aggAttr.type )
+	{
+		case TypeInt:
+			memcpy( data , &countInt, sizeof(int));
+			break;
+		case TypeReal:
+			memcpy( data , &countFloat, sizeof(int));
+			break;
+		default:
+			break;
+
+	}
+
+	free( returnValue );
+}
 
 // Please name the output attribute as aggregateOp(aggAttr)
 // E.g. Relation=rel, attribute=attr, aggregateOp=MAX
 // output attrname = "MAX(rel.attr)"
 void Aggregate::getAttributes(vector<Attribute> &attrs) const{
+	Attribute attribute = aggAttr;
 
+	attrs.clear();
+
+	switch( this->op )
+	{
+		case MIN:
+			attribute.name = "MIN(" + aggAttr.name + ")";
+			break;
+		case MAX:
+			attribute.name = "MAX(" + aggAttr.name + ")";
+			break;
+		case SUM:
+			attribute.name = "SUM(" + aggAttr.name + ")";
+			break;
+		case AVG:
+			attribute.name = "AVG(" + aggAttr.name + ")";
+			break;
+		case COUNT:
+			attribute.name = "COUNT(" + aggAttr.name + ")";
+			break;
+	}
+
+	attrs.push_back(attribute);
 
 };
 

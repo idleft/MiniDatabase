@@ -7,6 +7,9 @@
 #include "../rm/rm.h"
 #include "../ix/ix.h"
 
+#include <climits>
+#include <float.h>
+
 # define QE_EOF (-1)  // end of the index scan
 
 using namespace std;
@@ -40,6 +43,7 @@ struct Condition {
     Value   rhsValue;       // right-hand side value if bRhsIsAttr = FALSE
 };
 
+void moveToValueByAttrType(char* value, AttrType type);
 
 class Iterator {
     // All the relational operators and access methods are iterators.
@@ -211,7 +215,6 @@ class Filter : public Iterator {
         void getAttributes(vector<Attribute> &attrs) const{};
 
         bool valueCompare(void *data);
-        void moveToValueByAttrType(char* value, AttrType type);
         void setValue(Value rhsValue);
 
     private:
@@ -317,6 +320,14 @@ class Aggregate : public Iterator {
         void calculateSumForGroup();
         void calculateAvgForGroup();
         void calculateCountForGroup();
+
+        // getters
+        RC getNextTuple_basic(void *data);
+        void getMin_basic(void *data);
+        void getMax_basic(void *data);
+        void getSum_basic(void *data);
+        void getAvg_basic(void *data);
+        void getCount_basic(void *data);
 
     private:
         Iterator	*iterator;

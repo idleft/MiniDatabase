@@ -229,7 +229,7 @@ RC RelationManager::indexScan(const string &tableName, const string &attributeNa
 	if( rc != 0 )
 		return rc;
 
-	rc = _im->scan( ixFileHandle, attribute, lowKey, highKey, lowKeyInclusive, highKeyInclusive, rm_IndexScanIterator.ixsi);
+	rc = _im->scan( ixFileHandle, attribute, lowKey, highKey, lowKeyInclusive, highKeyInclusive, rm_IndexScanIterator._ix_ScanIterator);
 	if( rc != 0 )
 		return rc;
 
@@ -894,10 +894,10 @@ RC RM_ScanIterator::close()
 
 RC RM_IndexScanIterator::getNextEntry(RID &rid, void* key)
 {
-	return ixsi.getNextEntry( rid, key );
+	return _ix_ScanIterator.getNextEntry( rid, key );
 }
 
 RC RM_IndexScanIterator::close()
 {
-	return ixsi.close();
+	return _ix_ScanIterator.close();
 }
