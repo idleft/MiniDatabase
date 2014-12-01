@@ -59,17 +59,21 @@ bool Filter::valueCompare(void *data) {
 		moveToValueByAttrType( lhs_value, attr.type );
 	}
 
+	// prevent cross initialization error
+	int lhs_int, rhs_int;
+	float lhs_float, rhs_float;
+
 	switch( type )
 	{
 		case TypeInt:
-			int lhs_int = *((int *)lhs_value);
-			int rhs_int = *((int *)rhs_value);
+			lhs_int = *((int *)lhs_value);
+			rhs_int = *((int *)rhs_value);
 
 			compareValueByAttrType( lhs_int, rhs_int, compOp );
 			break;
 		case TypeReal:
-			float lhs_float = *((float *)lhs_value);
-			float rhs_float = *((float *)rhs_value);
+			lhs_float = *((float *)lhs_value);
+			rhs_float = *((float *)rhs_value);
 
 			compareValueByAttrType(lhs_float, rhs_float, compOp );
 			break;
@@ -102,7 +106,7 @@ void moveToValueByAttrType(char* value, AttrType type) {
 			break;
 	}
 }
-
+/*
 BNLJoin::BNLJoin(Iterator *leftIn,
         TableScan *rightIn,
         const Condition &condition,
@@ -110,17 +114,13 @@ BNLJoin::BNLJoin(Iterator *leftIn,
 
 }
 
-BNLJoin::~BNLJoin(){
-
-};
-
 RC BNLJoin::getNextTuple(void *data){
-	return QE_EOF;
 };
 
 void BNLJoin::getAttributes(vector<Attribute> &attrs) const{
 
 };
+*/
 
 // Index nested-loop join operator
 INLJoin::INLJoin(Iterator *leftIn,       // Iterator of input R
@@ -155,10 +155,6 @@ INLJoin::INLJoin(Iterator *leftIn,       // Iterator of input R
 	}
 
 	this->condition = condition;
-}
-
-INLJoin::~INLJoin(){
-
 }
 
 RC INLJoin::getNextTuple(void *data){
@@ -276,17 +272,21 @@ void INLJoin::copyValue( void* dest, const void* src, AttrType attrType )
 
 bool INLJoin::compareValue( const char* lhs_value, const char* rhs_value, CompOp compOp, AttrType attrType )
 {
+	// prevent cross initialization error
+	int lhs_int, rhs_int;
+	float lhs_float, rhs_float;
+
 	switch( attrType )
 	{
 		case TypeInt:
-			int lhs_int = *((int *)lhs_value);
-			int rhs_int = *((int *)rhs_value);
+			lhs_int = *((int *)lhs_value);
+			rhs_int = *((int *)rhs_value);
 
 			compareValueByAttrType( lhs_int, rhs_int, compOp );
 			break;
 		case TypeReal:
-			float lhs_float = *((float *)lhs_value);
-			float rhs_float = *((float *)rhs_value);
+			lhs_float = *((float *)lhs_value);
+			rhs_float = *((float *)rhs_value);
 
 			compareValueByAttrType( lhs_float, rhs_float, compOp );
 			break;
