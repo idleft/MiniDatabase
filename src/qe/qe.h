@@ -44,6 +44,8 @@ struct Condition {
 };
 
 void moveToValueByAttrType(char* value, AttrType type);
+template <typename T>
+bool compareValueByAttrType( T const lhs_value, T const rhs_value, CompOp compOp);
 
 class Iterator {
     // All the relational operators and access methods are iterators.
@@ -210,9 +212,9 @@ class Filter : public Iterator {
         );
         ~Filter(){};
 
-        RC getNextTuple(void *data) {return QE_EOF;};
+        RC getNextTuple(void *data);
         // For attribute in vector<Attribute>, name it as rel.attr
-        void getAttributes(vector<Attribute> &attrs) const{};
+        void getAttributes(vector<Attribute> &attrs) const;
 
         bool valueCompare(void *data);
         void setValue(Value rhsValue);
@@ -224,7 +226,7 @@ class Filter : public Iterator {
         vector<Attribute> attributeVector;
         CompOp compOp;
         AttrType type;
-        Value rhs_value;
+        char rhs_value[PAGE_SIZE];
 
 };
 

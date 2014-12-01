@@ -10,15 +10,10 @@ Filter::Filter(Iterator* input, const Condition &condition) {
 
 	type = condition.rhsValue.type;
 
-	rhs_value = setValue(condition.rhsValue);
+	setValue(condition.rhsValue);
 
 	iterator->getAttributes(attributeVector);
 
-}
-
-
-/* Filter destructor */
-Filter::~Filter(){
 }
 
 RC Filter::getNextTuple(void *data) {
@@ -41,14 +36,14 @@ void Filter::setValue(Value rhsValue) {
 
 	switch( type ) {
 		case TypeInt:
-			memcpy( (void*)rhs_value, rhsValue.data, sizeof(int) );
+			memcpy( rhs_value, rhsValue.data, sizeof(int) );
 			break;
 		case TypeReal:
-			memcpy( (void*)rhs_value, rhsValue.data, sizeof(float) );
+			memcpy( rhs_value, rhsValue.data, sizeof(float) );
 			break;
 		case TypeVarChar:
 			int length = *((int*)rhsValue.data);
-			memcpy( (void*)rhs_value, rhsValue.data, sizeof(int) + length );
+			memcpy( rhs_value, rhsValue.data, sizeof(int) + length );
 			break;
 	}
 }
