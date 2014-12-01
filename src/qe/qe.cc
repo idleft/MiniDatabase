@@ -69,12 +69,14 @@ bool Filter::valueCompare(void *data) {
 		case TypeInt:
 			int lhs_int = *((int *)lhs_value);
 			int rhs_int = *((int *)rhs_value);
+
 			compareValueByAttrType( lhs_int, rhs_int, compOp );
 			break;
 		case TypeReal:
 			float lhs_float = *((float *)lhs_value);
 			float rhs_float = *((float *)rhs_value);
-			compareValueByAttrType(lhs_float, rhs_float,compOp);
+
+			compareValueByAttrType(lhs_float, rhs_float, compOp );
 			break;
 		case TypeVarChar:
 			int length = *((int*)lhs_value);
@@ -123,6 +125,193 @@ RC BNLJoin::getNextTuple(void *data){
 
 void BNLJoin::getAttributes(vector<Attribute> &attrs) const{
 
+};
+
+// Index nested-loop join operator
+INLJoin::INLJoin(Iterator *leftIn,       // Iterator of input R
+        IndexScan *rightIn,          	// IndexScan Iterator of input S
+        const Condition &condition   	// Join condition
+)
+{
+
+	if( condition.bRhsIsAttr == false )
+		return;
+
+	iterator = leftIn;
+	iterator->getAttributes( leftAttributeVector );
+
+	for( Attribute attr : leftAttributeVector )
+	{
+		if( attr.name == condition.lhsAttr )
+		{
+			attrType = attr.type;
+			break;
+		}
+	}
+
+	totalAttributes = leftAttributeVector;
+
+	indexScan = rightIn;
+	indexScan->getAttributes( rightAttributeVector );
+
+	for( Attribute lAttr: rightAttributeVector )
+	{
+		totalAttributes.push_back ( lAttr );
+	}
+
+	this->condition = condition;
+}
+
+INLJoin::~INLJoin(){
+
+}
+
+RC INLJoin::getNextTuple(void *data){
+	RC rc;
+
+	do {
+		// Get next tuple from right iterator
+		rc = indexScan->getNextTuple( rightValue );
+		if( rc != 0 )
+		{
+			do{
+				// Try loading one more time
+				rc = indexScan->getNextTuple( leftValue );
+				if( rc != 0 )
+				{
+					cout << "Failed to load left input value " << endl;
+					return QE_EOF;
+				}
+
+				rc = getAttributeValue( leftValue, leftCondition, leftAttributeVector, condition.lhsAttr );
+				if( rc != 0 )
+				{
+					cout << "Failed to read attribute value from left iterator" << endl;
+					return QE_EOF;
+				}
+
+				// Tuple retrieval failed
+				retrieveNextLeftValue = false;
+
+				// Reset the iterator
+				setRightIterator( leftValue );
+//				indexScan->setIterator( condition.rhsValue.data, condition.rhsValue.data, true, true );
+
+			} while( indexScan->getNextTuple( rightValue ) != QE_EOF );
+		}
+
+
+		// Get right condition value
+		rc = getAttributeValue( rightValue, rightCondition, rightAttributeVector, condition.rhsAttr );
+		if( rc != 0 )
+		{
+			cout << "Failed to read attribute value from right condition value" << endl;
+			return rc;
+		}
+
+	} while( !compareValue( leftCondition, rightCondition, condition.op,  attrType) );
+
+	int sizeOfLeftRecord = _rbfm->getSizeOfRecord( leftAttributeVector, leftValue );
+	int sizeOfRightRecord = _rbfm->getSizeOfRecord( rightAttributeVector, rightValue );
+
+	memcpy( (char*)data, leftValue, sizeOfLeftRecord );
+	memcpy( (char*)data + sizeOfLeftRecord , rightValue, sizeOfRightRecord );
+
+	return 0;
+
+}
+
+void INLJoin::setRightIterator(char* value) {
+
+	switch( condition.op ) {
+		case EQ_OP:
+			indexScan->setIterator(value, value, true, true);
+			break;
+		case LT_OP:
+			indexScan->setIterator(value, NULL, false, true);
+			break;
+		case GT_OP:
+			indexScan->setIterator(NULL, value, true, false);
+			break;
+		case LE_OP:
+			indexScan->setIterator(value, NULL, true, true);
+			break;
+		case GE_OP:
+			indexScan->setIterator(NULL, value, true, true);
+			break;
+		case NE_OP:
+			indexScan->setIterator(NULL, NULL, true, true);
+			break;
+		default:
+			indexScan->setIterator(NULL, NULL, true, true);
+			break;
+	}
+}
+
+RC INLJoin::getAttributeValue( char* value, char* condition, vector<Attribute> attributeVector, string strCondition )
+{
+	for( Attribute attr: attributeVector )
+	{
+		if( attr.name == strCondition )
+		{
+			copyValue( value, condition, attr.type );
+			return 0;
+		}
+
+		moveToValueByAttrType( value, attr.type );
+	}
+}
+
+void INLJoin::copyValue( void* dest, const void* src, AttrType attrType )
+{
+	switch( attrType )
+	{
+		case TypeInt:
+			memcpy( dest, src, sizeof(int));
+			break;
+		case TypeReal:
+			memcpy( dest, src, sizeof(float));
+			break;
+		case TypeVarChar:
+			int length = *((int*)src);
+			memcpy( dest, src, sizeof(int) + length);
+			break;
+	}
+}
+
+bool INLJoin::compareValue( const char* lhs_value, const char* rhs_value, CompOp compOp, AttrType attrType )
+{
+	switch( attrType )
+	{
+		case TypeInt:
+			int lhs_int = *((int *)lhs_value);
+			int rhs_int = *((int *)rhs_value);
+
+			compareValueByAttrType( lhs_int, rhs_int, compOp );
+			break;
+		case TypeReal:
+			float lhs_float = *((float *)lhs_value);
+			float rhs_float = *((float *)rhs_value);
+
+			compareValueByAttrType( lhs_float, rhs_float, compOp );
+			break;
+		case TypeVarChar:
+			int length = *((int*)lhs_value);
+			std::string lhs_string(lhs_value, length);
+			std::string rhs_string(rhs_value, length);
+
+			compareValueByAttrType( lhs_string, rhs_string, compOp );
+			break;
+	}
+
+	return true;
+
+}
+
+// For attribute in vector<Attribute>, name it as rel.attr
+void INLJoin::getAttributes(vector<Attribute> &attrs) const{
+	attrs.clear();
+	attrs = this->totalAttributes;
 };
 
 // Mandatory for graduate teams only
