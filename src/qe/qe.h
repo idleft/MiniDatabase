@@ -11,6 +11,12 @@
 
 using namespace std;
 
+#define QE_ATTRIBUTE_NOT_SUPPORTED 20
+#define QE_NOT_FOUND 21
+
+#define AGGREGATION_BASIC 40
+#define AGGREGATION_GROUP 41
+
 typedef enum{ MIN = 0, MAX, SUM, AVG, COUNT } AggregateOp;
 
 
@@ -304,6 +310,22 @@ class Aggregate : public Iterator {
         // E.g. Relation=rel, attribute=attr, aggregateOp=MAX
         // output attrname = "MAX(rel.attr)"
         void getAttributes(vector<Attribute> &attrs) const{};
+
+        // Group-based hash aggregation
+        void calculateMinForGroup();
+        void calculateMaxForGroup();
+        void calculateSumForGroup();
+        void calculateAvgForGroup();
+        void calculateCountForGroup();
+
+    private:
+        Iterator	*iterator;
+        vector<Attribute> attributeVector;
+        Attribute aggAttr;
+        Attribute groupAttr;
+        AggregateOp op;
+        int typeOfAggregation;
+        unsigned numPartitions;
 };
 
 #endif
