@@ -206,7 +206,7 @@ class Filter : public Iterator {
 
         bool valueCompare(void *data);
         void moveToValueByAttrType(char* value, AttrType type);
-        Value setValue(Value rhsValue);
+        void setValue(Value rhsValue);
 
     private:
         Iterator *iterator;

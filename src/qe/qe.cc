@@ -37,7 +37,7 @@ void Filter::getAttributes(vector<Attribute> &attrs) const {
 	iterator->getAttributes(attrs);
 }
 
-Value Filter::setValue(Value rhsValue) {
+void Filter::setValue(Value rhsValue) {
 
 	switch( type ) {
 		case TypeInt:
