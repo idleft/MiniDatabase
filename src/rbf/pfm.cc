@@ -115,8 +115,19 @@ RC PagedFileManager::closeFile(FileHandle &fileHandle)
 
 bool PagedFileManager::fileExists(const char *filename)
 {
+	// [12-01-14] joyce.shin bug fix
+	// building on unix generates error
+	/*
 	std::ifstream ifile(filename);
 	return ifile;
+	*/
+
+	struct stat buffer;
+	if( stat(filename, &buffer) ) {
+		return false;
+	}
+	else
+		return true;
 };
 
 FileHandle::FileHandle()
