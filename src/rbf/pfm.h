@@ -10,6 +10,7 @@
 #include<stdlib.h>
 #include<fstream>
 #include<iostream>
+#include<sys/stat.h>
 
 typedef int RC;
 typedef unsigned PageNum;
