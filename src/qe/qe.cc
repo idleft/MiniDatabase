@@ -14,9 +14,13 @@ Filter::Filter(Iterator* input, const Condition &condition) {
 
 	iterator->getAttributes(attributeVector);
 
+//	cout << "Filter initialization complete" << endl;
+
 }
 
 RC Filter::getNextTuple(void *data) {
+
+//	cout << "Filter getNextTuple Start " << endl;
 	RC rc = -1;
 
 	do {
@@ -25,15 +29,19 @@ RC Filter::getNextTuple(void *data) {
 			return QE_EOF;
 	} while(!valueCompare(data));
 
+//	cout << "Filter getNextTuple End" << endl;
 	return 0;
 }
 
 void Filter::getAttributes(vector<Attribute> &attrs) const {
+//	cout << "Filter getAttributes Start" << endl;
 	iterator->getAttributes(attrs);
+//	cout << "Filter getAttributes End" << endl;
 }
 
 void Filter::setValue(Value rhsValue) {
 
+//	cout << "Filter setValue Start" << endl;
 	switch( type ) {
 		case TypeInt:
 			memcpy( rhs_value, rhsValue.data, sizeof(int) );
@@ -46,9 +54,13 @@ void Filter::setValue(Value rhsValue) {
 			memcpy( rhs_value, rhsValue.data, sizeof(int) + length );
 			break;
 	}
+
+//	cout << "Filter setValue End" << endl;
 }
 
 bool Filter::valueCompare(void *data) {
+
+//	cout << "Filter valueCompare Start" << endl;
 	char *lhs_value = (char *)data;
 
 	for ( Attribute attr : attributeVector ) {
@@ -58,6 +70,8 @@ bool Filter::valueCompare(void *data) {
 
 		moveToValueByAttrType( lhs_value, attr.type );
 	}
+
+//	cout << "Filter moveToValueByAttrType Pass" << endl;
 
 	// prevent cross initialization error
 	int lhs_int, rhs_int;
@@ -91,6 +105,8 @@ bool Filter::valueCompare(void *data) {
 
 void moveToValueByAttrType(char* value, AttrType type) {
 
+//	cout << "Filter moveToValueByAttrType type=" << type << endl;
+
 	int length = 0;
 	switch( type )
 	{
@@ -105,7 +121,62 @@ void moveToValueByAttrType(char* value, AttrType type) {
 			value += length + sizeof(int);
 			break;
 	}
+
+//	cout << "Filter moveToValueByAttrType End=" << type << endl;
 }
+
+Project::Project(Iterator *input,                    // Iterator of input R
+        const vector<string> &attrNames)
+{
+	if( attrNames.empty() )
+		cout << "Attribute name vector is empty" << endl;
+
+	iterator = input;
+
+	iterator->getAttributes( attributeVector );
+
+	/* construct unordered set to save only unique attribute name */
+	for( string name: attrNames )
+	{
+		attributeSet.emplace(name);
+	}
+
+	for( Attribute attr: attributeVector )
+	{
+		if( attributeSet.count(attr.name) > 0 )
+			attributeVectorForProjection.push_back( attr );
+	}
+}
+
+RC Project::getNextTuple(void *data) {
+
+	RC rc = -1;
+
+	rc = iterator->getNextTuple( retrievedData );
+	if( rc != 0 )
+		return rc;
+
+	char* dest = (char*) retrievedData;
+	for( Attribute attr: attributeVectorForProjection )
+	{
+		if( attributeSet.count(attr.name) > 0 )
+		{
+			copyValue( data, dest, attr.type );		// update data with returned result
+
+			moveToValueByAttrType( (char*)data, attr.type );	// go to value
+		}
+
+		moveToValueByAttrType( dest, attr.type );		// go to value
+	}
+
+	return 0;
+}
+
+void Project::getAttributes(vector<Attribute> &attrs) const {
+	attrs.clear();
+	attrs = attributeVectorForProjection;
+}
+
 /*
 BNLJoin::BNLJoin(Iterator *leftIn,
         TableScan *rightIn,
@@ -256,8 +327,10 @@ RC INLJoin::getAttributeValue( char* value, char* condition, vector<Attribute> a
 	return QE_FAIL_TO_FIND_ATTRIBUTE;
 }
 
-void INLJoin::copyValue( void* dest, const void* src, AttrType attrType )
+void copyValue( void* dest, const void* src, AttrType attrType )
 {
+//	cout << "copyValue Start type=" << attrType << endl;
+
 	switch( attrType )
 	{
 		case TypeInt:
@@ -271,6 +344,8 @@ void INLJoin::copyValue( void* dest, const void* src, AttrType attrType )
 			memcpy( dest, src, sizeof(int) + length);
 			break;
 	}
+
+//	cout << "copyValue End " << endl;
 }
 
 bool INLJoin::compareValue( const char* lhs_value, const char* rhs_value, CompOp compOp, AttrType attrType )
