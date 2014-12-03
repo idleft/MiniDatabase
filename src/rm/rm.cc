@@ -124,6 +124,34 @@ RC RelationManager::deleteTable(const string &tableName)
     return result;
 }
 
+RC RelationManager::colDescriptorToAttri(void* data, Attribute &colAttri){
+	int offset = sizeof(int); //skip the tableID
+	int varLen = 0,columnStart;
+	memcpy(&varLen, (char*) data + offset, sizeof(int));
+	offset = offset + sizeof(int) + sizeof(char)*varLen;// skip tableName
+
+	memcpy(&columnStart, (char*) data + offset, sizeof(int));
+	offset += sizeof(int);
+
+	memcpy(&varLen, (char*) data + offset, sizeof(int));
+	offset += sizeof(int);
+
+	char * nameChar = (char *)malloc(varLen+1);
+	memset(nameChar,0,varLen+1);
+	memcpy(nameChar, (char*)data+offset, varLen); // store columnName
+	colAttri.name = string((char *)nameChar);
+//	cout<<"Read attribute name: "<<colAttri.name<<endl;
+	free(nameChar);
+	offset = offset + sizeof(char)*varLen;
+
+	memcpy(&colAttri.type,(char*)data+offset, sizeof(int)); // store columnType
+	offset = offset + sizeof(AttrType);
+
+	memcpy(&colAttri.length, (char*) data+offset, sizeof(int)); //store colMaxLength
+
+	return 0;
+}
+
 RC RelationManager::createIndex(const string &tableName, const string &attributeName)
 {
 	RC rc = 0;

@@ -69,9 +69,9 @@ class RM_IndexScanIterator {
   RC close();             					// Terminate index scan
 
   IXFileHandle	idxFileHandle;
+  IX_ScanIterator _ix_ScanIterator;
 
  private:
-  IX_ScanIterator _ix_ScanIterator;
   IndexManager *_im;
 };
 /* extension for project 4 */
