@@ -4,10 +4,10 @@ CODEROOT = ..
 LDLIBS = -lreadline
 
 #CC = gcc
-CC = g++-4.8
+#CC = g++-4.8
+CC= g++
 
 CXX = $(CC)
 
 #CPPFLAGS = -Wall -I$(CODEROOT) -O3  # maximal optimization
-CPPFLAGS = -std=c++0x -Wall -I$(CODEROOT) -std=c++11 -DDATABASE_FOLDER=\"$(CODEROOT)/cli/\" -g # with debugging info
-
+CPPFLAGS = -Wall -I$(CODEROOT) -std=c++11 -DDATABASE_FOLDER=\"$(CODEROOT)/cli/\" -g # with debugging info

@@ -55,14 +55,24 @@ private:
 /* extension for project 4 */
 class RM_IndexScanIterator {
  public:
-  RM_IndexScanIterator();  	// Constructor
-  ~RM_IndexScanIterator(); 	// Destructor
+  RM_IndexScanIterator() { _im = IndexManager::instance(); }; 	// Constructor
+  ~RM_IndexScanIterator() {}; 	// Destructor
+
+  RC initialize(const Attribute attribute,
+  	    const void      *lowKey,
+  	    const void      *highKey,
+  	    bool			lowKeyInclusive,
+  	    bool        	highKeyInclusive);
 
   // "key" follows the same format as in IndexManager::insertEntry()
   RC getNextEntry(RID &rid, void *key);  	// Get next matching entry
   RC close();             					// Terminate index scan
 
+  IXFileHandle	idxFileHandle;
   IX_ScanIterator _ix_ScanIterator;
+
+ private:
+  IndexManager *_im;
 };
 /* extension for project 4 */
 

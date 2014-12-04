@@ -1058,6 +1058,16 @@ RC RM_ScanIterator::close()
 	return _rbfm->closeFile( fileHandle );
 };
 
+
+RC RM_IndexScanIterator::initialize(const Attribute attribute,
+ 	    const void      *lowKey,
+ 	    const void      *highKey,
+ 	    bool			lowKeyInclusive,
+ 	    bool        	highKeyInclusive)
+{
+	return _im->scan( idxFileHandle, attribute, lowKey, highKey, lowKeyInclusive, highKeyInclusive, _ix_ScanIterator);
+}
+
 RC RM_IndexScanIterator::getNextEntry(RID &rid, void* key)
 {
 	return _ix_ScanIterator.getNextEntry( rid, key );

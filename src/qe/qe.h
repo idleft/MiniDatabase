@@ -9,6 +9,7 @@
 
 #include <climits>
 #include <float.h>
+#include <unordered_set>
 
 # define QE_EOF (-1)  // end of the index scan
 
@@ -47,6 +48,7 @@ struct Condition {
 void moveToValueByAttrType(char* value, AttrType type);
 template <typename T>
 bool compareValueByAttrType( T const lhs_value, T const rhs_value, CompOp compOp);
+void copyValue( void* dest, const void* src, AttrType attrType );
 
 class Iterator {
     // All the relational operators and access methods are iterators.
@@ -236,12 +238,21 @@ class Project : public Iterator {
     // Projection operator
     public:
         Project(Iterator *input,                    // Iterator of input R
-              const vector<string> &attrNames){};   // vector containing attribute names
+              const vector<string> &attrNames);   // vector containing attribute names
         ~Project(){};
 
-        RC getNextTuple(void *data) {return QE_EOF;};
+        RC getNextTuple(void *data);
         // For attribute in vector<Attribute>, name it as rel.attr
-        void getAttributes(vector<Attribute> &attrs) const{};
+        void getAttributes(vector<Attribute> &attrs) const;
+
+    private:
+        Iterator* iterator;
+        unordered_set<string> attributeSet;
+
+        vector<Attribute> attributeVector;
+        vector<Attribute> attributeVectorForProjection;
+
+        char retrievedData[PAGE_SIZE];
 };
 
 class GHJoin : public Iterator {
@@ -291,7 +302,6 @@ class INLJoin : public Iterator {
 
         RC getAttributeValue( char* value, char* condition, vector<Attribute> attributeVector, string strCondition );
         bool compareValue( const char* lhs_value, const char* rhs_value, CompOp compOp, AttrType attrType );
-        void copyValue( void* dest, const void* src, AttrType attrType );
         void setRightIterator(char* value);
 
     private:
