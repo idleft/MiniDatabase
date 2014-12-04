@@ -1038,7 +1038,7 @@ RC RM_ScanIterator::initialize(vector<Attribute> recordDescriptor,
 // "data" follows the same format as RelationManager::insertTuple()
 
 RM_IndexScanIterator::RM_IndexScanIterator(){
-
+	_im = IndexManager::instance();
 }
 
 RM_IndexScanIterator::~RM_IndexScanIterator(){

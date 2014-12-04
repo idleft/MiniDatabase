@@ -55,8 +55,8 @@ private:
 /* extension for project 4 */
 class RM_IndexScanIterator {
  public:
-  RM_IndexScanIterator() { _im = IndexManager::instance(); }; 	// Constructor
-  ~RM_IndexScanIterator() {}; 	// Destructor
+  RM_IndexScanIterator(); 	// Constructor
+  ~RM_IndexScanIterator(); 	// Destructor
 
   RC initialize(const Attribute attribute,
   	    const void      *lowKey,
