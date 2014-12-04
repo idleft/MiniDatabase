@@ -8,3 +8,4 @@ src/rm/mergeTest.cc
 *.tbl_desc
 *.idx
 *.meta
+makefile

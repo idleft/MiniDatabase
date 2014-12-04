@@ -12,7 +12,7 @@ using namespace std;
 
 #define TABLE_CATALOG_FILE_NAME "Tables.tbl"
 #define COLUMN_CATALOG_FILE_NAME "Columns.tbl"
-#define INDEX_CATALOG_FILE_NAME "index.tbl"
+#define INDEX_CATALOG_FILE_NAME "Index.tbl"
 
 # define RM_EOF (-1)  // end of a scan operator
 
@@ -132,6 +132,14 @@ public:
 
   bool findAttributeFromCatalog(const string &tableName, const string &attributeName, Attribute &attribute);
   /* extension for project 4 */
+  string getIndexName(string tableName, string attrName);
+
+  RC loadIndexList();
+  RC createIndexFile();
+  RC writeIndexList();
+
+
+  RC getAttrFromData(vector<Attribute> attrs, const void* data, void* key, string attrName);
 
   int TABLE_ID;
 
@@ -157,6 +165,7 @@ private:
 
   map< string, map<int,RID> *> tableRIDMap;
   map< int, map<int,RID> *> columnRIDMap;
+  map< string, vector<Attribute>> indexMap;
 
 };
 #endif

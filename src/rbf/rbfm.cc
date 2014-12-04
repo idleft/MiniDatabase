@@ -730,7 +730,7 @@ int RecordBasedFileManager::getEstimatedRecordDataSize(vector<Attribute> rescord
 	return res;
 }
 
-RC RecordBasedFileManager::getAttrFromData(const vector<Attribute> &recordDescriptor, void* recordData, void* data, const string attributeName, short &attrSize){
+RC RecordBasedFileManager::getAttrFromData(const vector<Attribute> &recordDescriptor, const void* recordData, void* data, const string attributeName, short &attrSize){
 	int fieldPointer = 0;
 	RC result = -1;
 	for(int iter1 = 0; iter1<recordDescriptor.size()&&result == -1; iter1++){

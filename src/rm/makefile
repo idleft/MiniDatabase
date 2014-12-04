@@ -6,7 +6,7 @@ all: librm.a rmtest_create_tables rmtest_00 rmtest_01 rmtest_02 rmtest_03 rmtest
 librm.a: librm.a(rm.o)  # and possibly other .o files
 
 # c file dependencies
-rm.o: rm.h
+rm.o: rm.h ../ix/ix.h
 
 rmtest_00.o: rm.h test_util.h
 
