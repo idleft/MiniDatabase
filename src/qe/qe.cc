@@ -822,6 +822,92 @@ void Aggregate::calculateCountForGroup()
 
 }
 
+// implement of GHJoin
+GHJoin::GHJoin(Iterator *leftIn,               // Iterator of input R
+        Iterator *rightIn,               // Iterator of input S
+        const Condition &condition,      // Join condition (CompOp is always EQ)
+        const unsigned numPartitions     // # of partitions for each relation (decided by the optimizer)
+  	  	){
+
+	leftIn->getAttributes(leftAttrList);
+	rightIn->getAttributes(rightAttrList);
+
+	this->condition = condition;
+
+	// partition
+	string identityName = condition.lhsAttr+condition.rhsAttr;
+	partitionOperator(leftIn, "left"+identityName, numPartitions,condition.lhsAttr);
+	partitionOperator(rightIn, "right"+identityName, numPartitions, condition.rhsAttr);
+
+	for(int iter1 = 0; iter1<numPartitions; iter1++)
+//		mergePartition(iter1, identityName);
+
+	// initialize iterator on mergeResult
+
+	// initialize ghAttrList
+	totalAttrList.clear();
+	for(Attribute iter1:leftAttrList){
+		totalAttrList.push_back(iter1);
+	}
+	for(Attribute iter1:rightAttrList){
+		totalAttrList.push_back(iter1);
+	}
+
+}
+
+RC GHJoin:: selectAttribute(vector<Attribute> attrList, string attrName, Attribute &attr){
+	int rc = -1;
+	for(int iter1 = 0; iter1 < attrList.size()&&rc==-1; iter1++)
+		if(attrList.at(iter1).name == attrName){
+			attr = attrList.at(iter1);
+			rc = 0;
+		}
+	return rc;
+}
+
+void GHJoin::partitionOperator(Iterator *iter, string identityName, const unsigned numPartitions, string attrName){
+
+	RC rc = -1;
+	for(int iter1 = 0; iter1<numPartitions; iter1++)
+		_rbfm->createFile("identityName"+string(iter1));
+
+	vector<Attribute> attrList;
+	Attribute keyAttr;
+	iter->getAttributes(attrList);
+	rc = selectAttribute(attrList, attrName,keyAttr);
+
+	void *recordData = malloc(_rbfm->getEstimatedRecordDataSize(attrList));
+	void *keyData = malloc(_rbfm->getEstimatedRecordDataSize(attrList));
+	short keySize;
+	unsigned hashKey,bucketId;
+	vector<FileHandle> fileHandleList;
+	RID rid;
+
+	for(int iter1=0;iter1<numPartitions;iter1++){
+		FileHandle fileHandle;
+		_rbfm->openFile(identityName+string(iter1), fileHandle);
+		fileHandleList.push_back(fileHandle);
+	}
+
+	while(iter->getNextTuple(recordData)!=QE_EOF){
+		_rbfm->getAttrFromData(attrList, recordData, keyData, attrName,keySize);
+		hashKey = _ix->hash(keyAttr,keyData);
+		bucketId = hashKey%numPartitions;
+		_rbfm->insertRecord(fileHandleList.at(bucketId), attrList, recordData, rid);
+	}
+
+	for(int iter1=0;iter1<numPartitions;iter1++)
+		_rbfm->closeFile(fileHandleList.at(iter1));
+	fileHandleList.clear();
+}
+
+void GHJoin::getAttributes(vector<Attribute> &attrList)const{
+	attrList = this->totalAttrList;
+}
+
+
+//end of implement of GHJoin
+
 template <typename T>
 bool compareValueByAttrType( T const lhs_value, T const rhs_value, CompOp compOp) {
 

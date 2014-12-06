@@ -265,9 +265,23 @@ class GHJoin : public Iterator {
       ){};
       ~GHJoin(){};
 
-      RC getNextTuple(void *data){return QE_EOF;};
+      RC getNextTuple(void *data);
       // For attribute in vector<Attribute>, name it as rel.attr
-      void getAttributes(vector<Attribute> &attrs) const{};
+      void getAttributes(vector<Attribute> &attrs) const;
+      void partitionOperator(Iterator *iter, string identityName, const unsigned numPartitions, string attrName);
+      RC selectAttribute(vector<Attribute> attrList, string attrName, Attribute &attr);
+
+
+      vector<Attribute> totalAttrList;
+      vector<Attribute> leftAttrList;
+      vector<Attribute> rightAttrList;
+
+      private:
+      	  RecordBasedFileManager *_rbfm = RecordBasedFileManager::instance();
+      	  IndexManager *_ix = IndexManager::instance();
+      	  Condition condition;
+
+
 };
 
 
