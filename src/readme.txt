@@ -1,23 +1,29 @@
 
 - Modify the "CODEROOT" variable in makefile.inc to point to the root of your code base
 
-- Integrate your own implementation of rbf to folder, "rbf".
-  Note that the structure of FileHandle class has changed. You need to implement additional code.
-  Refer to the project 3 page for detail.
-  
-- Implement the Index Manager (IX):
+- Copy your own implementation of rbf, ix, and rm to folder, "rbf", "ix", and "rm", respectively.
 
-   Go to folder "ix" and type in:
+- Implement the extension of Relation Manager (RM) to coordinate data files and the associated indices of the data files.
+
+- Also, implement Query Engine (QE)
+
+   Go to folder "cli" and type in:
 
     make clean
     make
-    ./ixtest1
+    ./clitest_01
+    ./clitest_02
+    ./clitest_03
+    ./clitest_04
+    ./clitest_05
+    ./clitest_06
+    ./clitest_07
+    ./clitest_08
+    ./clitest_09
+    ./clitest_10
+    ./clitest_11
+    ./clitest_12
 
-   The program should work.  But it will fail. 
-   You are supposed to implement the API of the index manager defined in ix.h and pfm.h
+   The program should work. But it does nothing until you implement the extension of RM and QE.
 
-   Refer to the each test case for detail. 
-
-- By default you should not change those functions of the IndexManager and IX_ScanIterator class defined in ix/ix.h. 
-  If you think some changes are really necessary, please contact us first.
-
+- By default you should not change those classes defined in rm/rm.h and qe/qe.h. If you think some changes are really necessary, please contact us first.
