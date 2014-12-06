@@ -61,7 +61,7 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 	// check reserved table names
 	if( tableName.compare("Tables") == 0 ||
 			tableName.compare("Columns") == 0 ||
-			tableName.compare("index") == 0 )
+			tableName.compare("Index") == 0 )
 	{
 		cout << "Not allowed table name=" << tableName << "in the system. try different name" << endl;
 		return result;
