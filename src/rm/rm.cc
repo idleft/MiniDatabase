@@ -146,30 +146,51 @@ RC RelationManager::deleteTable(const string &tableName)
     return result;
 }
 
-RC RelationManager::colDescriptorToAttri(void* data, Attribute &colAttri){
-	int offset = sizeof(int); //skip the tableID
+RC RelationManager::colDescriptorToAttri(char* data, Attribute &colAttri){
+	// [tableID][tableName][columnStart][columnName][columnType][maxLength]
+	int offset = 0;
 	int varLen = 0,columnStart;
-	memcpy(&varLen, (char*) data + offset, sizeof(int));
-	offset = offset + sizeof(int) + sizeof(char)*varLen;// skip tableName
 
-	memcpy(&columnStart, (char*) data + offset, sizeof(int));
-	offset += sizeof(int);
+	// [EUNJEONG.SHIN] rewrote the whole function not to use offset
+	data = data + sizeof(int);	//skip the tableID
 
-	memcpy(&varLen, (char*) data + offset, sizeof(int));
-	offset += sizeof(int);
+	memcpy(&varLen, data, sizeof(int));
+	data = data + sizeof(int) + varLen;// skip tableName
 
+	memcpy(&columnStart, data, sizeof(int));
+	data += sizeof(int);	// skip columnStart
+
+	memcpy(&varLen, (char*)data, sizeof(int));
+	data += sizeof(int);	// skip columnName length
+
+	colAttri.name = string(data, varLen);
+	data += varLen;
+
+	/*
 	char * nameChar = (char *)malloc(varLen+1);
 	memset(nameChar,0,varLen+1);
 	memcpy(nameChar, (char*)data+offset, varLen); // store columnName
 	colAttri.name = string((char *)nameChar);
+
 //	cout<<"*************Read attribute name: "<<colAttri.name<<endl;
 	free(nameChar);
-	offset = offset + sizeof(char)*varLen;
+	*/
 
-	memcpy(&colAttri.type,(char*)data+offset, sizeof(int)); // store columnType
-	offset = offset + sizeof(AttrType);
+	/*
+	memcpy(&varLen, (char *)data, sizeof(int));
+	data += sizeof(int);		// skip columnType size
+	*/
 
-	memcpy(&colAttri.length, (char*) data+offset, sizeof(int)); //store colMaxLength
+	AttrType type;
+	memcpy(&type,(char*)data, sizeof(AttrType)); // store columnType
+	colAttri.type = type;
+	data += sizeof(int);
+
+	unsigned mLength;
+	memcpy(&mLength, (char*)data, sizeof(int)); // store colMaxLength
+	colAttri.length = mLength;
+
+//	cout << "name=" << colAttri.name << " type=" << colAttri.type << " length=" << colAttri.length << endl;
 
 	return 0;
 }
@@ -356,7 +377,7 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 
 			RID attrRid = iter2->second;
 
-			void* colDescriptor = malloc(colCatalogSize);
+			char* colDescriptor = (char*)malloc(colCatalogSize);
 			result = _rbfm->readRecord(fileHandle, columnCatalog, attrRid, colDescriptor);
 			if( result != 0 )
 				return result;
@@ -364,7 +385,9 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 			result = colDescriptorToAttri(colDescriptor, colAttri);
 			if( result != 0 )
 				return result;
-			attrs.push_back( colAttri );
+
+			if( colAttri.name.compare("tableID") != 0 )
+				attrs.push_back( colAttri );
 
 			free( colDescriptor );
 		}
@@ -973,7 +996,7 @@ RC RelationManager::insertColumnEntry(int tableID, string tableName, int columnS
 	char* data = (char*)malloc(catalogSize);
 
 	// [tableID][tableName][columnStart][columnName][columnType][maxLength]
-	memcpy( data + offset, &tableID, sizeof(int));
+	memcpy( data, &tableID, sizeof(int));
 	offset += sizeof(int);
 
 	int varCharLen = tableName.length();

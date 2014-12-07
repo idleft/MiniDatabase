@@ -131,7 +131,7 @@ public:
 
   RC createCatalogFile(const string& tableName, const vector<Attribute>& attrVector);
 
-  RC colDescriptorToAttri(void* data, Attribute &colAttri);
+  RC colDescriptorToAttri(char* data, Attribute &colAttri);
 
   /* extension for project 4 */
   RC createIndex(const string &tableName, const string &attributeName);
