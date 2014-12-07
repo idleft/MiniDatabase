@@ -839,21 +839,119 @@ GHJoin::GHJoin(Iterator *leftIn,               // Iterator of input R
 	partitionOperator(leftIn, "left"+identityName, numPartitions,condition.lhsAttr);
 	partitionOperator(rightIn, "right"+identityName, numPartitions, condition.rhsAttr);
 
-	for(int iter1 = 0; iter1<numPartitions; iter1++)
-//		mergePartition(iter1, identityName);
-
-	// initialize iterator on mergeResult
-
-	// initialize ghAttrList
-	totalAttrList.clear();
+	// merge attribute
+	mergeAttrList.clear();
 	for(Attribute iter1:leftAttrList){
-		totalAttrList.push_back(iter1);
+		mergeAttrList.push_back(iter1);
 	}
 	for(Attribute iter1:rightAttrList){
-		totalAttrList.push_back(iter1);
+		mergeAttrList.push_back(iter1);
 	}
 
+	// merge partition
+	for(int iter1 = 0; iter1<numPartitions; iter1++)
+		mergePartition(iter1, identityName, leftAttrList, rightAttrList, condition, mergeAttrList);
+
+	// initialize iterator on mergeResult
+	vector<string> mergeAttrName;
+	_rbfm->openFile("res"+identityName, resFileHandle);
+	getAllAttrNames(mergeAttrList, mergeAttrName);
+	resScaner.initialize(resFileHandle, mergeAttrList, "", NULL, NULL, mergeAttrName);
 }
+
+RC GHJoin::getAllAttrNames(vector<Attribute> attrList, vector<string> &attrNames){
+	for(int iter1 = 0; iter1<attrList.size(); iter1++)
+		attrNames.push_back(attrList.at(iter1).name);
+}
+
+bool GHJoin::keyCompare(void *key1, void *key2, Attribute attr){
+	bool res = false;
+	if(attr.type == TypeInt)
+		res = *(int*)key1 == *(int*)key2;
+	else if (attr.type == TypeReal)
+		res = *(float*)key1 == *(float*)key2;
+	else{
+		int len1,len2,cmp;
+		len1 = *(int*)key1;
+		len2 = *(int*)key2;
+		cmp = strcmp((char*)key1+sizeof(int), (char*)key2+sizeof(int));
+		if(cmp == 0)
+			res = true;
+	}
+	return res;
+}
+
+RC GHJoin::mergePartition(int iter1, string identityName, vector<Attribute> leftAttrList,
+							vector<Attribute> rightAttrList, Condition condition, vector<Attribute>mergeAttrList){
+
+	FileHandle leftFileHandle, rightFileHandle, resFileHandle;
+	vector<void *> inMemorySet;
+	RBFM_ScanIterator leftRbfmScanner,rightRbfmScanner;
+	vector<string> leftAttrNames,rightAttrNames;
+	Attribute comAttr;
+	RID rid;
+	void *recordData;
+	unsigned estRecordSize;
+
+	_rbfm->openFile("left"+identityName+string(iter1), leftFileHandle);
+	_rbfm->openFile("right"+identityName+string(iter1), rightFileHandle);
+	_rbfm->openFile("res"+identityName, resFileHandle);
+
+	// decide which partition is smaller
+
+
+	if(leftFileHandle.getNumberOfPages()>rightFileHandle.getNumberOfPages()){
+		//swap left and right
+	}
+
+	// load left partition
+	getAllAttrNames(leftAttrList, leftAttrNames);
+	getAllAttrNames(rightAttrList, rightAttrNames);
+	selectAttribute(rightAttrList, condition.rhsAttr, comAttr);
+
+	leftRbfmScanner.initialize(leftFileHandle, leftAttrList, "", NULL, NULL, leftAttrNames);
+	estRecordSize = _rbfm->getEstimatedRecordDataSize(leftAttrList);
+	recordData = malloc(estRecordSize);
+	while(leftRbfmScanner.getNextRecord(rid, recordData)!=-1){
+		inMemorySet.push_back(recordData);
+		recordData = malloc(estRecordSize);
+	}
+	free(recordData);
+	// compare to another partition & write to file
+	rightRbfmScanner.initialize(rightFileHandle, rightAttrList, "", NULL, NULL, rightAttrNames);
+	estRecordSize = _rbfm->getEstimatedRecordDataSize(rightAttrList);
+	recordData = malloc(estRecordSize);
+	int keyLength = comAttr.length+sizeof(int);
+	void *leftKey = malloc(keyLength);
+	void *rightKey = malloc(keyLength);
+
+	while(rightRbfmScanner.getNextRecord(rid, recordData)){
+		for(int iter1= 0; iter1<inMemorySet.at(iter1);iter1++){
+			short leftSize, rightSize; // in case of long str
+			void *leftRecord = inMemorySet.at(iter1);
+			_rbfm->getAttrFromData(leftAttrList, leftRecord, leftKey, condition.lhsAttr, leftSize);
+			_rbfm->getAttrFromData(rightAttrList, recordData, rightKey, condition.rhsAttr, rightSize);
+			if(keyCompare(leftKey, rightKey, comAttr)){
+				int actLeftRecordSize, actRightRecordSize;
+				actLeftRecordSize = _rbfm->getSizeOfRecord(leftAttrList, leftRecord);
+				actRightRecordSize = _rbfm->getSizeOfRecord(rightAttrList,recordData);
+				void *mergeData = malloc(actLeftRecordSize+actRightRecordSize);
+				memcpy(mergeData, leftRecord, actLeftRecordSize);
+				memcpy((char*)mergeData+actLeftRecordSize, recordData, actRightRecordSize);
+				_rbfm->insertRecord(resFileHandle, mergeAttrList, mergeData, rid);
+				free(mergeData);
+			}
+		}
+	}
+
+	_rbfm->closeFile(leftFileHandle);
+	_rbfm->closeFile(rightFileHandle);
+	_rbfm->closeFile(resFileHandle);
+
+	free(leftKey);
+	free(rightKey);
+}
+
 
 RC GHJoin:: selectAttribute(vector<Attribute> attrList, string attrName, Attribute &attr){
 	int rc = -1;
@@ -902,9 +1000,13 @@ void GHJoin::partitionOperator(Iterator *iter, string identityName, const unsign
 }
 
 void GHJoin::getAttributes(vector<Attribute> &attrList)const{
-	attrList = this->totalAttrList;
+	attrList = this->mergeAttrList;
 }
 
+RC GHJoin::getNextTuple(void *data){
+	RID rid;
+	return resScaner.getNextRecord(rid, data);
+}
 
 //end of implement of GHJoin
 
