@@ -469,23 +469,18 @@ RC Aggregate::getNextTuple(void *data){
 			break;
 		}
 		case AGGREGATION_GROUP:
-			RC rc;
+			RC rc = 0;
 			switch( this->op )
 			{
 				case MIN:
-					return rc;
 					break;
 				case MAX:
-					return rc;
 					break;
 				case SUM:
-					return rc;
 					break;
 				case AVG:
-					return rc;
 					break;
 				case COUNT:
-					return rc;
 					break;
 			}
 	}
