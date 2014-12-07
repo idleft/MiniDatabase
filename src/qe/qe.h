@@ -262,12 +262,34 @@ class GHJoin : public Iterator {
             Iterator *rightIn,               // Iterator of input S
             const Condition &condition,      // Join condition (CompOp is always EQ)
             const unsigned numPartitions     // # of partitions for each relation (decided by the optimizer)
-      ){};
+      );
       ~GHJoin(){};
 
-      RC getNextTuple(void *data){return QE_EOF;};
+      RC getNextTuple(void *data);
       // For attribute in vector<Attribute>, name it as rel.attr
-      void getAttributes(vector<Attribute> &attrs) const{};
+      void getAttributes(vector<Attribute> &attrs) const;
+      void partitionOperator(Iterator *iter, string identityName, const unsigned numPartitions, string attrName);
+      RC selectAttribute(vector<Attribute> attrList, string attrName, Attribute &attr);
+      RC mergePartition(Iterator *iter1, string identityName);
+      RC getAllAttrNames(vector<Attribute> attrList, vector<string> &attrNames);
+      bool keyCompare(void *key1, void *key2, Attribute attr);
+      RC mergePartition(int iter1, string identityName, vector<Attribute> leftAttrList,
+      							vector<Attribute> rightAttrList, Condition condition, vector<Attribute>mergeAttrList);
+
+
+
+      vector<Attribute> mergeAttrList;
+      vector<Attribute> leftAttrList;
+      vector<Attribute> rightAttrList;
+
+      private:
+      	  RecordBasedFileManager *_rbfm = RecordBasedFileManager::instance();
+      	  IndexManager *_ix = IndexManager::instance();
+      	  Condition condition;
+      	  RBFM_ScanIterator resScaner;
+      	  FileHandle resFileHandle;
+
+
 };
 
 

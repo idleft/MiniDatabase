@@ -140,7 +140,7 @@ RC RelationManager::deleteTable(const string &tableName)
 	
 	// delete index 
 	vector<Attribute> attrList = indexMap[tableName];
-	for(int iter1 = 0; iter1<attrList.size();iter1++)
+	for(unsigned iter1 = 0; iter1<attrList.size();iter1++)
 		destroyIndex(tableName, attrList.at(iter1).name);
 	indexMap.erase(tableName);
     return result;
@@ -426,12 +426,12 @@ RC RelationManager::insertTuple(const string &tableName, const void *data, RID &
 
     // insert index
     vector<Attribute> attrList = indexMap[tableName];
-    for(int iter1 = 0; iter1< attrList.size(); iter1++){
+    for(unsigned iter1 = 0; iter1< attrList.size(); iter1++){
     	void* key = malloc(attrList.at(iter1).length);
     	string indexFileName = tableName + "_" + attrList.at(iter1).name;
     	IXFileHandle ixfileHandle;
     	_im->openFile(indexFileName, ixfileHandle);
-    	for(int iter2 = 0; iter2<tableAttributes.size();iter2++){
+    	for(unsigned iter2 = 0; iter2<tableAttributes.size();iter2++){
     		if(attrList.at(iter1).name == tableAttributes.at(iter2).name){
     			indexAttr = attrList.at(iter1);
     			getAttrFromData( tableAttributes,data, key,attrList.at(iter1).name );
@@ -469,7 +469,7 @@ RC RelationManager::deleteTuples(const string &tableName)
 
 	// empty index
 	vector<Attribute> attrList = indexMap[tableName];
-	for(int iter1 = 0; iter1 < attrList.size(); iter1++){
+	for(unsigned iter1 = 0; iter1 < attrList.size(); iter1++){
 		string indexFileName = getIndexName(tableName, attrList.at(iter1).name);
 		_im->destroyFile(indexFileName);
 		result = createIndex(tableName, attrList.at(iter1).name);
@@ -499,8 +499,8 @@ RC RelationManager::deleteTuple(const string &tableName, const RID &rid)
 	indexAttrList = indexMap[tableName];
 	// delete Index first then record itself
 	estimatedRecordSize = _rbfm->getEstimatedRecordDataSize(tableAttributes);
-	void *recordData = malloc(estimatedRecordSize);
-	for(int iter1 = 0; iter1<indexAttrList.size(); iter1++){
+//	void *recordData = malloc(estimatedRecordSize);
+	for(unsigned iter1 = 0; iter1<indexAttrList.size(); iter1++){
 		void *key = malloc(tableAttributes.at(iter1).length);
 		string indexFileName = getIndexName(tableName, indexAttrList.at(iter1).name);
 		_im->openFile(indexFileName, ixFileHandle);
@@ -531,7 +531,7 @@ RC RelationManager::updateTuple(const string &tableName, const void *data, const
 	getAttributes(tableName, tableAttributes);
 	// update index
 	vector<Attribute> attrList = indexMap[tableName];
-	for(int iter1 = 0; iter1<attrList.size(); iter1++){
+	for(unsigned iter1 = 0; iter1<attrList.size(); iter1++){
 		void* key = malloc(attrList.at(iter1).length);
 		void* updatedKey = malloc(attrList.at(iter1).length);
 		string indexFileName = getIndexName(tableName, attrList.at(iter1).name);
@@ -913,7 +913,7 @@ RC RelationManager::createCatalogFile(const string& tableName, const vector<Attr
 
 //  [EUNJEONG.SHIN] Add each column for the table with TABLE_ID
 //	map<int, RID> *columnRID = new map<int, RID>();
-	for(int i = 0; i < (int)attrVector.size(); i++)
+	for(unsigned i = 0; i < attrVector.size(); i++)
 	{
 		int columnPos = i + 1;
 		result = insertColumnEntry( TABLE_ID, tableName, i+1, attrVector.at(i).name, attrVector.at(i).type, attrVector.at(i).length, fileHandle, rid);
