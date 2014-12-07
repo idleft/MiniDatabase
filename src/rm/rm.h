@@ -55,8 +55,8 @@ private:
 /* extension for project 4 */
 class RM_IndexScanIterator {
  public:
-  RM_IndexScanIterator(); 	// Constructor
-  ~RM_IndexScanIterator(); 	// Destructor
+  RM_IndexScanIterator() { _im = IndexManager::instance(); }; 	// Constructor
+  ~RM_IndexScanIterator() {}; 	// Destructor
 
   RC initialize(const Attribute attribute,
   	    const void      *lowKey,
@@ -138,7 +138,13 @@ public:
 
   RC destroyIndex(const string &tableName, const string &attributeName);
 
-  RC indexScan(const string &tableName, const string &attributeName, const void *lowKey, const void *highKey, bool lowKeyInclusive, bool highKeyInclusive, RM_IndexScanIterator &rm_IndexScanIterator);
+  RC indexScan(const string &tableName, 
+  		const string &attributeName, 
+		const void *lowKey, 
+		const void *highKey, 
+		bool lowKeyInclusive, 
+		bool highKeyInclusive, 
+		RM_IndexScanIterator &rm_IndexScanIterator);
 
   bool findAttributeFromCatalog(const string &tableName, const string &attributeName, Attribute &attribute);
   /* extension for project 4 */
@@ -149,7 +155,7 @@ public:
   RC writeIndexList();
 
 
-  RC getAttrFromData(vector<Attribute> attrs, const void* data, void* key, string attrName);
+  RC getAttrFromData(const vector<Attribute> attrs, const void* data, void* key, string attrName);
 
   int TABLE_ID;
 

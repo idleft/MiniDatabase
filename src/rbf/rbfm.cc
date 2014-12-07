@@ -86,7 +86,9 @@ RC RecordBasedFileManager::destroyFile(const string &fileName) {
 RC RecordBasedFileManager::openFile(const string &fileName, FileHandle &fileHandle)
 {
 	RC result = -1;
-	result = _pfm->openFile( &fileName[0], fileHandle );
+
+//	result = _pfm->openFile( &fileName[0], fileHandle );
+	result = _pfm->openFile( fileName.c_str(), fileHandle );	// [EUNJEONG.SHIN] Bug fix while opening file with fileName
 	if( result == 0 ) {
 		if( directoryOfSlots.find(fileName) == directoryOfSlots.end() )	// fileName does not exist in directory of slots
 		{
@@ -730,7 +732,7 @@ int RecordBasedFileManager::getEstimatedRecordDataSize(vector<Attribute> rescord
 	return res;
 }
 
-RC RecordBasedFileManager::getAttrFromData(const vector<Attribute> &recordDescriptor, const void* recordData, void* data, const string attributeName, short &attrSize){
+RC RecordBasedFileManager::getAttrFromData(const vector<Attribute> &recordDescriptor, void* recordData, void* data, const string attributeName, short &attrSize){
 	int fieldPointer = 0;
 	RC result = -1;
 	for(int iter1 = 0; iter1<recordDescriptor.size()&&result == -1; iter1++){
@@ -1004,12 +1006,23 @@ bool RBFM_ScanIterator::checkCondition(void* data, string &attrName, vector<Attr
 		}
 	}
 	else{
+		/*
 		char* fieldValue;
 		char* targetValue = (char *) targetPointer;
 		varLen = *(int*)((char *)data+fieldOffset);
 		fieldValue = (char *)malloc(varLen);
 		memcpy(fieldValue, (char *)data+fieldOffset+sizeof(int), varLen);
 		int strCmpRes = strcmp(fieldValue, targetValue);
+		*/
+		char* targetValue = (char *) targetPointer;
+		// [EUNJEONG.SHIN] Bug fix while comparing string field value
+		int fieldLeng = *(int *)((char *)data+fieldOffset);
+		string field((char *)data + fieldOffset + sizeof(int), fieldLeng);
+		int targetLeng = *(int *)targetValue;
+		string target((char *)targetValue + sizeof(int), targetLeng);
+
+		int strCmpRes = strcmp(field.c_str(), target.c_str());
+
 		switch(compOp){
 			case EQ_OP :  result = (strCmpRes == 0); break;
 			case LT_OP :  result = (strCmpRes < 0 ); break;    // <
@@ -1019,7 +1032,8 @@ bool RBFM_ScanIterator::checkCondition(void* data, string &attrName, vector<Attr
 			case NE_OP :  result = (strCmpRes != 0); break;   // !=
 			case NO_OP :  result = true; break;
 		}
-		free(fieldValue);
+//		free(fieldValue);
+
 	}
 	return result;
 }
@@ -1040,7 +1054,8 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 	RC tombStoneChk = -1;
 	totalPageNum = this->fileHandle.getNumberOfPages();
 
-	while( pageNum < totalPageNum && result ){
+	while( (pageNum < totalPageNum) && result ){		// [EUNJEONG.SHIN] Add parenthesis to make it clear
+
 
 		if( slotNum > dirInfo->numOfSlots )
 		{
@@ -1079,7 +1094,7 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 			{
 				string attrName = this->attributeNames.at(iter1);
 				this->_rbfm->getAttrFromData(recordDescriptor, recordData, attrBuffer, attrName,attrSize);
-//				cout<<"Reading attribute "<<attrName<<" Length: "<<attrSize<<endl;
+//				cout<<"***getNextRecord*** Reading attribute "<<attrName<<" Length: "<<attrSize<<endl;
 				memcpy((char*)data + attrSetSize, attrBuffer, attrSize);
 				attrSetSize += attrSize;
 			}
