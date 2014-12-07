@@ -849,19 +849,20 @@ GHJoin::GHJoin(Iterator *leftIn,               // Iterator of input R
 	}
 
 	// merge partition
-	for(int iter1 = 0; iter1<numPartitions; iter1++)
+	for(unsigned iter1 = 0; iter1<numPartitions; iter1++)
 		mergePartition(iter1, identityName, leftAttrList, rightAttrList, condition, mergeAttrList);
 
 	// initialize iterator on mergeResult
 	vector<string> mergeAttrName;
 	_rbfm->openFile("res"+identityName, resFileHandle);
 	getAllAttrNames(mergeAttrList, mergeAttrName);
-	resScaner.initialize(resFileHandle, mergeAttrList, "", NULL, NULL, mergeAttrName);
+	resScaner.initialize(resFileHandle, mergeAttrList, "", NO_OP, NULL, mergeAttrName);
 }
 
 RC GHJoin::getAllAttrNames(vector<Attribute> attrList, vector<string> &attrNames){
-	for(int iter1 = 0; iter1<attrList.size(); iter1++)
+	for(unsigned iter1 = 0; iter1<attrList.size(); iter1++)
 		attrNames.push_back(attrList.at(iter1).name);
+	return 0;
 }
 
 bool GHJoin::keyCompare(void *key1, void *key2, Attribute attr){
@@ -871,9 +872,7 @@ bool GHJoin::keyCompare(void *key1, void *key2, Attribute attr){
 	else if (attr.type == TypeReal)
 		res = *(float*)key1 == *(float*)key2;
 	else{
-		int len1,len2,cmp;
-		len1 = *(int*)key1;
-		len2 = *(int*)key2;
+		int cmp;
 		cmp = strcmp((char*)key1+sizeof(int), (char*)key2+sizeof(int));
 		if(cmp == 0)
 			res = true;
@@ -893,8 +892,8 @@ RC GHJoin::mergePartition(int iter1, string identityName, vector<Attribute> left
 	void *recordData;
 	unsigned estRecordSize;
 
-	_rbfm->openFile("left"+identityName+string(iter1), leftFileHandle);
-	_rbfm->openFile("right"+identityName+string(iter1), rightFileHandle);
+	_rbfm->openFile("left"+identityName+to_string(iter1), leftFileHandle);
+	_rbfm->openFile("right"+identityName+to_string(iter1), rightFileHandle);
 	_rbfm->openFile("res"+identityName, resFileHandle);
 
 	// decide which partition is smaller
@@ -909,7 +908,7 @@ RC GHJoin::mergePartition(int iter1, string identityName, vector<Attribute> left
 	getAllAttrNames(rightAttrList, rightAttrNames);
 	selectAttribute(rightAttrList, condition.rhsAttr, comAttr);
 
-	leftRbfmScanner.initialize(leftFileHandle, leftAttrList, "", NULL, NULL, leftAttrNames);
+	leftRbfmScanner.initialize(leftFileHandle, leftAttrList, "", NO_OP, NULL, leftAttrNames);
 	estRecordSize = _rbfm->getEstimatedRecordDataSize(leftAttrList);
 	recordData = malloc(estRecordSize);
 	while(leftRbfmScanner.getNextRecord(rid, recordData)!=-1){
@@ -918,7 +917,7 @@ RC GHJoin::mergePartition(int iter1, string identityName, vector<Attribute> left
 	}
 	free(recordData);
 	// compare to another partition & write to file
-	rightRbfmScanner.initialize(rightFileHandle, rightAttrList, "", NULL, NULL, rightAttrNames);
+	rightRbfmScanner.initialize(rightFileHandle, rightAttrList, "", NO_OP, NULL, rightAttrNames);
 	estRecordSize = _rbfm->getEstimatedRecordDataSize(rightAttrList);
 	recordData = malloc(estRecordSize);
 	int keyLength = comAttr.length+sizeof(int);
@@ -926,7 +925,7 @@ RC GHJoin::mergePartition(int iter1, string identityName, vector<Attribute> left
 	void *rightKey = malloc(keyLength);
 
 	while(rightRbfmScanner.getNextRecord(rid, recordData)){
-		for(int iter1= 0; iter1<inMemorySet.at(iter1);iter1++){
+		for(unsigned iter1= 0; iter1<inMemorySet.size();iter1++){
 			short leftSize, rightSize; // in case of long str
 			void *leftRecord = inMemorySet.at(iter1);
 			_rbfm->getAttrFromData(leftAttrList, leftRecord, leftKey, condition.lhsAttr, leftSize);
@@ -955,7 +954,7 @@ RC GHJoin::mergePartition(int iter1, string identityName, vector<Attribute> left
 
 RC GHJoin:: selectAttribute(vector<Attribute> attrList, string attrName, Attribute &attr){
 	int rc = -1;
-	for(int iter1 = 0; iter1 < attrList.size()&&rc==-1; iter1++)
+	for(unsigned iter1 = 0; iter1 < attrList.size()&&rc==-1; iter1++)
 		if(attrList.at(iter1).name == attrName){
 			attr = attrList.at(iter1);
 			rc = 0;
@@ -966,8 +965,8 @@ RC GHJoin:: selectAttribute(vector<Attribute> attrList, string attrName, Attribu
 void GHJoin::partitionOperator(Iterator *iter, string identityName, const unsigned numPartitions, string attrName){
 
 	RC rc = -1;
-	for(int iter1 = 0; iter1<numPartitions; iter1++)
-		_rbfm->createFile("identityName"+string(iter1));
+	for(unsigned iter1 = 0; iter1<numPartitions; iter1++)
+		_rbfm->createFile("identityName"+to_string(iter1));
 
 	vector<Attribute> attrList;
 	Attribute keyAttr;
@@ -981,9 +980,9 @@ void GHJoin::partitionOperator(Iterator *iter, string identityName, const unsign
 	vector<FileHandle> fileHandleList;
 	RID rid;
 
-	for(int iter1=0;iter1<numPartitions;iter1++){
+	for(unsigned iter1=0;iter1<numPartitions;iter1++){
 		FileHandle fileHandle;
-		_rbfm->openFile(identityName+string(iter1), fileHandle);
+		_rbfm->openFile(identityName+to_string(iter1), fileHandle);
 		fileHandleList.push_back(fileHandle);
 	}
 

@@ -920,7 +920,7 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 	// 11/19 updated to fit idx page
 	RC res = -1;
 	IdxRecordHeader *idxRecordHeader;
-	bool overflowFlag = false;
+//	bool overflowFlag = false;
 	while(res == -1 && curBucketId < totalBucketNum){
 
 		while(curRecId<=dirInfo->numOfIdx && res == -1){
@@ -956,7 +956,7 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 					ixfileHandle.idxFileHandle.readPage(curBucketId, pageData);
 			}
 			else{
-				overflowFlag = true;
+//				overflowFlag = true;
 				ixfileHandle.metaFileHandle.readPage(dirInfo->nextPageId, pageData);
 			}
 		}

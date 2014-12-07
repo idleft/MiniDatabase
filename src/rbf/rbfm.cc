@@ -28,13 +28,14 @@ RecordBasedFileManager::~RecordBasedFileManager()
 }
 void printVector(vector<short> *vec){
 	cout<<"****** Begin of print vector"<<endl;
-	for(int iter1 = 0; iter1<vec->size(); iter1++)
+	for(unsigned iter1 = 0; iter1<vec->size(); iter1++)
 		cout<<vec->at(iter1)<<endl;
 	cout<<"****** End of print vector"<<endl;
 }
 
 RC RecordBasedFileManager::debug(FileHandle fileHandle){
 	printVector(directoryOfSlots[fileHandle.getFileName()]);
+	return 0;
 }
 
 RC RecordBasedFileManager::createFile(const string &fileName)
@@ -165,7 +166,7 @@ RC RecordBasedFileManager::closeFile(FileHandle &fileHandle)
 
 	vector<short>* freeSpace = directoryOfSlots[fileHandle.getFileName()];
 	int numOfPages = (int)freeSpace->size();
-	int numOfHeaderPages = numOfPages / HEADER_PAGE_SIZE;
+	unsigned numOfHeaderPages = numOfPages / HEADER_PAGE_SIZE;
 	if( numOfPages % HEADER_PAGE_SIZE != 0 )
 		numOfHeaderPages++;
 
@@ -229,7 +230,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
 	// find first blank slot
 	for(; pageNum < slotDirectory->size(); pageNum++ )
 	{
-		if( (sizeOfRecord +  sizeof(Slot)) <= (*slotDirectory)[pageNum] )
+		if( (sizeOfRecord +  sizeof(Slot)) <= (unsigned)(*slotDirectory)[pageNum] )
 		{
 			// add record to the page
 			fileHandle.readPage( pageNum, page );
@@ -461,7 +462,7 @@ RC RecordBasedFileManager::recordToData(void* record, const vector<Attribute> &r
 {
 	short offset = 0;
 	short elementStart = 0;
-	for (short i = 0; i < recordDescriptor.size(); i++)
+	for (unsigned i = 0; i < recordDescriptor.size(); i++)
 	{
 		Attribute attr = recordDescriptor[i];
 
@@ -601,7 +602,7 @@ RC RecordBasedFileManager::deleteRecords(FileHandle &fileHandle)
 RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid)
 {
 	RC result = -1;
-	DirectoryOfSlotsInfo *dirInfo;
+//	DirectoryOfSlotsInfo *dirInfo;
 	if( fileHandle.getFile() == NULL )
 			return result;
 	if( directoryOfSlots.find( fileHandle.getFileName() ) ==
@@ -723,7 +724,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 
 int RecordBasedFileManager::getEstimatedRecordDataSize(vector<Attribute> rescordDescriptor){
 	int res = 0;
-	for(int iter1 = 0; iter1<rescordDescriptor.size(); iter1++)
+	for(unsigned iter1 = 0; iter1<rescordDescriptor.size(); iter1++)
 	{
 		if(rescordDescriptor.at(iter1).type==TypeVarChar)
 			res+=sizeof(int);
@@ -735,7 +736,7 @@ int RecordBasedFileManager::getEstimatedRecordDataSize(vector<Attribute> rescord
 RC RecordBasedFileManager::getAttrFromData(const vector<Attribute> &recordDescriptor, void* recordData, void* data, const string attributeName, short &attrSize){
 	int fieldPointer = 0;
 	RC result = -1;
-	for(int iter1 = 0; iter1<recordDescriptor.size()&&result == -1; iter1++){
+	for(unsigned iter1 = 0; iter1<recordDescriptor.size()&&result == -1; iter1++){
 		if(recordDescriptor.at(iter1).name == attributeName){
 			result = 0;
 			if(recordDescriptor.at(iter1).type == TypeInt){
@@ -822,7 +823,7 @@ RC RecordBasedFileManager::reorganizePage(FileHandle &fileHandle, const vector<A
 
 	short offset = 0;
 
-	for( unsigned iter1 = 0; iter1 < slotNum; iter1++ ) {
+	for( short iter1 = 0; iter1 < slotNum; iter1++ ) {
 
 		// data is there, let's move them
 		if( slot->begin < 0 )
@@ -1040,7 +1041,7 @@ bool RBFM_ScanIterator::checkCondition(void* data, string &attrName, vector<Attr
 
 RC  RBFM_ScanIterator::inrecreaseIteratorPos(){
 	slotNum += 1;
-	if(slotNum>dirInfo->numOfSlots){
+	if((short)slotNum>dirInfo->numOfSlots){
 		pageNum +=1;
 		slotNum = 1;
 	}
@@ -1057,7 +1058,7 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 	while( (pageNum < totalPageNum) && result ){		// [EUNJEONG.SHIN] Add parenthesis to make it clear
 
 
-		if( slotNum > dirInfo->numOfSlots )
+		if( (short)slotNum > dirInfo->numOfSlots )
 		{
 			slotNum = 1;
 			pageNum++;
@@ -1090,7 +1091,7 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 			int attrSetSize = 0;
 			short attrSize = 0;
 			void *attrBuffer = malloc(1000);//assume single feature maximum size 1000 ##DANGER##
-			for(int iter1 = 0; iter1<this->attributeNames.size(); iter1++)
+			for(unsigned iter1 = 0; iter1<this->attributeNames.size(); iter1++)
 			{
 				string attrName = this->attributeNames.at(iter1);
 				this->_rbfm->getAttrFromData(recordDescriptor, recordData, attrBuffer, attrName,attrSize);
@@ -1106,7 +1107,7 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 }
 
 RC RBFM_ScanIterator::getAttrSizeByName(string attrName, vector<Attribute> attrSet){
-	for(int iter1 = 0; iter1<attrSet.size();iter1++){
+	for(unsigned iter1 = 0; iter1<attrSet.size();iter1++){
 		Attribute attr = attrSet.at(iter1);
 		if(attr.name == attrName)
 			return attr.length;
