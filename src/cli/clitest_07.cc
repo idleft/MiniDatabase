@@ -43,9 +43,9 @@ void Test07()
 
   exec("load salary salary_5");
 
-  exec("SELECT GHJOIN employee, ages WHERE Age = Age PARTITIONS(10)");
+  // exec("SELECT GHJOIN employee, ages WHERE Age = Age PARTITIONS(10)");
 
-  exec("SELECT GHJOIN (GHJOIN employee, salary WHERE Salary = Salary PARTITIONS(10)), ages WHERE Age = Age PARTITIONS(10)");
+  // exec("SELECT GHJOIN (GHJOIN employee, salary WHERE Salary = Salary PARTITIONS(10)), ages WHERE Age = Age PARTITIONS(10)");
 
   exec("SELECT GHJOIN (GHJOIN (GHJOIN employee, employee WHERE EmpName = EmpName PARTITIONS(10)), salary) WHERE Salary = Salary PARTITIONS(10)), ages WHERE Age = Age PARTITIONS(10)");
 

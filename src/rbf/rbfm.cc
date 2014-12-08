@@ -72,6 +72,20 @@ RC RecordBasedFileManager::createFile(const string &fileName)
 
 }
 
+RC RecordBasedFileManager::selectAttributes( vector<Attribute> attrList, vector<string> attrNames, 
+		vector<Attribute> &selectedAttrs){
+	for(string attrName : attrNames){
+		for(Attribute attr :attrList){
+			if(attr.name == attrName){
+				selectedAttrs.push_back(attr);
+				break;
+			}
+		}
+	}
+	return 0;
+}
+
+
 RC RecordBasedFileManager::destroyFile(const string &fileName) {
 	RC result = _pfm->destroyFile( fileName.c_str() );
 
@@ -396,19 +410,19 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
 
 		if( attr.type == TypeInt )
 		{
-			printf("%d\n", *((int*)((char*)data + offset)));
+			printf(" %d\n", *((int*)((char*)data + offset)));
 			offset += attr.length;
 		}
 		else if( attr.type == TypeReal )
 		{
-			printf("%.4f\n", *((float*)((char*)data + offset)));
+			printf(" %.4f\n", *((float*)((char*)data + offset)));
 			offset += attr.length;
 		}
 		else if( attr.type == TypeVarChar )
 		{
 			int varLength = *((int*)((char*)data + offset));
 			offset += sizeof(int);
-
+			printf(" %d ", varLength);
 			for(int j = 0; j < varLength; j++)
 			{
 				printf("%c", *((char*)data + offset));
@@ -422,6 +436,36 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
 	printf("\n");
 
     return 0;
+}
+
+short RecordBasedFileManager::getSizeOfData(const vector<Attribute> &recordDescriptor, const void* data){
+	// 12.7 xkwang measure the size of data before insert
+	short length = 0;
+	short offset = 0;
+	int varLength = 0;
+	for (unsigned i = 0; i < recordDescriptor.size(); i++)
+	{
+		// cout<<"length "<<length<<endl;
+		Attribute attr = recordDescriptor[i];
+
+		if( attr.type == TypeInt )
+		{
+			length += attr.length;
+			offset += attr.length;
+		}
+		else if( attr.type == TypeReal )
+		{
+			length += attr.length;
+			offset += attr.length;
+		}
+		else if( attr.type == TypeVarChar )
+		{
+			varLength = *(int*)((char*)data+offset);
+			length += (varLength+sizeof(int));
+			offset += (varLength + sizeof(int));
+		}
+	}
+	return length;
 }
 
 short RecordBasedFileManager::getSizeOfRecord(const vector<Attribute> &recordDescriptor, const void* data)

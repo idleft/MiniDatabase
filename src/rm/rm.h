@@ -181,7 +181,7 @@ private:
 
   map< string, map<int,RID> *> tableRIDMap;
   map< int, map<int,RID> *> columnRIDMap;
-  map< string, vector<Attribute>> indexMap;
+  map< string, vector<Attribute> > indexMap;
 
 };
 #endif

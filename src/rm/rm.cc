@@ -250,7 +250,7 @@ RC RelationManager::writeIndexList(){
 	_rbfm->createFile(INDEX_CATALOG_FILE_NAME);
 	_rbfm->openFile(INDEX_CATALOG_FILE_NAME, fileHandle);
 	short eSize = _rbfm->getEstimatedRecordDataSize(indexCatalog);
-	for( map< string, vector<Attribute>>::iterator iter1=indexMap.begin();iter1!=indexMap.end();iter1++){
+	for( map< string, vector<Attribute> >::iterator iter1=indexMap.begin();iter1!=indexMap.end();iter1++){
 		vector<Attribute> attrList = iter1->second;
 		tableName = iter1->first;
 		for(vector<Attribute>::iterator iter2 = attrList.begin(); iter2!=attrList.end(); iter2++){

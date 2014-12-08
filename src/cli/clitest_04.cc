@@ -39,6 +39,8 @@ void Test04()
 
   exec("SELECT PROJECT tbl_employee GET [ * ]");
 
+  exec("SELECT PROJECT tbl_employee GET [ EmpName ]");
+
   exec("SELECT PROJECT (PROJECT tbl_employee GET [ * ]) GET [ EmpName ]");
 
   exec("SELECT PROJECT (PROJECT tbl_employee GET [ EmpName, Age ]) GET [ Age ]");
