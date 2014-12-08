@@ -224,9 +224,8 @@ class Filter : public Iterator {
 
     private:
         Iterator *iterator;
-        IndexManager *indexManager;
         string lhsAttr;
-        vector<Attribute> attributeVector;
+        vector<Attribute> attrList;
         CompOp compOp;
         AttrType type;
         char rhs_value[PAGE_SIZE];
@@ -247,12 +246,12 @@ class Project : public Iterator {
 
     private:
         Iterator* iterator;
-        unordered_set<string> attributeSet;
+        vector<string> attrNames;
 
-        vector<Attribute> attributeVector;
-        vector<Attribute> attributeVectorForProjection;
+        vector<Attribute> attrList;
+        vector<Attribute> selectedAttrList;
 
-        char retrievedData[PAGE_SIZE];
+        RecordBasedFileManager *_rbfm = RecordBasedFileManager::instance();
 };
 
 class GHJoin : public Iterator {
@@ -263,7 +262,7 @@ class GHJoin : public Iterator {
             const Condition &condition,      // Join condition (CompOp is always EQ)
             const unsigned numPartitions     // # of partitions for each relation (decided by the optimizer)
       );
-      ~GHJoin(){};
+      ~GHJoin();
 
       RC getNextTuple(void *data);
       // For attribute in vector<Attribute>, name it as rel.attr
@@ -275,9 +274,6 @@ class GHJoin : public Iterator {
       bool keyCompare(void *key1, void *key2, Attribute attr);
       RC mergePartition(int iter1, string identityName, vector<Attribute> leftAttrList,
       							vector<Attribute> rightAttrList, Condition condition, vector<Attribute>mergeAttrList);
-
-
-
       vector<Attribute> mergeAttrList;
       vector<Attribute> leftAttrList;
       vector<Attribute> rightAttrList;
@@ -285,11 +281,11 @@ class GHJoin : public Iterator {
       private:
       	  RecordBasedFileManager *_rbfm = RecordBasedFileManager::instance();
       	  IndexManager *_ix = IndexManager::instance();
+          unsigned numPartitions;
+          string identityName;
       	  Condition condition;
       	  RBFM_ScanIterator resScaner;
       	  FileHandle resFileHandle;
-
-
 };
 
 
