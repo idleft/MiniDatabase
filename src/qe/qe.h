@@ -224,8 +224,9 @@ class Filter : public Iterator {
 
     private:
         Iterator *iterator;
+        IndexManager *indexManager;
         string lhsAttr;
-        vector<Attribute> attrList;
+        vector<Attribute> attributeVector;
         CompOp compOp;
         AttrType type;
         char rhs_value[PAGE_SIZE];
@@ -395,6 +396,10 @@ class Aggregate : public Iterator {
         AggregateOp op;
         int typeOfAggregation;
         unsigned numPartitions;
+        bool status;
+//        char returnValue[PAGE_SIZE];
+
+        RecordBasedFileManager *_rbfm = RecordBasedFileManager::instance();
 };
 
 #endif

@@ -5,11 +5,31 @@
 Filter::Filter(Iterator* input, const Condition &condition) {
 	/* Initialize variables */
 	iterator = input;
-	input->getAttributes(attrList);
+
+	compOp = condition.op;
+
+	type = condition.rhsValue.type;
+
+	lhsAttr = condition.lhsAttr;
+
+	setValue(condition.rhsValue);
+
+	iterator->getAttributes(attributeVector);
 }
 
 RC Filter::getNextTuple(void *data) {
-	// 12.08 xkwang reconstruct
+
+//	cout << "Filter getNextTuple Start " << endl;
+	RC rc = -1;
+
+	do {
+		rc = iterator->getNextTuple(data);
+		if( rc != 0 )
+			return QE_EOF;
+	} while(!valueCompare(data));
+
+//	cout << "Filter getNextTuple End" << endl;
+	return 0;
 }
 
 void Filter::getAttributes(vector<Attribute> &attrs) const {
@@ -42,7 +62,7 @@ bool Filter::valueCompare(void *data) {
 //	cout << "Filter valueCompare Start" << endl;
 	char *lhs_value = (char *)data;
 
-	for ( Attribute attr : attrList ) {
+	for ( Attribute attr : attributeVector ) {
 		if ( attr.name == lhsAttr ) {
 			break;
 		}
@@ -62,20 +82,23 @@ bool Filter::valueCompare(void *data) {
 			lhs_int = *((int *)lhs_value);
 			rhs_int = *((int *)rhs_value);
 
-			compareValueByAttrType( lhs_int, rhs_int, compOp );
+			return compareValueByAttrType( lhs_int, rhs_int, compOp );
 			break;
 		case TypeReal:
 			lhs_float = *((float *)lhs_value);
 			rhs_float = *((float *)rhs_value);
 
-			compareValueByAttrType(lhs_float, rhs_float, compOp );
+			return compareValueByAttrType( lhs_float, rhs_float, compOp );
 			break;
 		case TypeVarChar:
 			int length = *((int*)lhs_value);
 			std::string lhs_string(lhs_value, length);
 			std::string rhs_string(rhs_value, length);
 
-			compareValueByAttrType(lhs_string, rhs_string, compOp);
+			cout << "lhs_string:" << lhs_string << " ,rhs_value:" << rhs_string << ",length:" <<
+					length << endl;
+
+			return compareValueByAttrType( lhs_string, rhs_string, compOp);
 			break;
 	}
 
@@ -364,7 +387,10 @@ Aggregate:: Aggregate(Iterator *input,          // Iterator of input R
 ){
 
 	if( aggAttr.type == TypeVarChar )
+	{
+		status = false;
 		cout << "VarChar Type not supported! " << " Exit with error code= " <<QE_ATTRIBUTE_NOT_SUPPORTED << endl;
+	}
 
 	typeOfAggregation =  AGGREGATION_BASIC;
 
@@ -375,6 +401,8 @@ Aggregate:: Aggregate(Iterator *input,          // Iterator of input R
 	this->aggAttr = aggAttr;
 
 	this->op = op;
+
+	status = true;
 
 };
 
@@ -427,6 +455,8 @@ Aggregate:: Aggregate(Iterator *input,             // Iterator of input R
 };
 
 RC Aggregate::getNextTuple(void *data){
+	if( status == false )
+		return QE_EOF;
 
 	RC rc = 0;
 	switch( typeOfAggregation )
@@ -434,6 +464,7 @@ RC Aggregate::getNextTuple(void *data){
 		case AGGREGATION_BASIC:
 		{
 			getNextTuple_basic(data);
+			status = false;
 			return rc;
 			break;
 		}
@@ -452,6 +483,7 @@ RC Aggregate::getNextTuple(void *data){
 				case COUNT:
 					break;
 			}
+			return rc;
 	}
 	return rc;
 };
@@ -479,21 +511,33 @@ void Aggregate::getNextTuple_basic(void *data){
 }
 
 void Aggregate::getMin_basic(void *data) {
-	void* returnValue = malloc(PAGE_SIZE);
 	int minInt = INT_MAX;
 	float minFloat = FLT_MAX;
 
+	int fullRecordLen = _rbfm->getEstimatedRecordDataSize( attributeVector );
+	void* returnValue = malloc(fullRecordLen);
+
 	while( iterator->getNextTuple( returnValue ) != QE_EOF )
 	{
-		char *value = (char *)returnValue;
+		char value[PAGE_SIZE];
 
 		for( Attribute attr: attributeVector )
 		{
 			if( attr.name == aggAttr.name )
-				break;
+			{
+				void* fieldData = malloc(attr.length);
+				short fieldSize;
+				_rbfm->getAttrFromData(attributeVector, returnValue, fieldData, attr.name, fieldSize);
+				memcpy(value, fieldData, fieldSize);
+				free(fieldData);
 
-			moveToValueByAttrType( value, attr.type );
+				break;
+			}
 		}
+
+//		 cout<<"----------------Print selected record--------------"<<endl;
+//		 _rbfm->printRecord(attributeVector, data);
+//		 cout<<"----------------END selected record--------------"<<endl;
 
 		switch( aggAttr.type )
 		{
@@ -527,31 +571,43 @@ void Aggregate::getMin_basic(void *data) {
 }
 
 void Aggregate::getMax_basic(void *data) {
-	void* returnValue = malloc(PAGE_SIZE);
 	int maxInt = INT_MIN;
-	float maxFloat = FLT_MIN;
+	float maxFloat = -FLT_MAX;
 
+	int fullRecordLen = _rbfm->getEstimatedRecordDataSize( attributeVector );
+	void* returnValue = malloc(fullRecordLen);
+
+//	cout << "getMax_basic start" << endl;
 	while( iterator->getNextTuple( returnValue ) != QE_EOF )
 	{
-		char *value = (char *)returnValue;
+		char value[PAGE_SIZE];
 
 		for( Attribute attr: attributeVector )
 		{
 			if( attr.name == aggAttr.name )
+			{
+				void* fieldData = malloc(attr.length);
+				short fieldSize;
+				_rbfm->getAttrFromData( attributeVector, returnValue, fieldData, attr.name, fieldSize);
+				memcpy((char*)value, fieldData, fieldSize);
+				free(fieldData);
 				break;
 
-			moveToValueByAttrType( value, attr.type );
+			}
 		}
 
 		switch( aggAttr.type )
 		{
 			case TypeInt:
+//				printf("%d\n", *((int*)((char*)value)));
 				if( *((int *)value) > maxInt )
 					maxInt = *((int *)value);
 				break;
 			case TypeReal:
-				if( *((float *)value) > maxFloat )
+//				printf("%.4f\n", *((float*)((char*)value)));
+				if (maxFloat < *((float *)value)) {
 					maxFloat = *((float *)value);
+				}
 				break;
 			default:
 				cout << "Type not supported" << endl;
@@ -575,20 +631,27 @@ void Aggregate::getMax_basic(void *data) {
 }
 
 void Aggregate::getSum_basic(void *data) {
-	void* returnValue = malloc(PAGE_SIZE);
 	int sumInt = 0;
 	float sumFloat = 0;
 
+	int fullRecordLen = _rbfm->getEstimatedRecordDataSize( attributeVector );
+	void* returnValue = malloc(fullRecordLen);
+
 	while( iterator->getNextTuple( returnValue ) != QE_EOF )
 	{
-		char *value = (char *)returnValue;
+		char value[PAGE_SIZE];
 
 		for( Attribute attr: attributeVector )
 		{
 			if( attr.name == aggAttr.name )
+			{
+				void* fieldData = malloc(attr.length);
+				short fieldSize;
+				_rbfm->getAttrFromData( attributeVector, returnValue, fieldData, attr.name, fieldSize);
+				memcpy((char*)value, fieldData, fieldSize);
+				free(fieldData);
 				break;
-
-			moveToValueByAttrType( value, attr.type );
+			}
 		}
 
 		switch( aggAttr.type )
@@ -621,26 +684,31 @@ void Aggregate::getSum_basic(void *data) {
 }
 
 void Aggregate::getAvg_basic(void *data) {
-	void* returnValue = malloc(PAGE_SIZE);
 	int sumInt = 0;
 	float sumFloat = 0;
 
-	int countInt = 0;
-	int countFloat  = 0;
+	float count = 0;
 
-	float avgInt = 0;
-	float avgFloat = 0;
+	float avg = 0;
+
+	int fullRecordLen = _rbfm->getEstimatedRecordDataSize( attributeVector );
+	void* returnValue = malloc(fullRecordLen);
 
 	while( iterator->getNextTuple( returnValue ) != QE_EOF )
 	{
-		char *value = (char *)returnValue;
+		char value[PAGE_SIZE];
 
 		for( Attribute attr: attributeVector )
 		{
 			if( attr.name == aggAttr.name )
+			{
+				void* fieldData = malloc(attr.length);
+				short fieldSize;
+				_rbfm->getAttrFromData( attributeVector, returnValue, fieldData, attr.name, fieldSize);
+				memcpy(value, fieldData, fieldSize);
+				free(fieldData);
 				break;
-
-			moveToValueByAttrType( value, attr.type );
+			}
 		}
 
 		switch( aggAttr.type )
@@ -648,66 +716,76 @@ void Aggregate::getAvg_basic(void *data) {
 			case TypeInt:
 			{
 				sumInt += *((int *) value );
-				countInt++;
 				break;
 			}
 			case TypeReal:
 			{
 				sumFloat += *((float *) value );
-				countFloat++;
 				break;
 			}
 			default:
 				cout << "Type not supported" << endl;
 		}
+
+		count +=  1.0;
 	}
 
 	switch( aggAttr.type )
 	{
 		case TypeInt:
 		{
-			avgInt = (float)sumInt / countInt;
-			memcpy( data , &avgInt, sizeof(float));
+			cout << sumInt << endl;
+			avg = (float)sumInt / count;
 			break;
 		}
 		case TypeReal:
 		{
-			avgFloat = sumFloat / countFloat;
-			memcpy( data , &avgFloat, sizeof(float));
+			cout << sumFloat << endl;
+			avg = sumFloat / count;
 			break;
 		}
 		default:
 			break;
-
 	}
 
-	free( returnValue );
+	memcpy( data , &avg, sizeof(float));
+
+	free(returnValue);
 }
 
 void Aggregate::getCount_basic(void *data) {
-	void* returnValue = malloc(PAGE_SIZE);
-	int countInt = 0;
-	int countFloat = 0;
+	unordered_set<float> countFloat;
+	unordered_set<int> countInt;
+
+	float countSize;
+
+	int fullRecordLen = _rbfm->getEstimatedRecordDataSize( attributeVector );
+	void* returnValue = malloc(fullRecordLen);
 
 	while( iterator->getNextTuple( returnValue ) != QE_EOF )
 	{
-		char *value = (char *)returnValue;
+		char value[PAGE_SIZE];
 
 		for( Attribute attr: attributeVector )
 		{
 			if( attr.name == aggAttr.name )
+			{
+				void* fieldData = malloc(attr.length);
+				short fieldSize;
+				_rbfm->getAttrFromData( attributeVector, returnValue, fieldData, attr.name, fieldSize);
+				memcpy(value, fieldData, fieldSize);
+				free(fieldData);
 				break;
-
-			moveToValueByAttrType( value, attr.type );
+			}
 		}
 
 		switch( aggAttr.type )
 		{
 			case TypeInt:
-				countInt ++;
+				countInt.insert(*((int *)value));
 				break;
 			case TypeReal:
-				countFloat ++;
+				countFloat.insert(*((float *)value));
 				break;
 			default:
 				cout << "Type not supported" << endl;
@@ -717,15 +795,17 @@ void Aggregate::getCount_basic(void *data) {
 	switch( aggAttr.type )
 	{
 		case TypeInt:
-			memcpy( data , &countInt, sizeof(int));
+			countSize = countInt.size();
 			break;
 		case TypeReal:
-			memcpy( data , &countFloat, sizeof(int));
+			countSize = countFloat.size();
 			break;
 		default:
 			break;
 
 	}
+
+	memcpy( data , &countSize, sizeof(float));
 
 	free( returnValue );
 }
