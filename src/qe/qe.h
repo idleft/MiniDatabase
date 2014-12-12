@@ -213,7 +213,7 @@ class Filter : public Iterator {
         Filter(Iterator *input,               // Iterator of input R
                const Condition &condition     // Selection condition
         );
-        ~Filter(){};
+        ~Filter(){ cout<<"defoncsssssssssssss"<<endl;};
 
         RC getNextTuple(void *data);
         // For attribute in vector<Attribute>, name it as rel.attr
@@ -223,8 +223,11 @@ class Filter : public Iterator {
         void setValue(Value rhsValue);
 
     private:
+        Attribute selectAttr;
         Iterator *iterator;
         vector<Attribute> attrList;
+        Condition condition;
+        RecordBasedFileManager *_rbfm = RecordBasedFileManager::instance();
 
 };
 
@@ -264,10 +267,8 @@ class GHJoin : public Iterator {
       // For attribute in vector<Attribute>, name it as rel.attr
       void getAttributes(vector<Attribute> &attrs) const;
       void partitionOperator(Iterator *iter, string identityName, const unsigned numPartitions, string attrName);
-      RC selectAttribute(vector<Attribute> attrList, string attrName, Attribute &attr);
       RC mergePartition(Iterator *iter1, string identityName);
       RC getAllAttrNames(vector<Attribute> attrList, vector<string> &attrNames);
-      bool keyCompare(void *key1, void *key2, Attribute attr);
       RC mergePartition(int iter1, string identityName, vector<Attribute> leftAttrList,
       							vector<Attribute> rightAttrList, Condition condition, vector<Attribute>mergeAttrList);
       vector<Attribute> mergeAttrList;
@@ -282,6 +283,7 @@ class GHJoin : public Iterator {
       	  Condition condition;
       	  RBFM_ScanIterator resScaner;
       	  FileHandle resFileHandle;
+          bool nonNull;
 };
 
 

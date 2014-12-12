@@ -200,6 +200,10 @@ public:
 
   RC selectAttributes( vector<Attribute> attrList, vector<string> attrNames, 
     vector<Attribute> &selectedAttrs);
+  RC selectAttribute(vector<Attribute> attrList, string attrName, Attribute &attr);
+
+  int keyCompare(void *key1, void *key2, Attribute attr);
+  bool getMatchCompareRes(CompOp op, int cmpRes);
 
 
 

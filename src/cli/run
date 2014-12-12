@@ -6,4 +6,4 @@ rm *.tbl_desc
 rm right*
 rm left*
 make
-./clitest_04
+./clitest_07

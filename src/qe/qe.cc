@@ -1,86 +1,65 @@
 
 #include "qe.h"
 
-/* Filter constructor */
+/// start of filter
 Filter::Filter(Iterator* input, const Condition &condition) {
 	/* Initialize variables */
 	iterator = input;
-	input.getAttributes(attrList);
+	iterator->getAttributes(attrList);
+	_rbfm->selectAttribute(attrList, condition.lhsAttr, selectAttr);
+	this->condition = condition;
 }
 
 RC Filter::getNextTuple(void *data) {
 	// 12.08 xkwang reconstruct
+	RC rc = -1;
+	bool qualifyFlag = false;
+	int recordLen = _rbfm->getEstimatedRecordDataSize(attrList);
+	void *recordData = malloc(recordLen);
+
+	while(qualifyFlag ==false&&iterator->getNextTuple(recordData)!=-1){
+		void* keyData = malloc(selectAttr.length);
+		short keySize;
+		_rbfm->getAttrFromData(attrList, recordData, keyData, condition.lhsAttr, keySize);
+		// printf("The compared key: %d ",*(int*)keyData);
+		int cmpRes;
+		if(condition.bRhsIsAttr == true){
+			// compare with attribute
+			Attribute cmpAttr;
+			short cmpKeySize;
+			_rbfm->selectAttribute(attrList, condition.rhsAttr, cmpAttr);
+			void* cmpKey = malloc(cmpAttr.length);
+			_rbfm->getAttrFromData(attrList, recordData, cmpKey, condition.rhsAttr,cmpKeySize);
+			cmpRes = _rbfm->keyCompare(keyData, cmpKey, selectAttr);
+			free(cmpKey);
+		}
+		else
+			cmpRes = _rbfm->keyCompare(keyData, condition.rhsValue.data, selectAttr);
+		// printf(" cmp res :%d ",cmpRes);
+		bool matchCmpRes = _rbfm->getMatchCompareRes(condition.op, cmpRes);
+		if(matchCmpRes == true){
+			qualifyFlag = true;
+			// cout<<" Qulified";
+		}
+		// putchar('\n');
+		free(keyData);
+	}
+	if(qualifyFlag == true){
+		// copy the result
+		memcpy(data, recordData, recordLen);
+		rc =  0;
+	}
+	else
+		rc = QE_EOF;
+	free(recordData);
+	return rc;
 }
 
 void Filter::getAttributes(vector<Attribute> &attrs) const {
-//	cout << "Filter getAttributes Start" << endl;
-	iterator->getAttributes(attrs);
-//	cout << "Filter getAttributes End" << endl;
+	attrs = this->attrList;
 }
 
-void Filter::setValue(Value rhsValue) {
-
-//	cout << "Filter setValue Start" << endl;
-	switch( type ) {
-		case TypeInt:
-			memcpy( rhs_value, rhsValue.data, sizeof(int) );
-			break;
-		case TypeReal:
-			memcpy( rhs_value, rhsValue.data, sizeof(float) );
-			break;
-		case TypeVarChar:
-			int length = *((int*)rhsValue.data);
-			memcpy( rhs_value, rhsValue.data, sizeof(int) + length );
-			break;
-	}
-
-//	cout << "Filter setValue End" << endl;
-}
-
-bool Filter::valueCompare(void *data) {
-
-//	cout << "Filter valueCompare Start" << endl;
-	char *lhs_value = (char *)data;
-
-	for ( Attribute attr : attributeVector ) {
-		if ( attr.name == lhsAttr ) {
-			break;
-		}
-
-		moveToValueByAttrType( lhs_value, attr.type );
-	}
-
-//	cout << "Filter moveToValueByAttrType Pass" << endl;
-
-	// prevent cross initialization error
-	int lhs_int, rhs_int;
-	float lhs_float, rhs_float;
-
-	switch( type )
-	{
-		case TypeInt:
-			lhs_int = *((int *)lhs_value);
-			rhs_int = *((int *)rhs_value);
-
-			compareValueByAttrType( lhs_int, rhs_int, compOp );
-			break;
-		case TypeReal:
-			lhs_float = *((float *)lhs_value);
-			rhs_float = *((float *)rhs_value);
-
-			compareValueByAttrType(lhs_float, rhs_float, compOp );
-			break;
-		case TypeVarChar:
-			int length = *((int*)lhs_value);
-			std::string lhs_string(lhs_value, length);
-			std::string rhs_string(rhs_value, length);
-
-			compareValueByAttrType(lhs_string, rhs_string, compOp);
-			break;
-	}
-
-	return true;
-}
+/// end of filter
 
 void moveToValueByAttrType(char* value, AttrType type) {
 
@@ -800,13 +779,13 @@ GHJoin::GHJoin(Iterator *leftIn,               // Iterator of input R
 
 	// partition
 	identityName = condition.lhsAttr+condition.rhsAttr;
-	cout<<"Create partition "<<identityName<<endl;
+	// cout<<"Create partition "<<identityName<<endl;
 	partitionOperator(leftIn, "left"+identityName, numPartitions,condition.lhsAttr);
 	partitionOperator(rightIn, "right"+identityName, numPartitions, condition.rhsAttr);
 	_rbfm->createFile("res"+identityName);
 
 	// merge attribute
-	cout<<"Merge attribute"<<endl;
+	// cout<<"Merge attribute"<<endl;
 	mergeAttrList.clear();
 	for(Attribute iter1:leftAttrList){
 		mergeAttrList.push_back(iter1);
@@ -816,7 +795,7 @@ GHJoin::GHJoin(Iterator *leftIn,               // Iterator of input R
 	}
 
 	// merge partition
-	cout<<"Merge partition"<<endl;
+	// cout<<"Merge partition"<<endl;
 	for(unsigned iter1 = 0; iter1<numPartitions; iter1++)
 		mergePartition(iter1, identityName, leftAttrList, rightAttrList, condition, mergeAttrList);
 
@@ -828,14 +807,14 @@ GHJoin::GHJoin(Iterator *leftIn,               // Iterator of input R
 }
 
 GHJoin::~GHJoin(){
-	cout<<"destory"<<endl;
-	for(unsigned iter1 = 0; iter1<numPartitions; iter1++){
-		string partitionName = identityName+to_string(iter1);
-		_rbfm->destroyFile("left"+partitionName);
-		_rbfm->destroyFile("right"+partitionName);
-		cout<<"destory "<<" left"+partitionName<<endl;
-	}
-	_rbfm->destroyFile("res"+identityName);
+	// cout<<"destory"<<endl;
+	// for(unsigned iter1 = 0; iter1<numPartitions; iter1++){
+	// 	string partitionName = identityName+to_string(iter1);
+	// 	_rbfm->destroyFile("left"+partitionName);
+	// 	_rbfm->destroyFile("right"+partitionName);
+	// 	cout<<"destory "<<" left"+partitionName<<endl;
+	// }
+	// _rbfm->destroyFile("res"+identityName);
 }
 
 RC GHJoin::getAllAttrNames(vector<Attribute> attrList, vector<string> &attrNames){
@@ -844,24 +823,6 @@ RC GHJoin::getAllAttrNames(vector<Attribute> attrList, vector<string> &attrNames
 	return 0;
 }
 
-bool GHJoin::keyCompare(void *key1, void *key2, Attribute attr){
-	bool res = true;
-	if(attr.type == TypeInt)
-		res = *(int*)key1 == *(int*)key2;
-	else if (attr.type == TypeReal)
-		res = *(float*)key1 == *(float*)key2;
-	else{
-		int cmp;
-		int len1, len2;
-		len1 = *(int*)key1;
-		len2 = *(int*)key2;
-		if(len1!=len2)
-			res = false;
-		else
-			res = (memcmp(key1,key2,len1+sizeof(int)) == 0);
-	}
-	return res;
-}
 
 RC GHJoin::mergePartition(int iter1, string identityName, vector<Attribute> leftAttrList,
 							vector<Attribute> rightAttrList, Condition condition, vector<Attribute>mergeAttrList){
@@ -888,12 +849,12 @@ RC GHJoin::mergePartition(int iter1, string identityName, vector<Attribute> left
 	// load left partition
 	getAllAttrNames(leftAttrList, leftAttrNames);
 	getAllAttrNames(rightAttrList, rightAttrNames);
-	selectAttribute(rightAttrList, condition.rhsAttr, comAttr);
+	_rbfm->selectAttribute(rightAttrList, condition.rhsAttr, comAttr);
 
 	leftRbfmScanner.initialize(leftFileHandle, leftAttrList, "", NO_OP, NULL, leftAttrNames);
 	estRecordSize = _rbfm->getEstimatedRecordDataSize(leftAttrList);
 	recordData = malloc(estRecordSize);
-	cout<<"Loading inMemorySet"<<endl;
+	// cout<<"Loading inMemorySet"<<endl;
 	while(leftRbfmScanner.getNextRecord(rid, recordData)!=-1){
 		inMemorySet.push_back(recordData);
 		recordData = malloc(estRecordSize);
@@ -915,11 +876,11 @@ RC GHJoin::mergePartition(int iter1, string identityName, vector<Attribute> left
 			_rbfm->getAttrFromData(leftAttrList, leftRecord, leftKey, condition.lhsAttr, leftSize);
 			_rbfm->getAttrFromData(rightAttrList, recordData, rightKey, condition.rhsAttr, rightSize);
 			// cout<<"----------Record 1---------------"<<comAttr.name<<endl;
-			_rbfm->printRecord(leftAttrList, leftRecord);
-			if(keyCompare(leftKey, rightKey, comAttr)){
+			// _rbfm->printRecord(leftAttrList, leftRecord);
+			if(_rbfm->keyCompare(leftKey, rightKey, comAttr)==0){
 				// cout<<"Key match : "<<comAttr.name<<endl;
 				// cout<<"----------Record 2---------------"<<endl;
-				_rbfm->printRecord(rightAttrList, recordData);
+				// _rbfm->printRecord(rightAttrList, recordData);
 				// cout<<"------------------"<<endl;
 				int actLeftRecordSize, actRightRecordSize;
 				actLeftRecordSize = _rbfm->getSizeOfData(leftAttrList, leftRecord);
@@ -931,7 +892,7 @@ RC GHJoin::mergePartition(int iter1, string identityName, vector<Attribute> left
 				memcpy((char*)mergeData+actLeftRecordSize, recordData, actRightRecordSize);
 				rc = _rbfm->insertRecord(resFileHandle, mergeAttrList, mergeData, rid);
 				// cout<<"merged Record: "<<endl;
-				_rbfm->printRecord(mergeAttrList, mergeData);
+				// _rbfm->printRecord(mergeAttrList, mergeData);
 				free(mergeData);
 			}
 		}
@@ -941,21 +902,17 @@ RC GHJoin::mergePartition(int iter1, string identityName, vector<Attribute> left
 	_rbfm->closeFile(rightFileHandle);
 	_rbfm->closeFile(resFileHandle);
 
+	_rbfm->destroyFile("left"+identityName+to_string(iter1));
+	_rbfm->destroyFile("right"+identityName+to_string(iter1));
+	// _rbfm->destroyFile("res"+identityName);
+
 	free(leftKey);
 	free(rightKey);
 	return rc;
 }
 
 
-RC GHJoin:: selectAttribute(vector<Attribute> attrList, string attrName, Attribute &attr){
-	int rc = -1;
-	for(unsigned iter1 = 0; iter1 < attrList.size()&&rc==-1; iter1++)
-		if(attrList.at(iter1).name == attrName){
-			attr = attrList.at(iter1);
-			rc = 0;
-		}
-	return rc;
-}
+
 
 void GHJoin::partitionOperator(Iterator *iter, string identityName, const unsigned numPartitions, string attrName){
 
@@ -965,7 +922,7 @@ void GHJoin::partitionOperator(Iterator *iter, string identityName, const unsign
 	vector<Attribute> attrList;
 	Attribute keyAttr;
 	iter->getAttributes(attrList);
-	selectAttribute(attrList, attrName,keyAttr);
+	_rbfm->selectAttribute(attrList, attrName,keyAttr);
 
 	void *recordData = malloc(_rbfm->getEstimatedRecordDataSize(attrList));
 	void *keyData = malloc(_rbfm->getEstimatedRecordDataSize(attrList));
@@ -998,7 +955,12 @@ void GHJoin::getAttributes(vector<Attribute> &attrList)const{
 
 RC GHJoin::getNextTuple(void *data){
 	RID rid;
-	return resScaner.getNextRecord(rid, data);
+	RC rc = resScaner.getNextRecord(rid, data);
+	if(rc == -1 && nonNull == true)
+		_rbfm->destroyFile("res"+identityName);
+	else
+		nonNull = true;
+	return rc;
 }
 
 //end of implement of GHJoin
