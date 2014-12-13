@@ -1,109 +1,65 @@
 
 #include "qe.h"
 
-/* Filter constructor */
+/// start of filter
 Filter::Filter(Iterator* input, const Condition &condition) {
 	/* Initialize variables */
 	iterator = input;
-
-	compOp = condition.op;
-
-	type = condition.rhsValue.type;
-
-	lhsAttr = condition.lhsAttr;
-
-	setValue(condition.rhsValue);
-
-	iterator->getAttributes(attributeVector);
+	iterator->getAttributes(attrList);
+	_rbfm->selectAttribute(attrList, condition.lhsAttr, selectAttr);
+	this->condition = condition;
 }
 
 RC Filter::getNextTuple(void *data) {
-
-//	cout << "Filter getNextTuple Start " << endl;
+	// 12.08 xkwang reconstruct
 	RC rc = -1;
+	bool qualifyFlag = false;
+	int recordLen = _rbfm->getEstimatedRecordDataSize(attrList);
+	void *recordData = malloc(recordLen);
 
-	do {
-		rc = iterator->getNextTuple(data);
-		if( rc != 0 )
-			return QE_EOF;
-	} while(!valueCompare(data));
-
-//	cout << "Filter getNextTuple End" << endl;
-	return 0;
+	while(qualifyFlag ==false&&iterator->getNextTuple(recordData)!=-1){
+		void* keyData = malloc(selectAttr.length);
+		short keySize;
+		_rbfm->getAttrFromData(attrList, recordData, keyData, condition.lhsAttr, keySize);
+		// printf("The compared key: %d ",*(int*)keyData);
+		int cmpRes;
+		if(condition.bRhsIsAttr == true){
+			// compare with attribute
+			Attribute cmpAttr;
+			short cmpKeySize;
+			_rbfm->selectAttribute(attrList, condition.rhsAttr, cmpAttr);
+			void* cmpKey = malloc(cmpAttr.length);
+			_rbfm->getAttrFromData(attrList, recordData, cmpKey, condition.rhsAttr,cmpKeySize);
+			cmpRes = _rbfm->keyCompare(keyData, cmpKey, selectAttr);
+			free(cmpKey);
+		}
+		else
+			cmpRes = _rbfm->keyCompare(keyData, condition.rhsValue.data, selectAttr);
+		// printf(" cmp res :%d ",cmpRes);
+		bool matchCmpRes = _rbfm->getMatchCompareRes(condition.op, cmpRes);
+		if(matchCmpRes == true){
+			qualifyFlag = true;
+			// cout<<" Qulified";
+		}
+		// putchar('\n');
+		free(keyData);
+	}
+	if(qualifyFlag == true){
+		// copy the result
+		memcpy(data, recordData, recordLen);
+		rc =  0;
+	}
+	else
+		rc = QE_EOF;
+	free(recordData);
+	return rc;
 }
 
 void Filter::getAttributes(vector<Attribute> &attrs) const {
-//	cout << "Filter getAttributes Start" << endl;
-	iterator->getAttributes(attrs);
-//	cout << "Filter getAttributes End" << endl;
+	attrs = this->attrList;
 }
 
-void Filter::setValue(Value rhsValue) {
-
-//	cout << "Filter setValue Start" << endl;
-	switch( type ) {
-		case TypeInt:
-			memcpy( rhs_value, rhsValue.data, sizeof(int) );
-			break;
-		case TypeReal:
-			memcpy( rhs_value, rhsValue.data, sizeof(float) );
-			break;
-		case TypeVarChar:
-			int length = *((int*)rhsValue.data);
-			memcpy( rhs_value, rhsValue.data, sizeof(int) + length );
-			break;
-	}
-
-//	cout << "Filter setValue End" << endl;
-}
-
-bool Filter::valueCompare(void *data) {
-
-//	cout << "Filter valueCompare Start" << endl;
-	char *lhs_value = (char *)data;
-
-	for ( Attribute attr : attributeVector ) {
-		if ( attr.name == lhsAttr ) {
-			break;
-		}
-
-		moveToValueByAttrType( lhs_value, attr.type );
-	}
-
-//	cout << "Filter moveToValueByAttrType Pass" << endl;
-
-	// prevent cross initialization error
-	int lhs_int, rhs_int;
-	float lhs_float, rhs_float;
-
-	switch( type )
-	{
-		case TypeInt:
-			lhs_int = *((int *)lhs_value);
-			rhs_int = *((int *)rhs_value);
-
-			return compareValueByAttrType( lhs_int, rhs_int, compOp );
-			break;
-		case TypeReal:
-			lhs_float = *((float *)lhs_value);
-			rhs_float = *((float *)rhs_value);
-
-			return compareValueByAttrType( lhs_float, rhs_float, compOp );
-			break;
-		case TypeVarChar:
-			int length = *((int*)lhs_value);
-			std::string lhs_string(lhs_value, length);
-			std::string rhs_string(rhs_value, length);
-
-			cout << "lhs_string:" << lhs_string << " ,rhs_value:" << rhs_string << ",length:" <<
-					length << endl;
-
-			return compareValueByAttrType( lhs_string, rhs_string, compOp);
-			break;
-	}
-
-	return true;
-}
+/// end of filter
 
 void moveToValueByAttrType(char* value, AttrType type) {
 
@@ -212,15 +168,28 @@ INLJoin::INLJoin(Iterator *leftIn,       // Iterator of input R
 	indexScan = rightIn;
 	indexScan->getAttributes( rightAttributeVector );
 
-	for( Attribute lAttr: rightAttributeVector )
+	for( Attribute rAttr: rightAttributeVector )
 	{
-		totalAttributes.push_back ( lAttr );
+		totalAttributes.push_back ( rAttr );
 	}
 
 	this->condition = condition;
+
+	init = true;
 }
 
 RC INLJoin::getNextTuple(void *data){
+	if( init == false )
+		return init;
+
+	int rRecordLen = _rbfm->getEstimatedRecordDataSize( rightAttributeVector );
+	void *rightValue = malloc( rRecordLen );
+
+	int lRecordLen = _rbfm->getEstimatedRecordDataSize( leftAttributeVector );
+	void *leftValue = malloc( lRecordLen );
+
+	int offSet = 0;
+
 	RC rc;
 
 	do {
@@ -237,39 +206,84 @@ RC INLJoin::getNextTuple(void *data){
 					return QE_EOF;
 				}
 
-				rc = getAttributeValue( leftValue, leftCondition, leftAttributeVector, condition.lhsAttr );
+				for( Attribute attr: leftAttributeVector ){
+					if( attr.name == condition.lhsAttr )
+					{
+						cout << "attribute name=" << attr.name << " condition.lhsAttr=" << condition.lhsAttr << endl;
+						void* lData = malloc(attr.length);
+						short lfieldSize;
+						_rbfm->getAttrFromData(leftAttributeVector, leftValue, lData, attr.name, lfieldSize);
+						memcpy((char*)data + offSet, lData, lfieldSize);
+						offSet+=lfieldSize;
+						free(lData);
+					}
+
+				}
+
+				cout<<"----------------Print left selected record--------------"<<endl;
+				_rbfm->printRecord(leftAttributeVector, data);
+				cout<<"----------------END left selected record--------------"<<endl;
+
+				/*
+				rc = getAttributeValue( (char*)leftValue, leftCondition, leftAttributeVector, condition.lhsAttr );
 				if( rc != 0 )
 				{
 					cout << "Failed to read attribute value from left iterator" << endl;
 					return QE_EOF;
 				}
+				*/
 
 				// Tuple retrieval failed
 				retrieveNextLeftValue = false;
 
 				// Reset the iterator
-				setRightIterator( leftValue );
+				setRightIterator( leftCondition );
 //				indexScan->setIterator( condition.rhsValue.data, condition.rhsValue.data, true, true );
 
 			} while( indexScan->getNextTuple( rightValue ) != QE_EOF );
 		}
 
 
+		for( Attribute attr: rightAttributeVector ){
+			if( attr.name == condition.rhsAttr )
+			{
+				cout << "attribute name=" << attr.name << " condition.rhsAttr=" << condition.rhsAttr << endl;
+				void* rData = malloc(attr.length);
+				short rfieldSize;
+				_rbfm->getAttrFromData(rightAttributeVector, rightValue, rData, attr.name, rfieldSize);
+				memcpy((char*)data + offSet, rData, rfieldSize);
+				offSet+=rfieldSize;
+				free(rData);
+			}
+
+		}
+
+		cout<<"----------------Print right selected record--------------"<<endl;
+		_rbfm->printRecord(rightAttributeVector, data);
+		cout<<"----------------END right selected record--------------"<<endl;
+
 		// Get right condition value
-		rc = getAttributeValue( rightValue, rightCondition, rightAttributeVector, condition.rhsAttr );
+		/*
+		rc = getAttributeValue( (char*)rightValue, rightCondition, rightAttributeVector, condition.rhsAttr );
 		if( rc != 0 )
 		{
 			cout << "Failed to read attribute value from right condition value" << endl;
 			return rc;
 		}
+		*/
 
 	} while( !compareValue( leftCondition, rightCondition, condition.op,  attrType) );
 
+/*
 	int sizeOfLeftRecord = _rbfm->getSizeOfRecord( leftAttributeVector, leftValue );
 	int sizeOfRightRecord = _rbfm->getSizeOfRecord( rightAttributeVector, rightValue );
 
-	memcpy( (char*)data, leftValue, sizeOfLeftRecord );
-	memcpy( (char*)data + sizeOfLeftRecord , rightValue, sizeOfRightRecord );
+
+	memcpy( data, leftValue, sizeOfLeftRecord );
+	memcpy( data + sizeOfLeftRecord , rightValue, sizeOfRightRecord );
+*/
+	free( rightValue );
+	free( leftValue );
 
 	return 0;
 
@@ -415,8 +429,10 @@ Aggregate:: Aggregate(Iterator *input,             // Iterator of input R
         const unsigned numPartitions 				// Number of partitions for input (decided by the optimizer)
 ){
 
-	if( aggAttr.type == TypeVarChar )
+	if( aggAttr.type == TypeVarChar ){
 		cout << "VarChar Type not supported! " << " Exit with error code= " <<QE_ATTRIBUTE_NOT_SUPPORTED << endl;
+		return;
+	}
 
 	typeOfAggregation =  AGGREGATION_GROUP;
 
@@ -432,6 +448,9 @@ Aggregate:: Aggregate(Iterator *input,             // Iterator of input R
 
 	this->numPartitions = numPartitions;
 
+	status = true;
+
+	cout << "op=" << op << endl;
 	switch( op ) {
 		case MIN:
 			calculateMinForGroup();
@@ -687,7 +706,7 @@ void Aggregate::getAvg_basic(void *data) {
 	int sumInt = 0;
 	float sumFloat = 0;
 
-	float count = 0;
+	float count = 0.;
 
 	float avg = 0;
 
@@ -735,13 +754,17 @@ void Aggregate::getAvg_basic(void *data) {
 		case TypeInt:
 		{
 			cout << sumInt << endl;
+			cout << count << endl;
 			avg = (float)sumInt / count;
+			cout << avg << endl;
 			break;
 		}
 		case TypeReal:
 		{
 			cout << sumFloat << endl;
+			cout << count << endl;
 			avg = sumFloat / count;
+			cout << avg << endl;
 			break;
 		}
 		default:
@@ -796,16 +819,18 @@ void Aggregate::getCount_basic(void *data) {
 	{
 		case TypeInt:
 			countSize = countInt.size();
+//			cout << countSize << endl;
+			memcpy( data , &countSize, sizeof(float));
 			break;
 		case TypeReal:
 			countSize = countFloat.size();
+//			cout << countSize << endl;
+			memcpy( data , &countSize, sizeof(float));
 			break;
 		default:
 			break;
 
 	}
-
-	memcpy( data , &countSize, sizeof(float));
 
 	free( returnValue );
 }
@@ -843,7 +868,76 @@ void Aggregate::getAttributes(vector<Attribute> &attrs) const{
 
 void Aggregate::calculateMinForGroup()
 {
+	int matchCount = 0;
 
+	int fullRecordLen = _rbfm->getEstimatedRecordDataSize( attributeVector );
+	void* returnValue = malloc(fullRecordLen);
+
+
+	while( iterator->getNextTuple( returnValue ) != QE_EOF )
+	{
+
+		char aggrValue[PAGE_SIZE];
+		char groupAttrValue[PAGE_SIZE];
+
+		for( Attribute attr: attributeVector )
+		{
+			if( matchCount >= 2 )
+				return;
+
+			if( aggAttr.name == attr.name )
+			{
+				void* fieldData = malloc( attr.length );
+				short fieldSize;
+				_rbfm->getAttrFromData( attributeVector, returnValue, fieldData, attr.name, fieldSize);
+				memcpy((char*)aggrValue, fieldData, fieldSize);
+				free(fieldData);
+				matchCount += 1;
+				break;
+			}
+
+			if( groupAttr.name == attr.name )
+			{
+				void* fieldData = malloc( attr.length );
+				short fieldSize;
+				_rbfm->getAttrFromData( attributeVector, returnValue, fieldData, attr.name, fieldSize);
+				memcpy((char*)groupAttrValue, fieldData, fieldSize);
+				free(fieldData);
+				matchCount += 1;
+			}
+		}
+
+		switch( aggAttr. type )
+		{
+			case TypeInt:
+				 if( groupAttr.type == TypeInt )
+					 groupMin( groupmap_int_int, *((int*)groupAttrValue), *((int*)aggrValue) );
+				break;
+
+			case TypeReal:
+				 if( groupAttr.type == TypeReal )
+					 groupMin( groupmap_int_float, *((int*)groupAttrValue), *((float*)aggrValue) );
+				break;
+
+			case TypeVarChar:
+				if( groupAttr.type == TypeVarChar )
+				{
+					int length = *((int*)groupAttrValue);
+//					substr(sizeof(int), length-sizeof(int), groupAttrValue);
+					string gString = string( groupAttrValue, length );
+					cout << "gString=" << gString << endl;
+					groupMin( groupmap_int_string, *((int*)groupAttrValue),  gString);
+				}
+				break;
+
+			default:
+				cout << "Type Not Supported" << endl;
+				break;
+		}
+
+	}
+
+	free( returnValue );
 }
 
 void Aggregate::calculateMaxForGroup()
@@ -858,6 +952,94 @@ void Aggregate::calculateSumForGroup()
 
 void Aggregate::calculateAvgForGroup()
 {
+	int matchCount = 0;
+
+	int fullRecordLen = _rbfm->getEstimatedRecordDataSize( attributeVector );
+	void* returnValue = malloc(fullRecordLen);
+
+	cout << "calculateAvgForGroup" << endl;
+
+	while( iterator->getNextTuple( returnValue ) != QE_EOF )
+	{
+
+		char aggrValue[PAGE_SIZE];
+		char groupAttrValue[PAGE_SIZE];
+
+		for( Attribute attr: attributeVector )
+		{
+			cout << "matchCount=" << matchCount << endl;
+			if( matchCount >= 2 )
+				break;
+
+			if( aggAttr.name == attr.name )
+			{
+				void* fieldData = malloc( attr.length );
+				short fieldSize;
+				_rbfm->getAttrFromData( attributeVector, returnValue, fieldData, attr.name, fieldSize);
+				memcpy(aggrValue, fieldData, fieldSize);
+				cout << "aggrValue" << aggrValue << endl;
+				free(fieldData);
+				matchCount += 1;
+			}
+
+			if( groupAttr.name == attr.name )
+			{
+				void* fieldData = malloc( attr.length );
+				short fieldSize;
+				_rbfm->getAttrFromData( attributeVector, returnValue, fieldData, attr.name, fieldSize);
+				memcpy(groupAttrValue, fieldData, fieldSize);
+				cout << "groupAttrValue" << groupAttrValue << endl;
+				free(fieldData);
+				matchCount += 1;
+			}
+		}
+
+		cout << "aggrValue=" << aggrValue << ", groupAttrValue" << groupAttrValue << endl;
+
+//			float aggVal = *((float*)aggrValue);
+		double aggrVal = atof(aggrValue);
+		float aggrF = (float)aggrVal;
+
+		cout << "aggrF=" << aggrF << endl;
+
+		switch( aggAttr.type )
+		{
+			case TypeInt:
+				 if( groupAttr.type == TypeInt )
+				 {
+					 int gVal = *((int *)groupAttrValue);
+					 groupAvg( groupmap_int_float, groupmap_int_int, gVal, aggrF );
+				 }
+				break;
+
+			case TypeReal:
+				 if( groupAttr.type == TypeReal )
+				 {
+					 float gVal = *((float *)groupAttrValue);
+					 groupAvg( groupmap_float_float, groupmap_float_int, gVal, aggrF );
+				 }
+				break;
+
+			case TypeVarChar:
+				if( groupAttr.type == TypeVarChar )
+				{
+					int length = *((int*)groupAttrValue);
+					cout << "length=" << length << endl;
+//					substr(sizeof(int), length-sizeof(int), groupAttrValue);
+					string gVal = string( groupAttrValue, length );
+					cout << "gVal=" << gVal << endl;
+					groupAvg( groupmap_string_float, groupmap_string_int, gVal, aggrF );
+				}
+				break;
+
+			default:
+				cout << "Type Not Supported" << endl;
+				break;
+		}
+
+	}
+
+	free( returnValue );
 
 }
 
@@ -880,13 +1062,13 @@ GHJoin::GHJoin(Iterator *leftIn,               // Iterator of input R
 
 	// partition
 	identityName = condition.lhsAttr+condition.rhsAttr;
-	cout<<"Create partition "<<identityName<<endl;
+	// cout<<"Create partition "<<identityName<<endl;
 	partitionOperator(leftIn, "left"+identityName, numPartitions,condition.lhsAttr);
 	partitionOperator(rightIn, "right"+identityName, numPartitions, condition.rhsAttr);
 	_rbfm->createFile("res"+identityName);
 
 	// merge attribute
-	cout<<"Merge attribute"<<endl;
+	// cout<<"Merge attribute"<<endl;
 	mergeAttrList.clear();
 	for(Attribute iter1:leftAttrList){
 		mergeAttrList.push_back(iter1);
@@ -896,7 +1078,7 @@ GHJoin::GHJoin(Iterator *leftIn,               // Iterator of input R
 	}
 
 	// merge partition
-	cout<<"Merge partition"<<endl;
+	// cout<<"Merge partition"<<endl;
 	for(unsigned iter1 = 0; iter1<numPartitions; iter1++)
 		mergePartition(iter1, identityName, leftAttrList, rightAttrList, condition, mergeAttrList);
 
@@ -908,14 +1090,14 @@ GHJoin::GHJoin(Iterator *leftIn,               // Iterator of input R
 }
 
 GHJoin::~GHJoin(){
-	cout<<"destory"<<endl;
-	for(unsigned iter1 = 0; iter1<numPartitions; iter1++){
-		string partitionName = identityName+to_string(iter1);
-		_rbfm->destroyFile("left"+partitionName);
-		_rbfm->destroyFile("right"+partitionName);
-		cout<<"destory "<<" left"+partitionName<<endl;
-	}
-	_rbfm->destroyFile("res"+identityName);
+	// cout<<"destory"<<endl;
+	// for(unsigned iter1 = 0; iter1<numPartitions; iter1++){
+	// 	string partitionName = identityName+to_string(iter1);
+	// 	_rbfm->destroyFile("left"+partitionName);
+	// 	_rbfm->destroyFile("right"+partitionName);
+	// 	cout<<"destory "<<" left"+partitionName<<endl;
+	// }
+	// _rbfm->destroyFile("res"+identityName);
 }
 
 RC GHJoin::getAllAttrNames(vector<Attribute> attrList, vector<string> &attrNames){
@@ -924,24 +1106,6 @@ RC GHJoin::getAllAttrNames(vector<Attribute> attrList, vector<string> &attrNames
 	return 0;
 }
 
-bool GHJoin::keyCompare(void *key1, void *key2, Attribute attr){
-	bool res = true;
-	if(attr.type == TypeInt)
-		res = *(int*)key1 == *(int*)key2;
-	else if (attr.type == TypeReal)
-		res = *(float*)key1 == *(float*)key2;
-	else{
-		int cmp;
-		int len1, len2;
-		len1 = *(int*)key1;
-		len2 = *(int*)key2;
-		if(len1!=len2)
-			res = false;
-		else
-			res = (memcmp(key1,key2,len1+sizeof(int)) == 0);
-	}
-	return res;
-}
 
 RC GHJoin::mergePartition(int iter1, string identityName, vector<Attribute> leftAttrList,
 							vector<Attribute> rightAttrList, Condition condition, vector<Attribute>mergeAttrList){
@@ -968,12 +1132,12 @@ RC GHJoin::mergePartition(int iter1, string identityName, vector<Attribute> left
 	// load left partition
 	getAllAttrNames(leftAttrList, leftAttrNames);
 	getAllAttrNames(rightAttrList, rightAttrNames);
-	selectAttribute(rightAttrList, condition.rhsAttr, comAttr);
+	_rbfm->selectAttribute(rightAttrList, condition.rhsAttr, comAttr);
 
 	leftRbfmScanner.initialize(leftFileHandle, leftAttrList, "", NO_OP, NULL, leftAttrNames);
 	estRecordSize = _rbfm->getEstimatedRecordDataSize(leftAttrList);
 	recordData = malloc(estRecordSize);
-	cout<<"Loading inMemorySet"<<endl;
+	// cout<<"Loading inMemorySet"<<endl;
 	while(leftRbfmScanner.getNextRecord(rid, recordData)!=-1){
 		inMemorySet.push_back(recordData);
 		recordData = malloc(estRecordSize);
@@ -995,11 +1159,11 @@ RC GHJoin::mergePartition(int iter1, string identityName, vector<Attribute> left
 			_rbfm->getAttrFromData(leftAttrList, leftRecord, leftKey, condition.lhsAttr, leftSize);
 			_rbfm->getAttrFromData(rightAttrList, recordData, rightKey, condition.rhsAttr, rightSize);
 			// cout<<"----------Record 1---------------"<<comAttr.name<<endl;
-			_rbfm->printRecord(leftAttrList, leftRecord);
-			if(keyCompare(leftKey, rightKey, comAttr)){
+			// _rbfm->printRecord(leftAttrList, leftRecord);
+			if(_rbfm->keyCompare(leftKey, rightKey, comAttr)==0){
 				// cout<<"Key match : "<<comAttr.name<<endl;
 				// cout<<"----------Record 2---------------"<<endl;
-				_rbfm->printRecord(rightAttrList, recordData);
+				// _rbfm->printRecord(rightAttrList, recordData);
 				// cout<<"------------------"<<endl;
 				int actLeftRecordSize, actRightRecordSize;
 				actLeftRecordSize = _rbfm->getSizeOfData(leftAttrList, leftRecord);
@@ -1011,7 +1175,7 @@ RC GHJoin::mergePartition(int iter1, string identityName, vector<Attribute> left
 				memcpy((char*)mergeData+actLeftRecordSize, recordData, actRightRecordSize);
 				rc = _rbfm->insertRecord(resFileHandle, mergeAttrList, mergeData, rid);
 				// cout<<"merged Record: "<<endl;
-				_rbfm->printRecord(mergeAttrList, mergeData);
+				// _rbfm->printRecord(mergeAttrList, mergeData);
 				free(mergeData);
 			}
 		}
@@ -1021,21 +1185,16 @@ RC GHJoin::mergePartition(int iter1, string identityName, vector<Attribute> left
 	_rbfm->closeFile(rightFileHandle);
 	_rbfm->closeFile(resFileHandle);
 
+	_rbfm->destroyFile("left"+identityName+to_string(iter1));
+	_rbfm->destroyFile("right"+identityName+to_string(iter1));
+	// _rbfm->destroyFile("res"+identityName);
 	free(leftKey);
 	free(rightKey);
 	return rc;
 }
 
 
-RC GHJoin:: selectAttribute(vector<Attribute> attrList, string attrName, Attribute &attr){
-	int rc = -1;
-	for(unsigned iter1 = 0; iter1 < attrList.size()&&rc==-1; iter1++)
-		if(attrList.at(iter1).name == attrName){
-			attr = attrList.at(iter1);
-			rc = 0;
-		}
-	return rc;
-}
+
 
 void GHJoin::partitionOperator(Iterator *iter, string identityName, const unsigned numPartitions, string attrName){
 
@@ -1045,7 +1204,7 @@ void GHJoin::partitionOperator(Iterator *iter, string identityName, const unsign
 	vector<Attribute> attrList;
 	Attribute keyAttr;
 	iter->getAttributes(attrList);
-	selectAttribute(attrList, attrName,keyAttr);
+	_rbfm->selectAttribute(attrList, attrName,keyAttr);
 
 	void *recordData = malloc(_rbfm->getEstimatedRecordDataSize(attrList));
 	void *keyData = malloc(_rbfm->getEstimatedRecordDataSize(attrList));
@@ -1078,7 +1237,12 @@ void GHJoin::getAttributes(vector<Attribute> &attrList)const{
 
 RC GHJoin::getNextTuple(void *data){
 	RID rid;
-	return resScaner.getNextRecord(rid, data);
+	RC rc = resScaner.getNextRecord(rid, data);
+	if(rc == -1 && nonNull == true)
+		_rbfm->destroyFile("res"+identityName);
+	else
+		nonNull = true;
+	return rc;
 }
 
 //end of implement of GHJoin

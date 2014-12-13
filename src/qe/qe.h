@@ -10,6 +10,7 @@
 #include <climits>
 #include <float.h>
 #include <unordered_set>
+#include <unordered_map>
 
 # define QE_EOF (-1)  // end of the index scan
 
@@ -150,12 +151,16 @@ class IndexScan : public Iterator
         	this->attrName = attrName;
 
 
+//        	cout << "[EJSHIN FOR DEBUG] [IndexScan] attrName=" << attrName << endl;
+
             // Get Attributes from RM
             rm.getAttributes(tableName, attrs);
 
             // Call rm indexScan to get iterator
             iter = new RM_IndexScanIterator();
             rm.indexScan(tableName, attrName, NULL, NULL, true, true, *iter);
+
+//            cout << "[EJSHIN FOR DEBUG] [IndexScan] tableName=" << this->tableName << " ,attrName=" << this->attrName << endl;
 
             // Set alias
             if(alias) this->tableName = alias;
@@ -177,9 +182,11 @@ class IndexScan : public Iterator
         RC getNextTuple(void *data)
         {
             int rc = iter->getNextEntry(rid, key);
+            cout << "iter->getNextEntry:" << rc << endl;
             if(rc == 0)
             {
                 rc = rm.readTuple(tableName.c_str(), rid, data);
+                cout << "rm.readTuple[" << tableName.c_str()<< "]=" << rc << endl;
             }
             return rc;
         };
@@ -223,13 +230,11 @@ class Filter : public Iterator {
         void setValue(Value rhsValue);
 
     private:
+        Attribute selectAttr;
         Iterator *iterator;
-        IndexManager *indexManager;
-        string lhsAttr;
-        vector<Attribute> attributeVector;
-        CompOp compOp;
-        AttrType type;
-        char rhs_value[PAGE_SIZE];
+        vector<Attribute> attrList;
+        Condition condition;
+        RecordBasedFileManager *_rbfm = RecordBasedFileManager::instance();
 
 };
 
@@ -269,10 +274,8 @@ class GHJoin : public Iterator {
       // For attribute in vector<Attribute>, name it as rel.attr
       void getAttributes(vector<Attribute> &attrs) const;
       void partitionOperator(Iterator *iter, string identityName, const unsigned numPartitions, string attrName);
-      RC selectAttribute(vector<Attribute> attrList, string attrName, Attribute &attr);
       RC mergePartition(Iterator *iter1, string identityName);
       RC getAllAttrNames(vector<Attribute> attrList, vector<string> &attrNames);
-      bool keyCompare(void *key1, void *key2, Attribute attr);
       RC mergePartition(int iter1, string identityName, vector<Attribute> leftAttrList,
       							vector<Attribute> rightAttrList, Condition condition, vector<Attribute>mergeAttrList);
       vector<Attribute> mergeAttrList;
@@ -287,6 +290,7 @@ class GHJoin : public Iterator {
       	  Condition condition;
       	  RBFM_ScanIterator resScaner;
       	  FileHandle resFileHandle;
+          bool nonNull;
 };
 
 
@@ -342,6 +346,8 @@ class INLJoin : public Iterator {
         bool retrieveNextLeftValue;
         bool retrieveNextRightValue;
 
+        bool init;
+
         RecordBasedFileManager *_rbfm = RecordBasedFileManager::instance();
 
 };
@@ -387,6 +393,44 @@ class Aggregate : public Iterator {
         void getSum_basic(void *data);
         void getAvg_basic(void *data);
         void getCount_basic(void *data);
+
+        /* value type, aggregate value type */
+        unordered_map<int, int> groupmap_int_int;
+        unordered_map<int, float> groupmap_int_float;
+        unordered_map<int, string> groupmap_int_string;
+
+        unordered_map<float, float> groupmap_float_float;
+        unordered_map<float, int> groupmap_float_int;
+
+        unordered_map<string, float> groupmap_string_float;
+        unordered_map<string, int> groupmap_string_int;
+
+        template <typename GR, typename AGG>
+		void groupMin(unordered_map<GR, AGG> &map, const GR &gr, const AGG& agg) {
+			if (map.count(gr) == 0) {
+				map[gr] = agg;
+			} else if (map[gr] > agg){
+				map[gr] = agg;
+			}
+		}
+
+        template <typename GR>
+		void groupAvg(unordered_map<GR, float> &map_sum,
+				unordered_map<GR, int> &map_count,
+				const GR &gr, float &agg) {
+			if (map_count.count(gr) == 0) {
+				map_count[gr] = 1;
+			} else {
+				map_count[gr] = map_count[gr] + 1;
+			}
+			if (map_sum.count(gr) == 0) {
+				map_sum[gr] = (float)agg;
+			} else {
+				map_sum[gr] = map_sum[gr] + (float)agg;
+			}
+
+			cout << "map_sum[gr]" << map_sum[gr] << endl;
+		}
 
     private:
         Iterator	*iterator;
