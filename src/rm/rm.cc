@@ -149,7 +149,7 @@ RC RelationManager::deleteTable(const string &tableName)
 RC RelationManager::colDescriptorToAttri(char* data, Attribute &colAttri){
 	// [tableID][tableName][columnStart][columnName][columnType][maxLength]
 	int offset = 0;
-	int varLen = 0,columnStart;
+	int varLen = 0, columnStart;
 
 	// [EUNJEONG.SHIN] rewrote the whole function not to use offset
 	data = data + sizeof(int);	//skip the tableID
@@ -209,7 +209,8 @@ RC RelationManager::createIndex(const string &tableName, const string &attribute
 		return -1;
 
 	IXFileHandle ixFileHandle;
-	rc = _im->openFile( tableName+".tbl", ixFileHandle );
+	rc = _im->openFile( index, ixFileHandle );	// [EUNJEONG.SHIN] Bug fix input from tableName+".tbl" -> index
+//	cout << "_im->openFile, tableName:" << tableName << ":" << rc << endl;
 	if( rc != 0 )
 	    return rc;
 
@@ -250,7 +251,7 @@ RC RelationManager::writeIndexList(){
 	_rbfm->createFile(INDEX_CATALOG_FILE_NAME);
 	_rbfm->openFile(INDEX_CATALOG_FILE_NAME, fileHandle);
 	short eSize = _rbfm->getEstimatedRecordDataSize(indexCatalog);
-	for( map< string, vector<Attribute>>::iterator iter1=indexMap.begin();iter1!=indexMap.end();iter1++){
+	for( map< string, vector<Attribute> >::iterator iter1=indexMap.begin();iter1!=indexMap.end();iter1++){
 		vector<Attribute> attrList = iter1->second;
 		tableName = iter1->first;
 		for(vector<Attribute>::iterator iter2 = attrList.begin(); iter2!=attrList.end(); iter2++){
@@ -363,6 +364,7 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 
 	map<int, RID>* tableIdSet = tableRIDMap[tableName];
 //	printf("Table RID map size: %d  Table id set: %d\n",tableRIDMap.size(),tableIdSet->size());
+// EUNJEONG.SHIN 120714
 	for(map<int, RID>::iterator iter1 = tableIdSet->begin(); iter1!=tableIdSet->end(); iter1++){
 
 		int tableId = iter1->first; // only require tableId
@@ -386,8 +388,13 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 			if( result != 0 )
 				return result;
 
-			if( colAttri.name.compare("tableID") != 0 )
-				attrs.push_back( colAttri );
+			if( colAttri.name.compare("tableID") != 0
+				&& colAttri.name.compare("fileName") != 0 )
+					attrs.push_back( colAttri );
+
+/*	EUNJEONG.SHIN && colAttri.name.compare("tableName") != 0 */
+
+
 
 			free( colDescriptor );
 		}
@@ -971,7 +978,7 @@ RC RelationManager::insertTableEntry( int tableID, string tableName, string catF
 	varCharLen = catFileName.length();
 	memcpy( data + offset, &varCharLen, sizeof(int));
 	offset += sizeof(int);
-	memcpy( data + offset, catFileName.c_str(), catFileName.length() );// modified by xk
+	memcpy( data + offset, catFileName.c_str(), varCharLen );// modified by xk
 	offset += varCharLen;
 
 	int numOfColumns = tableCatalog.size();
@@ -979,8 +986,6 @@ RC RelationManager::insertTableEntry( int tableID, string tableName, string catF
 	offset += sizeof(int);
 
 	result = _rbfm->insertRecord( fileHandle, tableCatalog, data, rid );
-	if( result != 0 )
-		return result;
 
 	free( data );
 
@@ -1003,30 +1008,41 @@ RC RelationManager::insertColumnEntry(int tableID, string tableName, int columnS
 	memcpy( data + offset, &varCharLen, sizeof(int));
 	offset += sizeof(int);
 
-	memcpy( data + offset, tableName.c_str(), varCharLen);
+	memcpy( data + offset, tableName.c_str(), varCharLen );
 	offset += varCharLen;
 
 	memcpy( data + offset, &columnStart, sizeof(int));
 	offset += sizeof(int);
 
-	varCharLen = columnName.length();
-	memcpy( data + offset, &varCharLen, sizeof(int) );
+	int columnLen = columnName.length();
+	memcpy( data + offset, &columnLen, sizeof(int) );
 	offset += sizeof(int);
 //	const char *cstrColumn = &columnName[0];
-	const char *cstrColumn = columnName.c_str();	// [EUNJEONG.SHIN] String to const char* conversion error fix
-	memcpy( data + offset, (const void*)cstrColumn, varCharLen);
-//	cout << "columnName:" << cstrColumn << endl;
-	offset += varCharLen;
+	// [EUNJEONG.SHIN] String to const char* conversion error fix
+	/*
+	char* y = new char[columnName.size() + 1];
+	strcpy( y, columnName.c_str());
+	cout << y <<" columnName.size()" << columnName.size() << endl;
 
+	memcpy( data + offset, y, strlen(y)+1);
+	*/
+	memcpy( data + offset, columnName.c_str(), columnLen );
+
+	/*
+	memcpy( data + offset, columnName.c_str(), varCharLen);
+	cout << "columnName:" << columnName.c_str() << endl;
+	*/
+	offset += columnLen;
+	
 	memcpy( data + offset, (int*)&columnType, sizeof(int) );
 	offset += sizeof(int);
 
 	memcpy( data + offset, &maxLength, sizeof(int));
+//	memcpy( data + offset, &maxLength, sizeof(AttrLength));
+//	cout << "maxLength:" << maxLength << endl;
 	offset += sizeof(int);
 
 	result = _rbfm->insertRecord( fileHandle, columnCatalog, data, rid );
-	if( result != 0 )
-		return -1;
 
 //	cout<<"For table name :"<< tableName << " TABLE_ID=" << tableID << " rid pageNum: " << rid.pageNum <<
 //			" rid slotNum: " << rid.slotNum << " result:"<< result << endl;
