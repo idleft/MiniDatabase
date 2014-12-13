@@ -201,7 +201,7 @@ RC RelationManager::createIndex(const string &tableName, const string &attribute
 	string index;
 
 	/* index name = table name + "_" + attribute name */
-	index = tableName + "_" + attributeName;
+	index = tableName + "." + attributeName;	// [EUNJEONG.SHIN] Change index name connected with "."
 
 	const unsigned numberOfPages = 4;	/* to be changed */
 	rc = _im->createFile( index, numberOfPages );
@@ -283,7 +283,7 @@ RC RelationManager::destroyIndex(const string &tableName, const string &attribut
 	RC rc;
 	string index;
 	/* index name = table name + "_" + attribute name */
-	index = tableName + "_" + attributeName;
+	index = tableName + "." + attributeName;	// [EUNJEONG.SHIN] Change index name connected with "."
 
 	rc = _im->destroyFile( index );
 	if( rc != 0 )
@@ -298,19 +298,21 @@ RC RelationManager::indexScan(const string &tableName, const string &attributeNa
 	string index;
 
 	/* index name = table name + "_" + attribute name */
-	index = tableName + "_" + attributeName;
+//	index = tableName + "." + attributeName;		// [EUNJEONG.SHIN ] attributeName itself is already an index name
 
 	IXFileHandle ixFileHandle;
-	rc = _im->openFile( tableName+".tbl", ixFileHandle );
+	rc = _im->openFile( attributeName, ixFileHandle );
 	if( rc != 0 )
 	    return rc;
 
 	Attribute attribute;
 	rc = findAttributeFromCatalog( tableName, attributeName, attribute );
+//	cout << "[EJSHIN FOR DEBUG] [findAttributeFromCatalog] rc=" << rc << endl;
 	if( rc != 0 )
 		return rc;
 
 	rc = _im->scan( ixFileHandle, attribute, lowKey, highKey, lowKeyInclusive, highKeyInclusive, rm_IndexScanIterator._ix_ScanIterator);
+//	cout << "[EJSHIN FOR DEBUG] [scan] rc=" << rc << endl;
 	if( rc != 0 )
 		return rc;
 
@@ -486,7 +488,7 @@ RC RelationManager::deleteTuples(const string &tableName)
 }
 
 string RelationManager::getIndexName(string tableName, string attrName){
-	return tableName + "_" + attrName;
+	return tableName + "." + attrName;		// [EUNJEONG.SHIN] Change index name connected with "."
 }
 
 
@@ -1098,7 +1100,9 @@ RC RM_IndexScanIterator::initialize(const Attribute attribute,
  	    bool			lowKeyInclusive,
  	    bool        	highKeyInclusive)
 {
-	return _im->scan( idxFileHandle, attribute, lowKey, highKey, lowKeyInclusive, highKeyInclusive, _ix_ScanIterator);
+	return _ix_ScanIterator.initialize( idxFileHandle, attribute, lowKey, highKey, lowKeyInclusive, highKeyInclusive );
+	// [EUNJEONG.SHIN] bug fix, (_im->scan -> _ix_ScanIterator.initialize)
+//	return _im->scan( idxFileHandle, attribute, lowKey, highKey, lowKeyInclusive, highKeyInclusive, _ix_ScanIterator);
 }
 
 RC RM_IndexScanIterator::getNextEntry(RID &rid, void* key)
