@@ -118,8 +118,13 @@ RC IndexManager::openFile(const string &fileName, IXFileHandle &ixFileHandle)
 	metaFileName = fileName + METASUFFIX;
 	idxFilename = fileName + BUCKETSUFFIX;
 
-	rc1 = _pfm->openFile(&metaFileName[0], ixFileHandle.metaFileHandle);
-	rc2 = _pfm->openFile(&idxFilename[0],ixFileHandle.idxFileHandle);
+	/* [EJSHIN] Bug fix, read file name change */
+//	rc1 = _pfm->openFile(&metaFileName[0], ixFileHandle.metaFileHandle);
+	rc1 = _pfm->openFile(metaFileName.c_str(), ixFileHandle.metaFileHandle);
+//	cout << "openFile: metaFileName[" << metaFileName.c_str() << "]=" << rc1 << endl;
+//	rc2 = _pfm->openFile(&idxFilename[0],ixFileHandle.idxFileHandle);
+	rc2 = _pfm->openFile(idxFilename.c_str(),ixFileHandle.idxFileHandle);
+//	cout << "openFile: idxFilename[" << idxFilename.c_str() << "]=" << rc2 << endl;
 	if(rc1==0&&rc2==0)
 		return 0;
 	else
@@ -904,10 +909,11 @@ RC IX_ScanIterator::initialize(IXFileHandle &ixfileHandle,
 	curInPageOffset = 0;
 
 	_ixm->getNumberOfPrimaryPages(ixfileHandle, totalBucketNum);
+	cout << "INITIALIZING SCAN ITERATOR.." << totalBucketNum << endl;
 
 	keyAttri = attribute;
 	pageData = malloc(PAGE_SIZE);
-	dirInfo = _ixm->goToDirectoryOfIdx(pageData);
+//	dirInfo = _ixm->goToDirectoryOfIdx(pageData);	// [EUNJEONG.SHIN] REDUNDANT CODE
 	ixfileHandle.idxFileHandle.readPage(0, pageData);
 	dirInfo = _ixm->goToDirectoryOfIdx(pageData);
 	// not finish yet
@@ -921,9 +927,14 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 	RC res = -1;
 	IdxRecordHeader *idxRecordHeader;
 //	bool overflowFlag = false;
+
+//	cout << "[EJSHIN FOR DEBUG] curBucketId=" << curBucketId << " , totalBucketNum=" << totalBucketNum << endl;
 	while(res == -1 && curBucketId < totalBucketNum){
 
+//		cout << "[EJSHIN FOR DEBUG] curBucketId< totalBucketNum" << endl;
+
 		while(curRecId<=dirInfo->numOfIdx && res == -1){
+//			cout << "[EJSHIN FOR DEBUG] curRecId=" << curRecId << " , dirInfo->numOfIdx=" << dirInfo->numOfIdx << endl;
 			idxRecordHeader = (IdxRecordHeader*)((char*)pageData + curInPageOffset);
 			if(idxRecordHeader->idxRecordLength < 0){
 				curInPageOffset += (0-idxRecordHeader->idxRecordLength);
