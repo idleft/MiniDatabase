@@ -1100,9 +1100,8 @@ RC RM_IndexScanIterator::initialize(const Attribute attribute,
  	    bool			lowKeyInclusive,
  	    bool        	highKeyInclusive)
 {
-	return _ix_ScanIterator.initialize( idxFileHandle, attribute, lowKey, highKey, lowKeyInclusive, highKeyInclusive );
 	// [EUNJEONG.SHIN] bug fix, (_im->scan -> _ix_ScanIterator.initialize)
-//	return _im->scan( idxFileHandle, attribute, lowKey, highKey, lowKeyInclusive, highKeyInclusive, _ix_ScanIterator);
+	return _ix_ScanIterator.initialize( idxFileHandle, attribute, lowKey, highKey, lowKeyInclusive, highKeyInclusive );
 }
 
 RC RM_IndexScanIterator::getNextEntry(RID &rid, void* key)
