@@ -691,24 +691,17 @@ unsigned IndexManager::hash(const Attribute &attribute, const void *key)
 		switch( attrType ) {
 			case TypeInt:
 			{
-//				unsigned intKey = *(unsigned*)key;
-//				cout << "intKey = " << intKey << '\n';
-	//			cout << "static_cast<unsigned int>(key)=" << static_cast<unsigned int>(*key) << endl;
 				hash = hash_uint(static_cast<unsigned int>(*(int*)key));
 				break;
 			}
 			case TypeReal:
 			{
-//				float floatKey = *(float *)key;
-//				printf("%3f\n", floatKey );
-//				cout << "floatKey = " << floatKey << '\n';
 				hash = hash_float(static_cast<float>(*(float *)key));
 				break;
 			}
 			case TypeVarChar:
 			{
 				std::string strKey((char *)key);
-//				cout << "strKey = " << strKey << '\n';
 				hash = hash_str(strKey);
 				break;
 			}
