@@ -148,6 +148,8 @@ public:
   // This method will be mainly used for debugging/testing
   RC printRecord(const vector<Attribute> &recordDescriptor, const void *data);
 
+  short getSizeOfData(const vector<Attribute> &recordDescriptor, const void* data);
+
   short getSizeOfRecord(const vector<Attribute> &recordDescriptor, const void* data);
 
   Slot* goToSlot(const void* endOfPage, unsigned slotNo);
@@ -195,6 +197,14 @@ public:
   RC insertRecordToPage(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid, unsigned pageId);
 
   RC debug(FileHandle fileHandle);
+
+  RC selectAttributes( vector<Attribute> attrList, vector<string> attrNames, 
+    vector<Attribute> &selectedAttrs);
+  RC selectAttribute(vector<Attribute> attrList, string attrName, Attribute &attr);
+
+  int keyCompare(void *key1, void *key2, Attribute attr);
+  bool getMatchCompareRes(CompOp op, int cmpRes);
+
 
 
 /**************************************************************************************************************************************************************

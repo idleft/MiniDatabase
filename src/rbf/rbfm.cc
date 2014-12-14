@@ -72,6 +72,89 @@ RC RecordBasedFileManager::createFile(const string &fileName)
 
 }
 
+int RecordBasedFileManager::keyCompare(void *key1, void *key2, Attribute attr){
+	int res = -3;
+	if(attr.type == TypeInt){
+		if(*(int*)key1 == *(int*)key2)
+			res = 0;
+		else if(*(int*)key1 > *(int*)key2)
+			res = 1;
+		else
+			res = -1;
+	}
+	else if (attr.type == TypeReal){
+		if( *(float*)key1 == *(float*)key2)
+			res =0;
+		else if(*(float*)key1 > *(float*)key2)
+			res = 1;
+		else
+			res = -1;
+	}
+	else{
+		// int cmp;
+		int len1, len2;
+		len1 = *(int*)key1;
+		len2 = *(int*)key2;
+		if(len1<len2){
+			res = memcmp((char*)key1+sizeof(int),(char*)key2+sizeof(int),len1);
+			//printf("length1 compare --- %d ",res);
+			if(res == 0)
+				res = -1;
+		}
+		else if (len1>len2){
+			res = memcmp((char*)key1+sizeof(int),(char*)key2+sizeof(int),len2);
+				//		printf("length2 compare --- %d ",res);
+
+			if(res == 0)
+				res = 1;
+		}
+		else
+			res = memcmp(key1,key2,len1+sizeof(int));
+	}
+	return res;
+}
+
+bool RecordBasedFileManager::getMatchCompareRes(CompOp op, int cmpRes){
+	bool res = false;
+	if(cmpRes==0 &&( op == EQ_OP || op == GE_OP || op == LE_OP))
+		res = true;
+	else if((cmpRes < 0||cmpRes ==0) && (op == LE_OP))
+		res = true;
+	else if((cmpRes >0 || cmpRes ==0) && (op == GE_OP))
+		res = true;
+	else if(cmpRes<0 && op == LT_OP)
+		res = true;
+	else if (cmpRes>0 && op==GT_OP)
+		res = true;
+	else if (op == NE_OP && cmpRes !=0)
+		res = true;
+	return res;
+}
+
+RC RecordBasedFileManager::selectAttribute(vector<Attribute> attrList, string attrName, Attribute &attr){
+	int rc = -1;
+	for(unsigned iter1 = 0; iter1 < attrList.size()&&rc==-1; iter1++)
+		if(attrList.at(iter1).name == attrName){
+			attr = attrList.at(iter1);
+			rc = 0;
+		}
+	return rc;
+}
+
+RC RecordBasedFileManager::selectAttributes( vector<Attribute> attrList, vector<string> attrNames, 
+		vector<Attribute> &selectedAttrs){
+	for(string attrName : attrNames){
+		for(Attribute attr :attrList){
+			if(attr.name == attrName){
+				selectedAttrs.push_back(attr);
+				break;
+			}
+		}
+	}
+	return 0;
+}
+
+
 RC RecordBasedFileManager::destroyFile(const string &fileName) {
 	RC result = _pfm->destroyFile( fileName.c_str() );
 
@@ -408,7 +491,7 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
 		{
 			int varLength = *((int*)((char*)data + offset));
 			offset += sizeof(int);
-
+			printf(" %d ", varLength);
 			for(int j = 0; j < varLength; j++)
 			{
 				printf("%c", *((char*)data + offset));
@@ -422,6 +505,36 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
 	printf("\n");
 
     return 0;
+}
+
+short RecordBasedFileManager::getSizeOfData(const vector<Attribute> &recordDescriptor, const void* data){
+	// 12.7 xkwang measure the size of data before insert
+	short length = 0;
+	short offset = 0;
+	int varLength = 0;
+	for (unsigned i = 0; i < recordDescriptor.size(); i++)
+	{
+		// cout<<"length "<<length<<endl;
+		Attribute attr = recordDescriptor[i];
+
+		if( attr.type == TypeInt )
+		{
+			length += attr.length;
+			offset += attr.length;
+		}
+		else if( attr.type == TypeReal )
+		{
+			length += attr.length;
+			offset += attr.length;
+		}
+		else if( attr.type == TypeVarChar )
+		{
+			varLength = *(int*)((char*)data+offset);
+			length += (varLength+sizeof(int));
+			offset += (varLength + sizeof(int));
+		}
+	}
+	return length;
 }
 
 short RecordBasedFileManager::getSizeOfRecord(const vector<Attribute> &recordDescriptor, const void* data)
@@ -512,6 +625,8 @@ RC RecordBasedFileManager::dataToRecord(const void* data, const vector<Attribute
 	{
 		Attribute attr = recordDescriptor[i];
 
+//		cout << i << "th descriptor reading:" << attr.name << " offset =" << offset << " elementStart="<< elementStart << endl;
+
 		*((short*)record + i + 1) = offset;	// Digest!
 
 		if( attr.type == TypeInt )
@@ -529,6 +644,7 @@ RC RecordBasedFileManager::dataToRecord(const void* data, const vector<Attribute
 		else if( attr.type == TypeVarChar )
 		{
 			memcpy( &varLength, (char*)data + elementStart, sizeof(int));
+//			cout << "TypeVarChar length=" << varLength << endl;
 			elementStart += sizeof(int);
 			memcpy( (char*)record + offset, (char*)data + elementStart, varLength);
 
@@ -737,7 +853,7 @@ RC RecordBasedFileManager::getAttrFromData(const vector<Attribute> &recordDescri
 	int fieldPointer = 0;
 	RC result = -1;
 	for(unsigned iter1 = 0; iter1<recordDescriptor.size()&&result == -1; iter1++){
-		if(recordDescriptor.at(iter1).name == attributeName){
+ 		if(recordDescriptor.at(iter1).name == attributeName){
 			result = 0;
 			if(recordDescriptor.at(iter1).type == TypeInt){
 				memcpy(data, (char *)recordData+fieldPointer, sizeof(int));
