@@ -335,6 +335,7 @@ class INLJoin : public Iterator {
         vector<Attribute> rightAttributeVector;
         vector<Attribute> totalAttributes;
 
+        Attribute selectAttr;
         Condition condition;
         AttrType attrType;
 
