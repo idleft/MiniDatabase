@@ -124,8 +124,7 @@ RC IndexManager::openFile(const string &fileName, IXFileHandle &ixFileHandle)
 //	cout << "openFile: metaFileName[" << metaFileName.c_str() << "]=" << rc1 << endl;
 //	rc2 = _pfm->openFile(&idxFilename[0],ixFileHandle.idxFileHandle);
 	rc2 = _pfm->openFile(idxFilename.c_str(),ixFileHandle.idxFileHandle);
-//	cout << "openFile: idxFilename[" << idxFilename.c_str() << "]=" << rc2 << endl;
-	if(rc1==0&&rc2==0)
+//	cout << "openFile: idxFilename[" << idxFilename.c_str() << "]=" << rc2 << endl;	if(rc1==0&&rc2==0)
 		return 0;
 	else
 		return -1;
@@ -909,7 +908,7 @@ RC IX_ScanIterator::initialize(IXFileHandle &ixfileHandle,
 	curInPageOffset = 0;
 
 	_ixm->getNumberOfPrimaryPages(ixfileHandle, totalBucketNum);
-	cout << "INITIALIZING SCAN ITERATOR.." << totalBucketNum << endl;
+
 
 	keyAttri = attribute;
 	pageData = malloc(PAGE_SIZE);
