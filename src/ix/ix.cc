@@ -909,7 +909,7 @@ RC IX_ScanIterator::initialize(IXFileHandle &ixfileHandle,
 	curInPageOffset = 0;
 
 	_ixm->getNumberOfPrimaryPages(ixfileHandle, totalBucketNum);
-	cout << "INITIALIZING SCAN ITERATOR.." << totalBucketNum << endl;
+	// cout << "INITIALIZING SCAN ITERATOR.." << totalBucketNum << endl;
 
 	keyAttri = attribute;
 	pageData = malloc(PAGE_SIZE);

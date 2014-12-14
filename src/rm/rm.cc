@@ -135,11 +135,16 @@ RC RelationManager::deleteTable(const string &tableName)
 	}
 
 	// [EUNJEONG.SHIN] delete physical file after deleting table, column record
+	// delete index 
+	vector<Attribute> attrList = indexMap[tableName];
 	string fileName = tableName + ".tbl";
 	result = _rbfm->destroyFile( fileName );
 	
-	// delete index 
-	vector<Attribute> attrList = indexMap[tableName];
+	// debug
+	// printf("attrListSize %d \n",attrList.size());
+	// for(unsigned iter1 = 0; iter1<attrList.size();iter1++)
+	// 	cout<<"----> "<<attrList.at(iter1).name<<"  <-----"<<endl;
+	//end of debug
 	for(unsigned iter1 = 0; iter1<attrList.size();iter1++)
 		destroyIndex(tableName, attrList.at(iter1).name);
 	indexMap.erase(tableName);
@@ -227,6 +232,7 @@ RC RelationManager::createIndex(const string &tableName, const string &attribute
 	RID rid;
 	Attribute attr;
 	rc = findAttributeFromCatalog( tableName, attributeName, attr );
+	// cout<<"find attribute from cata: "<<rc<<endl;
 	if( rc != 0 )
 		return rc;
 
@@ -237,8 +243,13 @@ RC RelationManager::createIndex(const string &tableName, const string &attribute
 	}
 
 	free(key);
-
+	// cout<<"The attr Inserted: "<<attr.name << "Other "<< attributeName<<endl;
 	indexMap[tableName].push_back(attr);
+
+	// vector<Attribute> attrList = indexMap[tableName];
+	// printf(" insert attrListSize %d \n",attrList.size());
+	// for(unsigned iter1 = 0; iter1<attrList.size();iter1++)
+	// 	cout<<"----> "<<attrList.at(iter1).name<<"  <-----"<<endl;
 	return rc;
 }
 
@@ -284,7 +295,7 @@ RC RelationManager::destroyIndex(const string &tableName, const string &attribut
 	string index;
 	/* index name = table name + "_" + attribute name */
 	index = tableName + "." + attributeName;	// [EUNJEONG.SHIN] Change index name connected with "."
-
+	// cout<<"delete index file: "<< index<<endl;
 	rc = _im->destroyFile( index );
 	if( rc != 0 )
 		return rc;
@@ -319,32 +330,33 @@ RC RelationManager::indexScan(const string &tableName, const string &attributeNa
 	return rc;
 }
 
-bool RelationManager::findAttributeFromCatalog(const string &tableName, const string &attributeName, Attribute &attribute)
+RC RelationManager::findAttributeFromCatalog(const string &tableName, const string &attributeName, Attribute &attribute)
 {
 	RC rc;
-	bool found = false;
+	// 12.13.2014 xkwang minor, change to rc
+	// cout<< "Finding attrName "<<attributeName<<" from table: "<<tableName<<endl;
 
 	vector<Attribute> attrs;
 	rc = getAttributes( tableName, attrs );
-	if( rc != -1 )
+	if( rc == -1 )
 		return rc;
 
 	for(Attribute attr : attrs)
 	{
 		if( attributeName.compare(attr.name) == 0 )
 		{
+			// cout<<"Get attr: "<<attr.name<<endl;
 			attribute.length = attr.length;
 			attribute.name = attr.name;
 			attribute.type = attr.type;
-			found = true;
+			rc = 0;
 		}
 	}
 
-	if( found == false )
+	if( rc == -1 )
 		return RM_ATTRIBUTE_NOT_FOUND;
-
-	return found;
-
+	else
+		return rc;
 }
 
 RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &attrs)
@@ -393,16 +405,15 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 			if( colAttri.name.compare("tableID") != 0
 				&& colAttri.name.compare("fileName") != 0 )
 					attrs.push_back( colAttri );
-
-/*	EUNJEONG.SHIN && colAttri.name.compare("tableName") != 0 */
-
-
-
 			free( colDescriptor );
 		}
 	}
 
 //	cout << "getAttributes:" << attrs.size() << endl;
+	// vector<Attribute> attrList = attrs;
+	// printf("In get attribute %d \n",attrList.size());
+	// for(unsigned iter1 = 0; iter1<attrList.size();iter1++)
+	// 	cout<<"----> "<<attrList.at(iter1).name<<"  <-----"<<endl;
 
 	_rbfm->closeFile(fileHandle);
 	return 0;

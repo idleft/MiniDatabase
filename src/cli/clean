@@ -1,0 +1,4 @@
+#!/bin/sh
+rm *.tbl
+rm *.tbl_desc
+rm employ*

@@ -146,7 +146,7 @@ public:
 		bool highKeyInclusive, 
 		RM_IndexScanIterator &rm_IndexScanIterator);
 
-  bool findAttributeFromCatalog(const string &tableName, const string &attributeName, Attribute &attribute);
+  RC findAttributeFromCatalog(const string &tableName, const string &attributeName, Attribute &attribute);
   /* extension for project 4 */
   string getIndexName(string tableName, string attrName);
 

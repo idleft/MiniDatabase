@@ -5,5 +5,7 @@ rm *.tbl
 rm *.tbl_desc
 rm right*
 rm left*
+rm employee*
 make
-./clitest_07
+./clitest_11
+
