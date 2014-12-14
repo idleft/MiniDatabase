@@ -799,7 +799,7 @@ void Aggregate::getCount_basic(void *data) {
 	unordered_set<float> countFloat;
 	unordered_set<int> countInt;
 
-	float countSize;
+	float countSize = 0.0;
 
 	int fullRecordLen = _rbfm->getEstimatedRecordDataSize( attributeVector );
 	void* returnValue = malloc(fullRecordLen);
@@ -838,18 +838,18 @@ void Aggregate::getCount_basic(void *data) {
 	{
 		case TypeInt:
 			countSize = countInt.size();
-//			cout << countSize << endl;
-			memcpy( data , &countSize, sizeof(float));
+			cout << countSize << endl;
 			break;
 		case TypeReal:
 			countSize = countFloat.size();
-//			cout << countSize << endl;
-			memcpy( data , &countSize, sizeof(float));
+			cout << countSize << endl;
 			break;
 		default:
 			break;
 
 	}
+
+	memcpy((float*)data, &countSize, sizeof(float));
 
 	free( returnValue );
 }
