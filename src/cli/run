@@ -1,0 +1,9 @@
+#!/bin/sh
+make clean
+rm res*
+rm *.tbl
+rm *.tbl_desc
+rm right*
+rm left*
+make
+./clitest_07
