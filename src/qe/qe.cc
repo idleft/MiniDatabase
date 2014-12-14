@@ -754,11 +754,13 @@ void Aggregate::getAvg_basic(void *data) {
 			case TypeInt:
 			{
 				sumInt += *((int *) value );
+				// cout<<"get value: "<<*(int*)value<<endl;
 				break;
 			}
 			case TypeReal:
 			{
 				sumFloat += *((float *) value );
+				// cout<<"get value: "<<*(float*)value<<endl;
 				break;
 			}
 			default:
@@ -772,18 +774,18 @@ void Aggregate::getAvg_basic(void *data) {
 	{
 		case TypeInt:
 		{
-			cout << sumInt << endl;
-			cout << count << endl;
+			// cout << sumInt << endl;
+			// cout << count << endl;
 			avg = (float)sumInt / count;
-			cout << avg << endl;
+			// cout << avg << endl;
 			break;
 		}
 		case TypeReal:
 		{
-			cout << sumFloat << endl;
-			cout << count << endl;
+			// cout << sumFloat << endl;
+			// cout << count << endl;
 			avg = sumFloat / count;
-			cout << avg << endl;
+			// cout << avg << endl;
 			break;
 		}
 		default:
@@ -799,7 +801,7 @@ void Aggregate::getCount_basic(void *data) {
 	unordered_set<float> countFloat;
 	unordered_set<int> countInt;
 
-	float countSize = 0.0;
+	int countSize = 0;
 
 	int fullRecordLen = _rbfm->getEstimatedRecordDataSize( attributeVector );
 	void* returnValue = malloc(fullRecordLen);
@@ -838,18 +840,19 @@ void Aggregate::getCount_basic(void *data) {
 	{
 		case TypeInt:
 			countSize = countInt.size();
-			cout << countSize << endl;
+			// cout << countSize << endl;
 			break;
 		case TypeReal:
 			countSize = countFloat.size();
-			cout << countSize << endl;
+			// cout << countSize << endl;
 			break;
 		default:
 			break;
 
 	}
+	// int resSize = (int)countSize;
 
-	memcpy((float*)data, &countSize, sizeof(float));
+	memcpy(data, &countSize, sizeof(int));
 
 	free( returnValue );
 }
@@ -875,9 +878,12 @@ void Aggregate::getAttributes(vector<Attribute> &attrs) const{
 			break;
 		case AVG:
 			attribute.name = "AVG(" + aggAttr.name + ")";
+			attribute.type = TypeReal;
+			// attribute.length = 4;
 			break;
 		case COUNT:
 			attribute.name = "COUNT(" + aggAttr.name + ")";
+			attribute.type = TypeInt;
 			break;
 	}
 
