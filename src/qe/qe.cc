@@ -176,6 +176,7 @@ INLJoin::INLJoin(Iterator *leftIn,       // Iterator of input R
 	this->condition = condition;
 
 	init = true;
+	retrieveNextLeftValue = true;
 }
 
 RC INLJoin::getNextTuple(void *data){
@@ -188,7 +189,8 @@ RC INLJoin::getNextTuple(void *data){
 	int lRecordLen = _rbfm->getEstimatedRecordDataSize( leftAttributeVector );
 	void *leftValue = malloc( lRecordLen );
 
-	int offSet = 0;
+	void* rDataAll = malloc(PAGE_SIZE);
+	void* lDataAll = malloc(PAGE_SIZE);
 
 	RC rc;
 
@@ -196,32 +198,38 @@ RC INLJoin::getNextTuple(void *data){
 		// Get next tuple from right iterator
 		rc = indexScan->getNextTuple( rightValue );
 		if( rc != 0 )
+			retrieveNextLeftValue = true;
+
+		if( retrieveNextLeftValue )
 		{
 			do{
 				// Try loading one more time
-				rc = indexScan->getNextTuple( leftValue );
+				rc = iterator->getNextTuple( leftValue );
 				if( rc != 0 )
 				{
 					cout << "Failed to load left input value " << endl;
 					return QE_EOF;
 				}
 
+				int offSet = 0;
+
 				for( Attribute attr: leftAttributeVector ){
+					cout << "left attribute name=" << attr.name << endl;
 					if( attr.name == condition.lhsAttr )
 					{
-						cout << "attribute name=" << attr.name << " condition.lhsAttr=" << condition.lhsAttr << endl;
+						cout << "left condition.lhsAttr=" << condition.lhsAttr << endl;
 						void* lData = malloc(attr.length);
 						short lfieldSize;
 						_rbfm->getAttrFromData(leftAttributeVector, leftValue, lData, attr.name, lfieldSize);
-						memcpy((char*)data + offSet, lData, lfieldSize);
+						memcpy((char*)lDataAll + offSet, lData, lfieldSize);
+//						memcpy( leftCondition, lData, lfieldSize );
 						offSet+=lfieldSize;
 						free(lData);
 					}
-
 				}
 
 				cout<<"----------------Print left selected record--------------"<<endl;
-				_rbfm->printRecord(leftAttributeVector, data);
+				_rbfm->printRecord(leftAttributeVector, lDataAll);
 				cout<<"----------------END left selected record--------------"<<endl;
 
 				/*
@@ -237,30 +245,32 @@ RC INLJoin::getNextTuple(void *data){
 				retrieveNextLeftValue = false;
 
 				// Reset the iterator
-				setRightIterator( leftCondition );
+				setRightIterator( (char*)lDataAll );
 //				indexScan->setIterator( condition.rhsValue.data, condition.rhsValue.data, true, true );
 
-			} while( indexScan->getNextTuple( rightValue ) != QE_EOF );
+			} while( indexScan->getNextTuple( rightValue ) == QE_EOF );
 		}
 
+		int roffSet = 0;
 
 		for( Attribute attr: rightAttributeVector ){
 			if( attr.name == condition.rhsAttr )
 			{
-				cout << "attribute name=" << attr.name << " condition.rhsAttr=" << condition.rhsAttr << endl;
+//				cout << "attribute name=" << attr.name << " condition.rhsAttr=" << condition.rhsAttr << endl;
 				void* rData = malloc(attr.length);
 				short rfieldSize;
 				_rbfm->getAttrFromData(rightAttributeVector, rightValue, rData, attr.name, rfieldSize);
-				memcpy((char*)data + offSet, rData, rfieldSize);
-				offSet+=rfieldSize;
+				memcpy((char*)rDataAll + roffSet, rData, rfieldSize);
+//				memcpy(rightCondition, rData, rfieldSize);
+				roffSet+=rfieldSize;
 				free(rData);
 			}
 
 		}
 
-		cout<<"----------------Print right selected record--------------"<<endl;
-		_rbfm->printRecord(rightAttributeVector, data);
-		cout<<"----------------END right selected record--------------"<<endl;
+//		cout<<"----------------Print right selected record--------------"<<endl;
+//		_rbfm->printRecord(rightAttributeVector, rDataAll);
+//		cout<<"----------------END right selected record--------------"<<endl;
 
 		// Get right condition value
 		/*
@@ -272,7 +282,8 @@ RC INLJoin::getNextTuple(void *data){
 		}
 		*/
 
-	} while( !compareValue( leftCondition, rightCondition, condition.op,  attrType) );
+//	} while( !compareValue( leftCondition, rightCondition, condition.op,  attrType) );
+	} while( !compareValue( (char*)lDataAll, (char*)rDataAll, condition.op,  attrType) );
 
 /*
 	int sizeOfLeftRecord = _rbfm->getSizeOfRecord( leftAttributeVector, leftValue );
@@ -284,6 +295,9 @@ RC INLJoin::getNextTuple(void *data){
 */
 	free( rightValue );
 	free( leftValue );
+
+	free( lDataAll );
+	free( rDataAll );
 
 	return 0;
 
@@ -359,6 +373,7 @@ bool INLJoin::compareValue( const char* lhs_value, const char* rhs_value, CompOp
 	// prevent cross initialization error
 	int lhs_int, rhs_int;
 	float lhs_float, rhs_float;
+	bool result;
 
 	switch( attrType )
 	{
@@ -366,20 +381,26 @@ bool INLJoin::compareValue( const char* lhs_value, const char* rhs_value, CompOp
 			lhs_int = *((int *)lhs_value);
 			rhs_int = *((int *)rhs_value);
 
-			compareValueByAttrType( lhs_int, rhs_int, compOp );
+			result = compareValueByAttrType( lhs_int, rhs_int, compOp );
+			cout << "lhs_int=" << lhs_int << " ,rhs_int=" << rhs_int << " ,result=" << result << endl;
+			return result;
 			break;
 		case TypeReal:
 			lhs_float = *((float *)lhs_value);
 			rhs_float = *((float *)rhs_value);
 
-			compareValueByAttrType( lhs_float, rhs_float, compOp );
+			result =  compareValueByAttrType( lhs_float, rhs_float, compOp );
+			cout << "lhs_float=" << lhs_float << " ,rhs_float=" << rhs_float << " ,result=" << result << endl;
+			return result;
 			break;
 		case TypeVarChar:
 			int length = *((int*)lhs_value);
 			std::string lhs_string(lhs_value, length);
 			std::string rhs_string(rhs_value, length);
 
-			compareValueByAttrType( lhs_string, rhs_string, compOp );
+			result = compareValueByAttrType( lhs_string, rhs_string, compOp );
+			cout << "lhs_string=" << lhs_string << " ,rhs_string=" << rhs_string << " ,result=" << result << endl;
+			return result;
 			break;
 	}
 

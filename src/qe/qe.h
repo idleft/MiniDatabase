@@ -182,11 +182,11 @@ class IndexScan : public Iterator
         RC getNextTuple(void *data)
         {
             int rc = iter->getNextEntry(rid, key);
-            cout << "iter->getNextEntry:" << rc << endl;
+//            cout << "iter->getNextEntry:" << rc << endl;
             if(rc == 0)
             {
                 rc = rm.readTuple(tableName.c_str(), rid, data);
-                cout << "rm.readTuple[" << tableName.c_str()<< "]=" << rc << endl;
+//                cout << "rm.readTuple[" << tableName.c_str()<< "]=" << rc << endl;
             }
             return rc;
         };
