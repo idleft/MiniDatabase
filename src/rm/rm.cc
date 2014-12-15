@@ -323,7 +323,7 @@ RC RelationManager::indexScan(const string &tableName, const string &attributeNa
 		return rc;
 
 	rc = _im->scan( ixFileHandle, attribute, lowKey, highKey, lowKeyInclusive, highKeyInclusive, rm_IndexScanIterator._ix_ScanIterator);
-	cout << "[EJSHIN FOR DEBUG] [scan] rc=" << rc << endl;
+//	cout << "[EJSHIN FOR DEBUG] [scan] rc=" << rc << endl;
 	if( rc != 0 )
 		return rc;
 
