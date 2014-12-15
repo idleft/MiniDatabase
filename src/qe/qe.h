@@ -359,6 +359,9 @@ class INLJoin : public Iterator {
 
         bool init;
 
+        int rRecordLen;
+        int lRecordLen;
+
         RecordBasedFileManager *_rbfm = RecordBasedFileManager::instance();
 
 };

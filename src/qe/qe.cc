@@ -248,6 +248,7 @@ BNLJoin::~BNLJoin(){
 }
 
 // end of BNLJoin
+
 // Index nested-loop join operator
 INLJoin::INLJoin(Iterator *leftIn,       // Iterator of input R
         IndexScan *rightIn,          	// IndexScan Iterator of input S
@@ -272,7 +273,7 @@ INLJoin::INLJoin(Iterator *leftIn,       // Iterator of input R
 		}
 	}
 
-	_rbfm->selectAttribute(leftAttributeVector, condition.lhsAttr, selectAttr);
+	lRecordLen = _rbfm->getEstimatedRecordDataSize( leftAttributeVector );
 
 	totalAttributes = leftAttributeVector;
 
@@ -281,9 +282,13 @@ INLJoin::INLJoin(Iterator *leftIn,       // Iterator of input R
 
 	for( Attribute rAttr: rightAttributeVector )
 	{
+
 		cout << "right attribute name=" << rAttr.name << endl;
 		totalAttributes.push_back ( rAttr );
 	}
+
+	_rbfm->selectAttribute(rightAttributeVector, condition.rhsAttr, selectAttr);
+	rRecordLen = _rbfm->getEstimatedRecordDataSize( rightAttributeVector );
 
 	this->condition = condition;
 
@@ -295,33 +300,26 @@ RC INLJoin::getNextTuple(void *data){
 	if( init == false )
 		return init;
 
-	int rRecordLen = _rbfm->getEstimatedRecordDataSize( rightAttributeVector );
-	void *rightValue = malloc( rRecordLen );
+	bool foundFlag = false;
 
-	int lRecordLen = _rbfm->getEstimatedRecordDataSize( leftAttributeVector );
+	void *rightValue = malloc( rRecordLen );
 	void *leftValue = malloc( lRecordLen );
 
-	void* rDataAll = malloc(PAGE_SIZE);
-	void* lDataAll = malloc(PAGE_SIZE);
+	void* rightKey = malloc(selectAttr.length+sizeof(int));
+	void* leftKey = malloc(selectAttr.length+sizeof(int) );
 
 	RC rc;
 
-	do {
-
-		// Get next tuple from right iterator
+	while(foundFlag == false){
 		rc = indexScan->getNextTuple( rightValue );
-		cout << "indexScan->getNextTuple=" << rc << endl;
 		if( rc != 0 )
+		{
 			retrieveNextLeftValue = true;
-
-//		cout<<"----------------Print right selected record--------------"<<endl;
-//		_rbfm->printRecord(rightAttributeVector, rightValue);
-//		cout<<"----------------END right selected record--------------"<<endl;
+		}
 
 		if( retrieveNextLeftValue )
 		{
-			do{
-				// Try loading one more time
+			do {
 				rc = iterator->getNextTuple( leftValue );
 				if( rc != 0 )
 				{
@@ -330,95 +328,51 @@ RC INLJoin::getNextTuple(void *data){
 //					break;
 				}
 
-//				cout<<"----------------Print left next selected record--------------"<<endl;
-//				_rbfm->printRecord(leftAttributeVector, leftValue);
-//				cout<<"----------------END left next selected record--------------"<<endl;
+				short leftSize, rightSize;
+				_rbfm->getAttrFromData(leftAttributeVector, leftValue, leftKey, condition.lhsAttr, leftSize);
+				_rbfm->getAttrFromData(rightAttributeVector, rightValue, rightKey, condition.rhsAttr, rightSize);
+				if(_rbfm->keyCompare(leftKey, rightKey, selectAttr)==0){
+//					 cout<<"Key match : "<<selectAttr.name<<endl;
+//					 cout<<"----------Record 2---------------"<<endl;
+//					_rbfm->printRecord(rightAttributeVector, rightValue);
+//					 cout<<"------------------"<<endl;
+					int actLeftRecordSize, actRightRecordSize;
+					actLeftRecordSize = _rbfm->getSizeOfData(leftAttributeVector, leftValue);
+					actRightRecordSize = _rbfm->getSizeOfData(rightAttributeVector,rightValue);
+//					printf("Diagnostic value: %d %d %u %u %u\n",actLeftRecordSize,actRightRecordSize,leftAttributeVector.size(),
+//							rightAttributeVector.size(),totalAttributes.size());
+					void *mergeData = malloc(actLeftRecordSize+actRightRecordSize);
+					memcpy(mergeData, leftValue, actLeftRecordSize);
+					memcpy((char*)mergeData+actLeftRecordSize, rightValue, actRightRecordSize);
+					foundFlag = true;
+					memcpy(data, mergeData, actLeftRecordSize+actRightRecordSize);
+//					cout<<"--------merged Record--------- "<<endl;
+//					 _rbfm->printRecord(totalAttributes, mergeData);
+					free(mergeData);
 
-				int offSet = 0;
-				vector<Attribute> lList;
-
-				for( Attribute attr: leftAttributeVector ){
-//					cout << "left attribute name=" << attr.name << endl;
-					if( attr.name == condition.lhsAttr )
-					{
-						Attribute cmpAttr;
-						cout << "left condition.lhsAttr=" << condition.lhsAttr << endl;
-						_rbfm->selectAttribute(leftAttributeVector, condition.lhsAttr, cmpAttr);
-						void* lData = malloc(cmpAttr.length);
-						short lfieldSize;
-						_rbfm->getAttrFromData(leftAttributeVector, leftValue, lData, condition.lhsAttr, lfieldSize);
-						memcpy((char*)lDataAll + offSet, lData, lfieldSize);
-//						memcpy( leftCondition, lData, lfieldSize );
-						offSet+=lfieldSize;
-						lList.push_back(cmpAttr);
-						free(lData);
-					}
+					retrieveNextLeftValue = false;
 				}
 
-				// Select attribute only and print
-				cout<<"----------------Print left selected attribute--------------"<<endl;
-				_rbfm->printRecord(lList, lDataAll);
-				cout<<"----------------END left selected attribute--------------"<<endl;
-
-				// Tuple retrieval failed
-				retrieveNextLeftValue = false;
-
-				// Reset the iterator
-				setRightIterator( (char*)lDataAll );
+				// [EJSHIN FOR DEBUG] Failing to set a right index iterator with new leftKey value
+//				setRightIterator( (char*)leftKey );
 
 			} while( indexScan->getNextTuple( rightValue ) == QE_EOF );
 		}
+	}
 
-		int roffSet = 0;
-		vector<Attribute> rList;
-
-		for( Attribute attr: rightAttributeVector ){
-			if( attr.name == condition.rhsAttr )
-			{
-//				cout << "attribute name=" << attr.name << " condition.rhsAttr=" << condition.rhsAttr << endl;
-				void* rData = malloc(attr.length);
-				short rfieldSize;
-				_rbfm->getAttrFromData(rightAttributeVector, rightValue, rData, attr.name, rfieldSize);
-				memcpy((char*)rDataAll + roffSet, rData, rfieldSize);
-//				memcpy(rightCondition, rData, rfieldSize);
-				roffSet+=rfieldSize;
-				rList.push_back(attr);
-				free(rData);
-			}
-
-		}
-
-		cout<<"----------------Print right selected record--------------"<<endl;
-		_rbfm->printRecord(rList, rDataAll);
-		cout<<"----------------END right selected record--------------"<<endl;
-
-//	} while( !compareValue( leftCondition, rightCondition, condition.op,  attrType) );
-//	} while( !compareValue( (char*)lDataAll, (char*)rDataAll, condition.op,  attrType) );
-
-		cout<<"Before Key match : "<< endl;
-		rc = _rbfm->keyCompare( lDataAll, rDataAll, selectAttr );
-		cout<<"Key match : "<< selectAttr.name << " rc=" << rc << endl;
-		// cout<<"----------Record 2---------------"<<endl;
-		// _rbfm->printRecord(rightAttrList, recordData);
-		// cout<<"------------------"<<endl;
-
-	} while( rc != 0 );
-
-	int sizeOfLeftRecord = _rbfm->getSizeOfRecord( leftAttributeVector, leftValue );
-	int sizeOfRightRecord = _rbfm->getSizeOfRecord( rightAttributeVector, rightValue );
-
-	memcpy( (char*)data, leftValue, sizeOfLeftRecord );
-	memcpy( (char*)data + sizeOfLeftRecord , rightValue, sizeOfRightRecord );
 
 	/* free memory allocated for each record for each relation */
 	free( rightValue );
 	free( leftValue );
 
 	/* free memory allocated for each indexed attribute for each relation */
-	free( lDataAll );
-	free( rDataAll );
+	free( rightKey );
+	free( leftKey );
 
-	return 0;
+	if(foundFlag == false)
+		return -1;
+	else
+		return 0;
 
 }
 
@@ -426,7 +380,6 @@ void INLJoin::setRightIterator(char* value) {
 
 	switch( condition.op ) {
 		case EQ_OP:
-			cout << "setIterator to" << "equal w/ value:" << value << endl;
 			indexScan->setIterator(value, value, true, true);
 			break;
 		case LT_OP:
