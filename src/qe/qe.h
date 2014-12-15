@@ -333,34 +333,24 @@ class INLJoin : public Iterator {
         // For attribute in vector<Attribute>, name it as rel.attr
         void getAttributes(vector<Attribute> &attrs) const;
 
-        RC getAttributeValue( char* value, char* condition, vector<Attribute> attributeVector, string strCondition );
-        bool compareValue( const char* lhs_value, const char* rhs_value, CompOp compOp, AttrType attrType );
-        void setRightIterator(char* value);
-
     private:
-        Iterator *iterator;
-        IndexScan *indexScan;
+        Iterator *leftIn;
+        IndexScan *rightIn;
 
-        vector<Attribute> leftAttributeVector;
-        vector<Attribute> rightAttributeVector;
-        vector<Attribute> totalAttributes;
+        vector<Attribute> leftAttrList;
+        vector<Attribute> rightAttrList;
+        vector<Attribute> mergeAttrList;
 
-        Attribute selectAttr;
+        Attribute comAttr;
         Condition condition;
-        AttrType attrType;
+        int rightRecordSize;
+        short leftSize;
+        int leftRecordSize;
+        RC leftRC,rightRC;
 
-        char leftValue[PAGE_SIZE];
-        char rightValue[PAGE_SIZE];
-        char leftCondition[PAGE_SIZE];
-        char rightCondition[PAGE_SIZE];
-
-        bool retrieveNextLeftValue;
-        bool retrieveNextRightValue;
-
-        bool init;
-
-        int rRecordLen;
-        int lRecordLen;
+        void* leftRecord;
+        void* rightRecord;
+        void *leftKey;
 
         RecordBasedFileManager *_rbfm = RecordBasedFileManager::instance();
 
@@ -408,6 +398,11 @@ class Aggregate : public Iterator {
         void getAvg_basic(void *data);
         void getCount_basic(void *data);
 
+        // caculate group value
+        RC getNextTuple_groupAvg(void *data);
+        RC getNextTuple_groupCount(void *data);
+        RC getNextTuple_groupMaxMinSum(void *data);
+
         /* value type, aggregate value type */
         unordered_map<int, int> groupmap_int_int;
         unordered_map<int, float> groupmap_int_float;
@@ -419,6 +414,8 @@ class Aggregate : public Iterator {
         unordered_map<string, float> groupmap_string_float;
         unordered_map<string, int> groupmap_string_int;
 
+        char str[PAGE_SIZE];
+
         template <typename GR, typename AGG>
 		void groupMin(unordered_map<GR, AGG> &map, const GR &gr, const AGG& agg) {
 			if (map.count(gr) == 0) {
@@ -428,11 +425,19 @@ class Aggregate : public Iterator {
 			}
 		}
 
+        template <typename GR, typename AGG>
+		void groupMax(unordered_map<GR, AGG> &map, const GR &gr, const AGG& agg) {
+			if (map.count(gr) == 0) {
+				map[gr] = agg;
+			} else if (map[gr] < agg){
+				map[gr] = agg;
+			}
+		}
+
         template <typename GR>
 		void groupAvg(unordered_map<GR, float> &map_sum,
 				unordered_map<GR, int> &map_count,
 				const GR &gr, float &agg) {
-        	cout << "groupAvg" << endl;
 			if (map_count.count(gr) == 0) {
 				map_count[gr] = 1;
 			} else {
@@ -444,7 +449,25 @@ class Aggregate : public Iterator {
 				map_sum[gr] = map_sum[gr] + (float)agg;
 			}
 
-			cout << "map_sum[gr]" << map_sum[gr] << endl;
+//			cout << "map_sum[gr]" << map_sum[gr] << endl;
+		}
+
+     	template <typename GR, typename AGG>
+		void groupSum(unordered_map<GR, AGG> &map, const GR &gr, const AGG& agg) {
+			if (map.count(gr) == 0) {
+				map[gr] = agg;
+			} else {
+				map[gr] = map[gr] + agg;
+			}
+		}
+
+     	template <typename GR>
+		void groupCount(unordered_map<GR, int> &map, const GR &gr) {
+			if (map.count(gr) == 0) {
+				map[gr] = 1;
+			} else {
+				map[gr] = map[gr] + 1;
+			}
 		}
 
     private:

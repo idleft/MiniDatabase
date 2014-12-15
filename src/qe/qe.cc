@@ -255,169 +255,78 @@ INLJoin::INLJoin(Iterator *leftIn,       // Iterator of input R
         const Condition &condition   	// Join condition
 )
 {
-
-	if( condition.bRhsIsAttr == false )
-		return;
-
-	iterator = leftIn;
-	iterator->getAttributes( leftAttributeVector );
-
-	for( Attribute attr : leftAttributeVector )
-	{
-		if( attr.name == condition.lhsAttr )
-		{
-			cout << "attr.name=" << attr.name << endl;
-			cout << "condition.lhsAttr=" << condition.lhsAttr << endl;
-			attrType = attr.type;
-			break;
-		}
-	}
-
-	lRecordLen = _rbfm->getEstimatedRecordDataSize( leftAttributeVector );
-
-	totalAttributes = leftAttributeVector;
-
-	indexScan = rightIn;
-	indexScan->getAttributes( rightAttributeVector );
-
-	for( Attribute rAttr: rightAttributeVector )
-	{
-
-		cout << "right attribute name=" << rAttr.name << endl;
-		totalAttributes.push_back ( rAttr );
-	}
-
-	_rbfm->selectAttribute(rightAttributeVector, condition.rhsAttr, selectAttr);
-	rRecordLen = _rbfm->getEstimatedRecordDataSize( rightAttributeVector );
+	// xikui dec/14/2014 reconstruct
+	this->leftIn = leftIn;
+	this->rightIn = rightIn;
 
 	this->condition = condition;
 
-	init = true;
-	retrieveNextLeftValue = true;
+	leftIn->getAttributes(leftAttrList);
+	rightIn->getAttributes(rightAttrList);
+
+	mergeAttrList.clear();
+	for(Attribute iter1:leftAttrList){
+		mergeAttrList.push_back(iter1);
+	}
+	for(Attribute iter1:rightAttrList){
+		mergeAttrList.push_back(iter1);
+	}
+
+	leftRecordSize = _rbfm->getEstimatedRecordDataSize(leftAttrList);
+	rightRecordSize = _rbfm->getEstimatedRecordDataSize(rightAttrList);
+
+	leftRecord = malloc(leftRecordSize);
+	rightRecord = malloc(rightRecordSize);
+
+	_rbfm->selectAttribute(rightAttrList, condition.rhsAttr, comAttr);
+	leftKey = malloc(comAttr.length+sizeof(int));
+
+	leftRC = leftIn->getNextTuple(leftRecord);
+	_rbfm->getAttrFromData(leftAttrList, leftRecord, leftKey, condition.lhsAttr, leftSize);
+	rightIn->setIterator(leftKey,leftKey,true,true);
 }
 
 RC INLJoin::getNextTuple(void *data){
-	if( init == false )
-		return init;
 
 	bool foundFlag = false;
-
-	void *rightValue = malloc( rRecordLen );
-	void *leftValue = malloc( lRecordLen );
-
-	void* rightKey = malloc(selectAttr.length+sizeof(int));
-	void* leftKey = malloc(selectAttr.length+sizeof(int) );
-
-	RC rc;
+	void *rightKey = malloc(comAttr.length+sizeof(int));
 
 	while(foundFlag == false){
-		rc = indexScan->getNextTuple( rightValue );
-		if( rc != 0 )
-		{
-			retrieveNextLeftValue = true;
+		if(leftRC == -1)
+			break;
+
+		rightRC = rightIn->getNextTuple(rightRecord);
+		if(rightRC == -1){
+			leftRC = leftIn->getNextTuple(leftRecord);
+			_rbfm->getAttrFromData(leftAttrList, leftRecord, leftKey, condition.lhsAttr, leftSize);
+			rightIn->setIterator(leftKey,leftKey,true,true);
 		}
-
-		if( retrieveNextLeftValue )
-		{
-			do {
-				rc = iterator->getNextTuple( leftValue );
-				if( rc != 0 )
-				{
-					cout << "Failed to load left input value " << endl;
-					return QE_EOF;
-//					break;
-				}
-
-				short leftSize, rightSize;
-				_rbfm->getAttrFromData(leftAttributeVector, leftValue, leftKey, condition.lhsAttr, leftSize);
-				_rbfm->getAttrFromData(rightAttributeVector, rightValue, rightKey, condition.rhsAttr, rightSize);
-				if(_rbfm->keyCompare(leftKey, rightKey, selectAttr)==0){
-//					 cout<<"Key match : "<<selectAttr.name<<endl;
-//					 cout<<"----------Record 2---------------"<<endl;
-//					_rbfm->printRecord(rightAttributeVector, rightValue);
-//					 cout<<"------------------"<<endl;
-					int actLeftRecordSize, actRightRecordSize;
-					actLeftRecordSize = _rbfm->getSizeOfData(leftAttributeVector, leftValue);
-					actRightRecordSize = _rbfm->getSizeOfData(rightAttributeVector,rightValue);
-//					printf("Diagnostic value: %d %d %u %u %u\n",actLeftRecordSize,actRightRecordSize,leftAttributeVector.size(),
-//							rightAttributeVector.size(),totalAttributes.size());
-					void *mergeData = malloc(actLeftRecordSize+actRightRecordSize);
-					memcpy(mergeData, leftValue, actLeftRecordSize);
-					memcpy((char*)mergeData+actLeftRecordSize, rightValue, actRightRecordSize);
-					foundFlag = true;
-					memcpy(data, mergeData, actLeftRecordSize+actRightRecordSize);
-//					cout<<"--------merged Record--------- "<<endl;
-//					 _rbfm->printRecord(totalAttributes, mergeData);
-					free(mergeData);
-
-					retrieveNextLeftValue = false;
-				}
-
-				// [EJSHIN FOR DEBUG] Failing to set a right index iterator with new leftKey value
-//				setRightIterator( (char*)leftKey );
-
-			} while( indexScan->getNextTuple( rightValue ) == QE_EOF );
+		else{
+			short leftSize, rightSize;
+			_rbfm->getAttrFromData(rightAttrList, rightRecord, rightKey, condition.rhsAttr, rightSize);
+			if(_rbfm->keyCompare(leftKey, rightKey, comAttr)==0){
+				int actLeftRecordSize, actRightRecordSize;
+				actLeftRecordSize = _rbfm->getSizeOfData(leftAttrList, leftRecord);
+				actRightRecordSize = _rbfm->getSizeOfData(rightAttrList,rightRecord);
+				// printf("Diagnostic value: %d %d %u %u %u\n",actLeftRecordSize,actRightRecordSize,leftAttrList.size(),
+					// rightAttrList.size(),mergeAttrList.size());
+				void *mergeData = malloc(actLeftRecordSize+actRightRecordSize);
+				memcpy(mergeData, leftRecord, actLeftRecordSize);
+				memcpy((char*)mergeData+actLeftRecordSize, rightRecord, actRightRecordSize);
+				foundFlag = true;
+				memcpy(data, mergeData, actLeftRecordSize+actRightRecordSize);
+				// cout<<"merged Record: "<<endl;
+				// _rbfm->printRecord(mergeAttrList, mergeData);
+				free(mergeData);
+			}
 		}
 	}
-
-
-	/* free memory allocated for each record for each relation */
-	free( rightValue );
-	free( leftValue );
-
-	/* free memory allocated for each indexed attribute for each relation */
-	free( rightKey );
-	free( leftKey );
 
 	if(foundFlag == false)
 		return -1;
 	else
 		return 0;
 
-}
-
-void INLJoin::setRightIterator(char* value) {
-
-	switch( condition.op ) {
-		case EQ_OP:
-			indexScan->setIterator(value, value, true, true);
-			break;
-		case LT_OP:
-			indexScan->setIterator(value, NULL, false, true);
-			break;
-		case GT_OP:
-			indexScan->setIterator(NULL, value, true, false);
-			break;
-		case LE_OP:
-			indexScan->setIterator(value, NULL, true, true);
-			break;
-		case GE_OP:
-			indexScan->setIterator(NULL, value, true, true);
-			break;
-		case NE_OP:
-			indexScan->setIterator(NULL, NULL, true, true);
-			break;
-		default:
-			indexScan->setIterator(NULL, NULL, true, true);
-			break;
-	}
-}
-
-RC INLJoin::getAttributeValue( char* value, char* condition, vector<Attribute> attributeVector, string strCondition )
-{
-	RC rc = 0;
-	for( Attribute attr: attributeVector )
-	{
-		if( attr.name == strCondition )
-		{
-			copyValue( value, condition, attr.type );
-			return rc;
-		}
-
-		moveToValueByAttrType( value, attr.type );
-	}
-
-	return QE_FAIL_TO_FIND_ATTRIBUTE;
 }
 
 void copyValue( void* dest, const void* src, AttrType attrType )
@@ -441,52 +350,10 @@ void copyValue( void* dest, const void* src, AttrType attrType )
 //	cout << "copyValue End " << endl;
 }
 
-bool INLJoin::compareValue( const char* lhs_value, const char* rhs_value, CompOp compOp, AttrType attrType )
-{
-	// prevent cross initialization error
-	int lhs_int, rhs_int;
-	float lhs_float, rhs_float;
-	bool result;
-
-	cout << "compareValue:" << attrType << endl;
-
-	switch( attrType )
-	{
-		case TypeInt:
-			lhs_int = *((int *)lhs_value);
-			rhs_int = *((int *)rhs_value);
-
-			result = compareValueByAttrType( lhs_int, rhs_int, compOp );
-			cout << "lhs_int=" << lhs_int << " ,rhs_int=" << rhs_int << " ,result=" << result << endl;
-			return result;
-			break;
-		case TypeReal:
-			lhs_float = *((float *)lhs_value);
-			rhs_float = *((float *)rhs_value);
-
-			result =  compareValueByAttrType( lhs_float, rhs_float, compOp );
-			cout << "lhs_float=" << lhs_float << " ,rhs_float=" << rhs_float << " ,result=" << result << endl;
-			return result;
-			break;
-		case TypeVarChar:
-			int length = *((int*)lhs_value);
-			std::string lhs_string(lhs_value, length);
-			std::string rhs_string(rhs_value, length);
-
-			result = compareValueByAttrType( lhs_string, rhs_string, compOp );
-			cout << "lhs_string=" << lhs_string << " ,rhs_string=" << rhs_string << " ,result=" << result << endl;
-			return result;
-			break;
-	}
-
-	return true;
-
-}
-
 // For attribute in vector<Attribute>, name it as rel.attr
 void INLJoin::getAttributes(vector<Attribute> &attrs) const{
 	attrs.clear();
-	attrs = this->totalAttributes;
+	attrs = this->mergeAttrList;
 };
 
 // Mandatory for graduate teams only
@@ -546,7 +413,6 @@ Aggregate:: Aggregate(Iterator *input,             // Iterator of input R
 
 	status = true;
 
-	cout << "op=" << op << endl;
 	switch( op ) {
 		case MIN:
 			calculateMinForGroup();
@@ -584,23 +450,23 @@ RC Aggregate::getNextTuple(void *data){
 			break;
 		}
 		case AGGREGATION_GROUP:
-			RC rc = 0;
-			switch( this->op )
-			{
+		{
+			RC rc;
+			switch(op) {
 				case MIN:
-					break;
 				case MAX:
-					break;
 				case SUM:
+					rc = getNextTuple_groupMaxMinSum(data);
 					break;
 				case AVG:
+					rc = getNextTuple_groupAvg(data);
 					break;
 				case COUNT:
-					break;
+					rc = getNextTuple_groupCount(data);
 			}
 			return rc;
+		}
 	}
-	return rc;
 };
 
 void Aggregate::getNextTuple_basic(void *data){
@@ -975,7 +841,6 @@ void Aggregate::calculateMinForGroup()
 	int fullRecordLen = _rbfm->getEstimatedRecordDataSize( attributeVector );
 	void* returnValue = malloc(fullRecordLen);
 
-
 	while( iterator->getNextTuple( returnValue ) != QE_EOF )
 	{
 
@@ -995,7 +860,6 @@ void Aggregate::calculateMinForGroup()
 				memcpy((char*)aggrValue, fieldData, fieldSize);
 				free(fieldData);
 				matchCount += 1;
-				break;
 			}
 
 			if( groupAttr.name == attr.name )
@@ -1009,11 +873,14 @@ void Aggregate::calculateMinForGroup()
 			}
 		}
 
-		switch( aggAttr. type )
+		switch( aggAttr.type )
 		{
 			case TypeInt:
 				 if( groupAttr.type == TypeInt )
+				 {
+					 cout << "groupAttr.type=int" << endl;
 					 groupMin( groupmap_int_int, *((int*)groupAttrValue), *((int*)aggrValue) );
+				 }
 				break;
 
 			case TypeReal:
@@ -1024,6 +891,7 @@ void Aggregate::calculateMinForGroup()
 			case TypeVarChar:
 				if( groupAttr.type == TypeVarChar )
 				{
+					 cout << "groupAttr.type=varchar" << endl;
 					int length = *((int*)groupAttrValue);
 //					substr(sizeof(int), length-sizeof(int), groupAttrValue);
 					string gString = string( groupAttrValue, length );
@@ -1044,22 +912,157 @@ void Aggregate::calculateMinForGroup()
 
 void Aggregate::calculateMaxForGroup()
 {
-
-}
-
-void Aggregate::calculateSumForGroup()
-{
-
-}
-
-void Aggregate::calculateAvgForGroup()
-{
-
+	int matchCount = 0;
 
 	int fullRecordLen = _rbfm->getEstimatedRecordDataSize( attributeVector );
 	void* returnValue = malloc(fullRecordLen);
 
-	cout << "calculateAvgForGroup" << endl;
+
+	while (iterator->getNextTuple(returnValue) != QE_EOF) {
+
+		char aggrValue[PAGE_SIZE];
+		char groupAttrValue[PAGE_SIZE];
+
+		for( Attribute attr: attributeVector )
+		{
+			if( matchCount >= 2 )
+				return;
+
+			if( aggAttr.name == attr.name )
+			{
+				void* fieldData = malloc( attr.length );
+				short fieldSize;
+				_rbfm->getAttrFromData( attributeVector, returnValue, fieldData, attr.name, fieldSize);
+				memcpy((char*)aggrValue, fieldData, fieldSize);
+				free(fieldData);
+				matchCount += 1;
+			}
+
+			if( groupAttr.name == attr.name )
+			{
+				void* fieldData = malloc( attr.length );
+				short fieldSize;
+				_rbfm->getAttrFromData( attributeVector, returnValue, fieldData, attr.name, fieldSize);
+				memcpy((char*)groupAttrValue, fieldData, fieldSize);
+				free(fieldData);
+				matchCount += 1;
+			}
+		}
+
+		if (aggAttr.type == TypeInt) {
+			int aggVal = *((int *)aggrValue);
+			if (groupAttr.type == TypeInt) {
+				int gVal = *((int *)groupAttrValue);
+				groupMax(groupmap_int_int, gVal, aggVal);
+			} else if (groupAttr.type == TypeReal) {
+				float gVal = *((float *)groupAttrValue);
+				groupMax(groupmap_float_int, gVal, aggVal);
+			} else {
+				int len = *((int *)groupAttrValue);
+				memcpy(str, groupAttrValue + sizeof(int), len);
+				str[len] = '\0';
+				string gVal(str);
+				groupMax(groupmap_string_int, gVal, aggVal);
+			}
+		} else if (aggAttr.type == TypeReal) {
+			float aggVal = *((float *)aggrValue);
+			if (groupAttr.type == TypeInt) {
+				int gVal = *((int *)groupAttrValue);
+				groupMax(groupmap_int_float, gVal, aggVal);
+			} else if (groupAttr.type == TypeReal) {
+				float gVal = *((float *)groupAttrValue);
+				groupMax(groupmap_float_float, gVal, aggVal);
+			} else {
+				int len = *((int *)groupAttrValue);
+				memcpy(str, groupAttrValue + sizeof(int), len);
+				str[len] = '\0';
+				string gVal(str);
+				groupMax(groupmap_string_float, gVal, aggVal);
+			}
+		} else {
+			cerr << "Try to aggregate a char that we don't support" << endl;
+		}
+	}
+}
+
+void Aggregate::calculateSumForGroup()
+{
+	int matchCount = 0;
+
+	int fullRecordLen = _rbfm->getEstimatedRecordDataSize( attributeVector );
+	void* returnValue = malloc(fullRecordLen);
+
+	while (iterator->getNextTuple(returnValue) != QE_EOF) {
+		char aggrValue[PAGE_SIZE];
+		char groupAttrValue[PAGE_SIZE];
+
+		for( Attribute attr: attributeVector )
+		{
+			if( matchCount >= 2 )
+				return;
+
+			if( aggAttr.name == attr.name )
+			{
+				void* fieldData = malloc( attr.length );
+				short fieldSize;
+				_rbfm->getAttrFromData( attributeVector, returnValue, fieldData, attr.name, fieldSize);
+				memcpy((char*)aggrValue, fieldData, fieldSize);
+				free(fieldData);
+				matchCount += 1;
+			}
+
+			if( groupAttr.name == attr.name )
+			{
+				void* fieldData = malloc( attr.length );
+				short fieldSize;
+				_rbfm->getAttrFromData( attributeVector, returnValue, fieldData, attr.name, fieldSize);
+				memcpy((char*)groupAttrValue, fieldData, fieldSize);
+				free(fieldData);
+				matchCount += 1;
+			}
+		}
+
+
+		if (aggAttr.type == TypeInt) {
+			int aggVal = *((int *)aggrValue);
+			if (groupAttr.type == TypeInt) {
+				int gVal = *((int *)groupAttrValue);
+				groupSum(groupmap_int_int, gVal, aggVal);
+			} else if (groupAttr.type == TypeReal) {
+				float gVal = *((float *)groupAttrValue);
+				groupSum(groupmap_float_int, gVal, aggVal);
+			} else {
+				int len = *((int *)groupAttrValue);
+				memcpy(str, groupAttrValue + sizeof(int), len);
+				str[len] = '\0';
+				string gVal(str);
+				groupSum(groupmap_string_int, gVal, aggVal);
+			}
+		} else if (aggAttr.type == TypeReal) {
+			float aggVal = *((float *)aggrValue);
+			if (groupAttr.type == TypeInt) {
+				int gVal = *((int *)groupAttrValue);
+				groupSum(groupmap_int_float, gVal, aggVal);
+			} else if (groupAttr.type == TypeReal) {
+				float gVal = *((float *)groupAttrValue);
+				groupSum(groupmap_float_float, gVal, aggVal);
+			} else {
+				int len = *((int *)groupAttrValue);
+				memcpy(str, groupAttrValue + sizeof(int), len);
+				str[len] = '\0';
+				string gVal(str);
+				groupSum(groupmap_string_float, gVal, aggVal);
+			}
+		} else {
+			cerr << "Try to aggregate a char that we don't support" << endl;
+		}
+	}
+}
+
+void Aggregate::calculateAvgForGroup()
+{
+	int fullRecordLen = _rbfm->getEstimatedRecordDataSize( attributeVector );
+	void* returnValue = malloc(fullRecordLen);
 
 	while( iterator->getNextTuple( returnValue ) != QE_EOF )
 	{
@@ -1071,78 +1074,96 @@ void Aggregate::calculateAvgForGroup()
 
 		for( Attribute attr: attributeVector )
 		{
-			cout << "matchCount=" << matchCount << endl;
+//			cout << "matchCount=" << matchCount << endl;
 			if( matchCount >= 2 )
 				break;
 
 			if( aggAttr.name == attr.name )
 			{
-				cout << "aggAttr.name=" << aggAttr.name << endl;
+//				cout << "aggAttr.name=" << aggAttr.name << endl;
 				void* fieldData = malloc( attr.length );
 				short fieldSize;
 				_rbfm->getAttrFromData( attributeVector, returnValue, fieldData, attr.name, fieldSize);
 				memcpy((char*)aggrValue, fieldData, fieldSize);
-				cout << "aggrValue" << aggrValue << endl;
+//				cout << "aggrValue" << aggrValue << endl;
 				free(fieldData);
 				matchCount += 1;
 			}
 
 			if( groupAttr.name == attr.name )
 			{
-				cout << "groupAttr.name=" << groupAttr.name << endl;
+//				cout << "groupAttr.name=" << groupAttr.name << endl;
 				void* fieldData = malloc( attr.length );
 				short fieldSize;
 				_rbfm->getAttrFromData( attributeVector, returnValue, fieldData, attr.name, fieldSize);
 				memcpy((char*)groupAttrValue, fieldData, fieldSize);
-				cout << "groupAttrValue" << groupAttrValue << endl;
+//				cout << "groupAttrValue" << groupAttrValue << endl;
 				free(fieldData);
 				matchCount += 1;
 			}
 		}
 
-		cout << "aggrValue=" << aggrValue << ", groupAttrValue" << groupAttrValue << endl;
+//		cout << "aggrValue=" << aggrValue << ", groupAttrValue" << groupAttrValue << endl;
 
 //			float aggVal = *((float*)aggrValue);
-		double aggrVal = atof(aggrValue);
-		float aggrF = (float)aggrVal;
+//		double aggrVal = atof(aggrValue);
+//		float aggrF = (float)aggrVal;
 
-		cout << "aggrF=" << aggrF << endl;
-		cout << "aggAttr.type =" << aggAttr.type << endl;
+//		cout << "aggrF=" << aggrF << endl;
 
-		switch( aggAttr.type )
+//		cout << "aggAttr.type =" << aggAttr.type << endl;
+//		cout << "groupAttr.type =" << groupAttr.type << endl;
+
+		if( aggAttr.type == TypeInt )
 		{
-			case TypeInt:
-				 if( groupAttr.type == TypeInt )
-				 {
-					 int gVal = *((int *)groupAttrValue);
-					 cout << "gVal=" << gVal << endl;
-					 groupAvg( groupmap_int_float, groupmap_int_int, gVal, aggrF );
-				 }
-				break;
+			float aggrF = (float)*((int *)aggrValue);
+			 if( groupAttr.type == TypeInt )
+			 {
+				 int gVal = *((int *)groupAttrValue);
+//				 cout << "gVal=" << gVal << endl;
+				 groupAvg( groupmap_int_float, groupmap_int_int, gVal, aggrF );
+			 }
+			 else if( groupAttr.type == TypeReal )
+			 {
+				 float gVal = *((float *)groupAttrValue);
+//				 cout << "gVal=" << gVal << endl;
+				 groupAvg( groupmap_float_float, groupmap_float_int, gVal, aggrF );
+			 }
+			 else if( groupAttr.type == TypeVarChar )
+			 {
+				int len = *((int *)groupAttrValue);
+				memcpy(str, groupAttrValue + sizeof(int), len);
+				str[len] = '\0';
+				string gVal(str);
 
-			case TypeReal:
-				 if( groupAttr.type == TypeReal )
-				 {
-					 float gVal = *((float *)groupAttrValue);
-					 groupAvg( groupmap_float_float, groupmap_float_int, gVal, aggrF );
-				 }
-				break;
+//				cout << "gVal=" << gVal << endl;
+				groupAvg( groupmap_string_float, groupmap_string_int, gVal, aggrF );
+			 }
+		}
+		else if (aggAttr.type == TypeReal) {
+			float aggrF = *((float *)aggrValue);
+			if( groupAttr.type == TypeInt )
+			 {
+				 int gVal = *((int *)groupAttrValue);
+//				 cout << "gVal=" << gVal << endl;
+				 groupAvg( groupmap_int_float, groupmap_int_int, gVal, aggrF );
+			 }
+			 else if( groupAttr.type == TypeReal )
+			 {
+				 float gVal = *((float *)groupAttrValue);
+//				 cout << "gVal=" << gVal << endl;
+				 groupAvg( groupmap_float_float, groupmap_float_int, gVal, aggrF );
+			 }
+			 else if( groupAttr.type == TypeVarChar )
+			 {
+				int len = *((int *)groupAttrValue);
+				memcpy(str, groupAttrValue + sizeof(int), len);
+				str[len] = '\0';
+				string gVal(str);
 
-			case TypeVarChar:
-				if( groupAttr.type == TypeVarChar )
-				{
-					int length = *((int*)groupAttrValue);
-					cout << "length=" << length << endl;
-//					substr(sizeof(int), length-sizeof(int), groupAttrValue);
-					string gVal = string( groupAttrValue, length );
-					cout << "gVal=" << gVal << endl;
-					groupAvg( groupmap_string_float, groupmap_string_int, gVal, aggrF );
-				}
-				break;
-
-			default:
-				cout << "Type Not Supported" << endl;
-				break;
+//				cout << "gVal=" << gVal << endl;
+				groupAvg( groupmap_string_float, groupmap_string_int, gVal, aggrF );
+			 }
 		}
 
 	}
@@ -1153,7 +1174,256 @@ void Aggregate::calculateAvgForGroup()
 
 void Aggregate::calculateCountForGroup()
 {
+	int fullRecordLen = _rbfm->getEstimatedRecordDataSize( attributeVector );
+	void* returnValue = malloc(fullRecordLen);
 
+	while (iterator->getNextTuple(returnValue) != QE_EOF) {
+
+		char aggrValue[PAGE_SIZE];
+		char groupAttrValue[PAGE_SIZE];
+
+		int matchCount = 0;
+
+		for( Attribute attr: attributeVector )
+		{
+//			cout << "matchCount=" << matchCount << endl;
+			if( matchCount >= 2 )
+				break;
+
+			if( aggAttr.name == attr.name )
+			{
+//				cout << "aggAttr.name=" << aggAttr.name << endl;
+				void* fieldData = malloc( attr.length );
+				short fieldSize;
+				_rbfm->getAttrFromData( attributeVector, returnValue, fieldData, attr.name, fieldSize);
+				memcpy((char*)aggrValue, fieldData, fieldSize);
+//				cout << "aggrValue" << aggrValue << endl;
+				free(fieldData);
+				matchCount += 1;
+			}
+
+			if( groupAttr.name == attr.name )
+			{
+//				cout << "groupAttr.name=" << groupAttr.name << endl;
+				void* fieldData = malloc( attr.length );
+				short fieldSize;
+				_rbfm->getAttrFromData( attributeVector, returnValue, fieldData, attr.name, fieldSize);
+				memcpy((char*)groupAttrValue, fieldData, fieldSize);
+//				cout << "groupAttrValue" << groupAttrValue << endl;
+				free(fieldData);
+				matchCount += 1;
+			}
+		}
+
+		if (aggAttr.type == TypeInt) {
+			int aggVal = *((int *)aggrValue);
+			if (groupAttr.type == TypeInt) {
+				int gVal = *((int *)groupAttrValue);
+				groupCount(groupmap_int_int, gVal);
+			} else if (groupAttr.type == TypeReal) {
+				float gVal = *((float *)groupAttrValue);
+				groupCount(groupmap_float_int, gVal);
+			} else {
+				int len = *((int *)groupAttrValue);
+				memcpy(str, groupAttrValue + sizeof(int), len);
+				str[len] = '\0';
+				string gVal(str);
+				groupCount(groupmap_string_int, gVal);
+			}
+		} else if (aggAttr.type == TypeReal) {
+			float aggVal = *((float *)aggrValue);
+			if (groupAttr.type == TypeInt) {
+				int gVal = *((int *)groupAttrValue);
+				groupCount(groupmap_int_int, gVal);
+			} else if (groupAttr.type == TypeReal) {
+				float gVal = *((float *)groupAttrValue);
+				groupCount(groupmap_float_int, gVal);
+			} else {
+				int len = *((int *)groupAttrValue);
+				memcpy(str, groupAttrValue + sizeof(int), len);
+				str[len] = '\0';
+				string gVal(str);
+				groupCount(groupmap_string_int, gVal);
+			}
+		} else {
+			cerr << "Try to aggregate a char that we don't support" << endl;
+		}
+	}
+}
+
+RC Aggregate::getNextTuple_groupAvg(void *data) {
+	char *returnData = (char *)data;
+	if (groupAttr.type == TypeInt) {
+		if (groupmap_int_int.empty()) {
+			return QE_EOF;
+		} else {
+			auto itr_1 = groupmap_int_int.begin();
+			int id = itr_1->first;
+			int cnt = itr_1->second;
+			auto itr_2 = groupmap_int_float.begin();
+			float sum =  itr_2->second;
+			float avg = sum / (float)cnt;
+			copyValue(returnData, &id, groupAttr.type);
+			copyValue(returnData+sizeof(int), &avg, aggAttr.type);
+			groupmap_int_int.erase(itr_1);
+			groupmap_int_float.erase(itr_2);
+		}
+	} else if (groupAttr.type == TypeReal) {
+		if (groupmap_float_int.empty()) {
+			return QE_EOF;
+		} else {
+			auto itr_1 = groupmap_float_int.begin();
+			int id = itr_1->first;
+			int cnt = itr_1->second;
+			auto itr_2 = groupmap_float_float.begin();
+			float sum =  itr_2->second;
+			float avg = sum / (float)cnt;
+			copyValue(returnData, &id, groupAttr.type);
+			copyValue(returnData+sizeof(int), &avg, aggAttr.type);
+			groupmap_float_int.erase(itr_1);
+			groupmap_float_float.erase(itr_2);
+		}
+	} else {
+		if (groupmap_string_int.empty()) {
+			return QE_EOF;
+		} else {
+			auto itr_1 = groupmap_string_int.begin();
+			string id = itr_1->first;
+			int id_len = id.size();
+			int cnt = itr_1->second;
+			auto itr_2 = groupmap_string_float.begin();
+			float sum =  itr_2->second;
+			float avg = sum / (float)cnt;
+			memcpy(returnData, &id_len, sizeof(int));
+			memcpy(returnData+sizeof(int), id.c_str(), id_len);
+			copyValue(returnData+sizeof(int)+id_len, &avg, aggAttr.type);
+			groupmap_string_int.erase(itr_1);
+			groupmap_string_float.erase(itr_2);
+		}
+	}
+	return 0;
+}
+
+RC Aggregate::getNextTuple_groupMaxMinSum(void *data) {
+	char *returnData = (char *)data;
+	if (aggAttr.type == TypeInt) {
+		if (groupAttr.type == TypeInt) {
+			if (groupmap_int_int.empty()) {
+				return QE_EOF;
+			} else {
+				auto itr = groupmap_int_int.begin();
+				int id = itr->first;
+				int val = itr->second;
+				copyValue(returnData, &id, groupAttr.type);
+				copyValue(returnData+sizeof(int), &val, aggAttr.type);
+				groupmap_int_int.erase(itr);
+			}
+		} else if (groupAttr.type == TypeReal) {
+			if (groupmap_float_int.empty()) {
+				return QE_EOF;
+			} else {
+				auto itr = groupmap_float_int.begin();
+				float id = itr->first;
+				int val = itr->second;
+				copyValue(returnData, &id, groupAttr.type);
+				copyValue(returnData+sizeof(float), &val, aggAttr.type);
+				groupmap_float_int.erase(itr);
+			}
+		} else {
+			if (groupmap_string_int.empty()) {
+				return QE_EOF;
+			} else {
+				auto itr = groupmap_string_int.begin();
+				string id = itr->first;
+				int id_len = id.size();
+				int val = itr->second;
+				memcpy(returnData, &id_len, sizeof(int));
+				memcpy(returnData+sizeof(int), id.c_str(), id_len);
+				copyValue(returnData+sizeof(int)+id_len, &val, aggAttr.type);
+				groupmap_string_int.erase(itr);
+			}
+		}
+	} else if (aggAttr.type == TypeReal) {
+		if (groupAttr.type == TypeInt) {
+			if (groupmap_int_float.empty()) {
+				return QE_EOF;
+			} else {
+				auto itr = groupmap_int_float.begin();
+				int id = itr->first;
+				float val = itr->second;
+				copyValue(returnData, &id, groupAttr.type);
+				copyValue(returnData+sizeof(int), &val, aggAttr.type);
+				groupmap_int_float.erase(itr);
+			}
+		} else if (groupAttr.type == TypeReal) {
+			if (groupmap_float_float.empty()) {
+				return QE_EOF;
+			} else {
+				auto itr = groupmap_float_float.begin();
+				float id = itr->first;
+				float val = itr->second;
+				copyValue(returnData, &id, groupAttr.type);
+				copyValue(returnData+sizeof(float), &val, aggAttr.type);
+				groupmap_float_float.erase(itr);
+			}
+		} else {
+			if (groupmap_string_float.empty()) {
+				return QE_EOF;
+			} else {
+				auto itr = groupmap_string_float.begin();
+				string id = itr->first;
+				int id_len = id.size();
+				float val = itr->second;
+				memcpy(returnData, &id_len, sizeof(int));
+				memcpy(returnData+sizeof(int), id.c_str(), id_len);
+				copyValue(returnData+sizeof(int)+id_len, &val, aggAttr.type);
+				groupmap_string_float.erase(itr);
+			}
+		}
+	}
+
+	return 0;
+}
+
+RC Aggregate::getNextTuple_groupCount(void *data) {
+	char *returnData = (char *)data;
+	if (groupAttr.type == TypeInt) {
+		if (groupmap_int_int.empty()) {
+			return QE_EOF;
+		} else {
+			auto itr = groupmap_int_int.begin();
+			int id = itr->first;
+			int val = itr->second;
+			copyValue(returnData, &id, groupAttr.type);
+			copyValue(returnData+sizeof(int), &val, aggAttr.type);
+			groupmap_int_int.erase(itr);
+		}
+	} else if (groupAttr.type == TypeReal) {
+		if (groupmap_float_int.empty()) {
+			return QE_EOF;
+		} else {
+			auto itr = groupmap_float_int.begin();
+			float id = itr->first;
+			int val = itr->second;
+			copyValue(returnData, &id, groupAttr.type);
+			copyValue(returnData+sizeof(float), &val, aggAttr.type);
+			groupmap_float_int.erase(itr);
+		}
+	} else {
+		if (groupmap_string_int.empty()) {
+			return QE_EOF;
+		} else {
+			auto itr = groupmap_string_int.begin();
+			string id = itr->first;
+			int id_len = id.size();
+			int val = itr->second;
+			memcpy(returnData, &id_len, sizeof(int));
+			memcpy(returnData+sizeof(int), id.c_str(), id_len);
+			copyValue(returnData+sizeof(int)+id_len, &val, aggAttr.type);
+			groupmap_string_int.erase(itr);
+		}
+	}
+	return 0;
 }
 
 // implement of GHJoin
