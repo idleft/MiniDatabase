@@ -1302,6 +1302,7 @@ bool compareValueByAttrType( T const lhs_value, T const rhs_value, CompOp compOp
 
 
 // starts of BNLJoin
+// xikui dec 14 
 
 BNLJoin::BNLJoin(Iterator *leftIn,            // Iterator of input R
                TableScan *rightIn,           // TableScan Iterator of input S
