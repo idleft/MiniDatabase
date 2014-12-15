@@ -1,0 +1,48 @@
+# 1. Design #
+
+This project implements one module Query Engine. To implement this module,  we extended the other modules Index Manager, Relation Manager, and Record Based File Manager.
+
+Query Engine(QE) handles queries based on Iterator interfaces.
+QE for this project offers filtering based on selected attributes, projecting given attributes data, joining two different relations, and aggregating values. For joins, we implemented Grace Hash Join, Block-Nested Loop Join, and Index-Nested Loop Join.
+
+Index Manager(IM) and Relation Manager(RM) now support creating and deleting index on each table. Record Based File Manager(RBF) was extended to select attributes to support queries.
+
+# 2. Implementation #
+
+For the following API description, it follows orders in qe.h. Each description is based on class name.
+
+[ QE Layer ]
+
+TableScan
+--------------
+Constructor sets member variables and get attributes from RM. Also it calls RM ScanIterator. To get next tuple, it calls iterator getNextTuple function. Destructor closes iterator.
+
+IndexScan
+--------------
+Given table name, attribute name, it sets member variables and get attributes from RM. Also it calls RM IndexScanIterator. To get next tuple, it calls iterator get NextTuple function and RM readTuple. 
+
+Filter
+--------------
+Constructor first gets attributes and select attributes based on condition left hand side attribute given. To get next tuple, it calls iterator getNextTuple and RBFM getAttrFromData function to retrieve data with condition met left hand side attribute. Last, we compare key value with condition given.    
+
+Project
+--------------
+Constructor first gets attributes and select attributes based on given attribute names. To get next tuple, it first calls iterator getNextTuple and  RBFM getAttrFromData to get selected attributes only.
+
+GHJoin
+--------------
+Constructor first get attributes for each iterator from left and right relation.  After that, it partitions each left and right relation. Based on merged attribute list, it merged partitions. Also, it initializes scanner with merged attribute list. 
+
+BNLJoin
+--------------
+Constructor first get attributes for iterator and table scanner. Also, it constructs total attribute list with previous given attribute list. To get the next record, it first reads a block with current position(this will be left value), then it reads next tuple from iterator(this will be right value). Once two records are read, we compare key data. If key value is same, then we copy merged data(left record + right record). It repeats reading left record from block list. If the block has been all consumed, we load next block.
+
+INLJoin
+--------------
+Constructor first gets attributes for each iterator from left and right relation. It also sets variables with given condition. To get next tuple, it first calls index scanner for the right relation with getNextTuple. Afterwards, it calls iterator getNextTuple to load left relation. By comparing each tuple, we concatenate the matched tuple result and return.
+
+Aggregate
+--------------
+Constructor first get attributes for given attribute. To get next tuple, it first checks which type of operation it supports. It supports minimum, maximum, sum, average, and count. To retrieve matched attribute data, it calls iterator getNextTuple, and RBF getAttrFromData. For the given data and data type(integer or float), it calculates minimum, maximum, sum, average, and count value. 
+
+
