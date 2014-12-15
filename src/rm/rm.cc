@@ -402,8 +402,8 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 			if( result != 0 )
 				return result;
 
-			if( colAttri.name.compare("tableID") != 0
-				&& colAttri.name.compare("fileName") != 0 )
+			if( colAttri.name.compare("tableID") != 0 )
+//				&& colAttri.name.compare("fileName") != 0 )
 					attrs.push_back( colAttri );
 			free( colDescriptor );
 		}
