@@ -1243,6 +1243,7 @@ RC CLI::load()
     // for (std::vector<Attribute>::iterator it = attrs.begin() ; it != attrs.end(); ++it)
     // totalLength += it->length;
   }
+
   // clear up indexMap
   for (auto it=indexMap.begin(); it != indexMap.end(); ++it) {
     free (it->second);
