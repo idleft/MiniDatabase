@@ -2,7 +2,7 @@ include ../makefile.inc
 
 #all: libcli.a clitest_01 clitest_02 clitest_03 clitest_04 clitest_05 clitest_06 clitest_07 clitest_08 clitest_09 clitest_10 clitest_11 clitest_12 start
 
-all: libcli.a clitest_09 start
+all: libcli.a clitest_12 start
 # lib file dependencies
 libcli.a: libcli.a(cli.o)  # and possibly other .o files
 

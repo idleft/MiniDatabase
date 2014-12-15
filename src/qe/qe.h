@@ -333,34 +333,24 @@ class INLJoin : public Iterator {
         // For attribute in vector<Attribute>, name it as rel.attr
         void getAttributes(vector<Attribute> &attrs) const;
 
-        RC getAttributeValue( char* value, char* condition, vector<Attribute> attributeVector, string strCondition );
-        bool compareValue( const char* lhs_value, const char* rhs_value, CompOp compOp, AttrType attrType );
-        void setRightIterator(char* value);
-
     private:
-        Iterator *iterator;
-        IndexScan *indexScan;
+        Iterator *leftIn;
+        IndexScan *rightIn;
 
-        vector<Attribute> leftAttributeVector;
-        vector<Attribute> rightAttributeVector;
-        vector<Attribute> totalAttributes;
+        vector<Attribute> leftAttrList;
+        vector<Attribute> rightAttrList;
+        vector<Attribute> mergeAttrList;
 
-        Attribute selectAttr;
+        Attribute comAttr;
         Condition condition;
-        AttrType attrType;
+        int rightRecordSize;
+        short leftSize;
+        int leftRecordSize;
+        RC leftRC,rightRC;
 
-        char leftValue[PAGE_SIZE];
-        char rightValue[PAGE_SIZE];
-        char leftCondition[PAGE_SIZE];
-        char rightCondition[PAGE_SIZE];
-
-        bool retrieveNextLeftValue;
-        bool retrieveNextRightValue;
-
-        bool init;
-
-        int rRecordLen;
-        int lRecordLen;
+        void* leftRecord;
+        void* rightRecord;
+        void *leftKey;
 
         RecordBasedFileManager *_rbfm = RecordBasedFileManager::instance();
 
