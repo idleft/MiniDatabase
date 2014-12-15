@@ -1299,3 +1299,128 @@ bool compareValueByAttrType( T const lhs_value, T const rhs_value, CompOp compOp
 	}
 	return true;
 }
+
+
+// starts of BNLJoin
+
+BNLJoin::BNLJoin(Iterator *leftIn,            // Iterator of input R
+               TableScan *rightIn,           // TableScan Iterator of input S
+               const Condition &condition,   // Join condition
+               const unsigned numRecords     // # of records can be loaded into memory, i.e., memory block size (decided by the optimizer)
+        )
+{
+	this->condition = condition;
+	this->numRecords = numRecords;
+
+
+	leftIn->getAttributes(leftAttrList);
+	rightIn->getAttributes(rightAttrList);
+	leftRecordSize = _rbfm->getEstimatedRecordDataSize(leftAttrList);
+	rightRecordSize = _rbfm->getEstimatedRecordDataSize(rightAttrList);
+
+	// endMark = loadBlockRecords();
+	this->leftIn = leftIn;
+	this->rightIn = rightIn;
+	curInblockP = 0;
+	curBlockListSize = 0;
+
+	mergeAttrList.clear();
+	for(Attribute iter1:leftAttrList){
+		mergeAttrList.push_back(iter1);
+	}
+	for(Attribute iter1:rightAttrList){
+		mergeAttrList.push_back(iter1);
+	}
+
+	_rbfm->selectAttribute(rightAttrList, condition.rhsAttr, comAttr);
+
+}
+
+RC BNLJoin::loadBlockRecords(){
+	emptyBlockList();
+	int blockIter = 0;
+	curBlockListSize = 0;
+	curInblockP = 0;
+	void *recordData = malloc(leftRecordSize);
+	while(blockIter < numRecords && leftIn->getNextTuple(recordData)!=-1){
+		blockRecordList.push_back(recordData);
+		recordData = malloc(leftRecordSize);
+		blockIter++;
+		curBlockListSize++;
+	}
+	free(recordData);
+	if(blockRecordList.size() == 0)
+		return -1;
+	else
+		return 0;
+}
+
+void BNLJoin::emptyBlockList(){
+	for(unsigned iter1 = 0; iter1<blockRecordList.size(); iter1++){
+		void *dataRecord = blockRecordList.at(iter1);
+		free(dataRecord);
+	}
+	blockRecordList.clear();
+}
+
+RC BNLJoin::getNextTuple(void *data){
+	RC rc = -1;
+	void *leftRecord;
+	bool foundFlag = false;
+	void *rightRecord = malloc(rightRecordSize);
+	void *leftKey = malloc(comAttr.length+sizeof(int));
+	void *rightKey = malloc(comAttr.length+sizeof(int));
+
+	while(foundFlag == false){
+		if(curInblockP == curBlockListSize){
+			rc = loadBlockRecords();
+			if(rc == -1)
+				break;
+		}
+		leftRecord = blockRecordList.at(curInblockP);
+		RC getRightFlag = rightIn->getNextTuple(rightRecord);
+		if(getRightFlag == -1){
+			rightIn->setIterator();
+			curInblockP ++;
+		}
+		else{
+			short leftSize, rightSize;
+			_rbfm->getAttrFromData(leftAttrList, leftRecord, leftKey, condition.lhsAttr, leftSize);
+			_rbfm->getAttrFromData(rightAttrList, rightRecord, rightKey, condition.rhsAttr, rightSize);
+			if(_rbfm->keyCompare(leftKey, rightKey, comAttr)==0){
+				// cout<<"Key match : "<<comAttr.name<<endl;
+				// cout<<"----------Record 2---------------"<<endl;
+				// _rbfm->printRecord(rightAttrList, recordData);
+				// cout<<"------------------"<<endl;
+				int actLeftRecordSize, actRightRecordSize;
+				actLeftRecordSize = _rbfm->getSizeOfData(leftAttrList, leftRecord);
+				actRightRecordSize = _rbfm->getSizeOfData(rightAttrList,rightRecord);
+				// printf("Diagnostic value: %d %d %u %u %u\n",actLeftRecordSize,actRightRecordSize,leftAttrList.size(),
+					// rightAttrList.size(),mergeAttrList.size());
+				void *mergeData = malloc(actLeftRecordSize+actRightRecordSize);
+				memcpy(mergeData, leftRecord, actLeftRecordSize);
+				memcpy((char*)mergeData+actLeftRecordSize, rightRecord, actRightRecordSize);
+				foundFlag = true;
+				memcpy(data, mergeData, actLeftRecordSize+actRightRecordSize);
+				// cout<<"merged Record: "<<endl;
+				// _rbfm->printRecord(mergeAttrList, mergeData);
+				free(mergeData);
+			}
+		}
+	}
+	free(rightRecord);
+	if(foundFlag == false)
+		return -1;
+	else
+		return 0;
+}
+
+void BNLJoin::getAttributes(vector<Attribute> &attrs) const{
+	attrs = this->mergeAttrList;
+}
+
+BNLJoin::~BNLJoin(){
+	emptyBlockList();
+}
+
+// end of BNLJoin

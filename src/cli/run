@@ -7,5 +7,4 @@ rm right*
 rm left*
 rm employee*
 make
-./clitest_09
-
+./clitest_08

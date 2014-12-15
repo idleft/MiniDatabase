@@ -301,12 +301,26 @@ class BNLJoin : public Iterator {
                TableScan *rightIn,           // TableScan Iterator of input S
                const Condition &condition,   // Join condition
                const unsigned numRecords     // # of records can be loaded into memory, i.e., memory block size (decided by the optimizer)
-        ){};
-        ~BNLJoin(){};
+        );
+        ~BNLJoin();
 
-        RC getNextTuple(void *data){return QE_EOF;};
+        RC getNextTuple(void *data);
         // For attribute in vector<Attribute>, name it as rel.attr
-        void getAttributes(vector<Attribute> &attrs) const{};
+        void getAttributes(vector<Attribute> &attrs) const;
+        RC loadBlockRecords();
+        void emptyBlockList();
+
+        Condition condition;
+        Iterator *leftIn;
+        TableScan *rightIn;
+        unsigned numRecords, curInblockP,curBlockListSize;
+        vector<void *> blockRecordList;
+        RecordBasedFileManager *_rbfm = RecordBasedFileManager::instance();
+        int leftRecordSize, rightRecordSize;
+        vector<Attribute> mergeAttrList;
+        vector<Attribute> leftAttrList;
+        vector<Attribute> rightAttrList;
+        Attribute comAttr;
 };
 
 
