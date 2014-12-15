@@ -125,22 +125,129 @@ void Project::getAttributes(vector<Attribute> &attrs) const {
 }
 //end of project
 
-/*
-BNLJoin::BNLJoin(Iterator *leftIn,
-        TableScan *rightIn,
-        const Condition &condition,
-        const unsigned numRecords) {
+// starts of BNLJoin
+// xikui dec 14
+BNLJoin::BNLJoin(Iterator *leftIn,            // Iterator of input R
+               TableScan *rightIn,           // TableScan Iterator of input S
+               const Condition &condition,   // Join condition
+               const unsigned numRecords     // # of records can be loaded into memory, i.e., memory block size (decided by the optimizer)
+        )
+{
+	this->condition = condition;
+	this->numRecords = numRecords;
+
+
+	leftIn->getAttributes(leftAttrList);
+	rightIn->getAttributes(rightAttrList);
+	leftRecordSize = _rbfm->getEstimatedRecordDataSize(leftAttrList);
+	rightRecordSize = _rbfm->getEstimatedRecordDataSize(rightAttrList);
+
+	// endMark = loadBlockRecords();
+	this->leftIn = leftIn;
+	this->rightIn = rightIn;
+	curInblockP = 0;
+	curBlockListSize = 0;
+
+	mergeAttrList.clear();
+	for(Attribute iter1:leftAttrList){
+		mergeAttrList.push_back(iter1);
+	}
+	for(Attribute iter1:rightAttrList){
+		mergeAttrList.push_back(iter1);
+	}
+
+	_rbfm->selectAttribute(rightAttrList, condition.rhsAttr, comAttr);
 
 }
 
+RC BNLJoin::loadBlockRecords(){
+	emptyBlockList();
+	int blockIter = 0;
+	curBlockListSize = 0;
+	curInblockP = 0;
+	void *recordData = malloc(leftRecordSize);
+	while(blockIter < numRecords && leftIn->getNextTuple(recordData)!=-1){
+		blockRecordList.push_back(recordData);
+		recordData = malloc(leftRecordSize);
+		blockIter++;
+		curBlockListSize++;
+	}
+	free(recordData);
+	if(blockRecordList.size() == 0)
+		return -1;
+	else
+		return 0;
+}
+
+void BNLJoin::emptyBlockList(){
+	for(unsigned iter1 = 0; iter1<blockRecordList.size(); iter1++){
+		void *dataRecord = blockRecordList.at(iter1);
+		free(dataRecord);
+	}
+	blockRecordList.clear();
+}
+
 RC BNLJoin::getNextTuple(void *data){
-};
+	RC rc = -1;
+	void *leftRecord;
+	bool foundFlag = false;
+	void *rightRecord = malloc(rightRecordSize);
+	void *leftKey = malloc(comAttr.length+sizeof(int));
+	void *rightKey = malloc(comAttr.length+sizeof(int));
+
+	while(foundFlag == false){
+		if(curInblockP == curBlockListSize){
+			rc = loadBlockRecords();
+			if(rc == -1)
+				break;
+		}
+		leftRecord = blockRecordList.at(curInblockP);
+		RC getRightFlag = rightIn->getNextTuple(rightRecord);
+		if(getRightFlag == -1){
+			rightIn->setIterator();
+			curInblockP ++;
+		}
+		else{
+			short leftSize, rightSize;
+			_rbfm->getAttrFromData(leftAttrList, leftRecord, leftKey, condition.lhsAttr, leftSize);
+			_rbfm->getAttrFromData(rightAttrList, rightRecord, rightKey, condition.rhsAttr, rightSize);
+			if(_rbfm->keyCompare(leftKey, rightKey, comAttr)==0){
+				// cout<<"Key match : "<<comAttr.name<<endl;
+				// cout<<"----------Record 2---------------"<<endl;
+				// _rbfm->printRecord(rightAttrList, recordData);
+				// cout<<"------------------"<<endl;
+				int actLeftRecordSize, actRightRecordSize;
+				actLeftRecordSize = _rbfm->getSizeOfData(leftAttrList, leftRecord);
+				actRightRecordSize = _rbfm->getSizeOfData(rightAttrList,rightRecord);
+				// printf("Diagnostic value: %d %d %u %u %u\n",actLeftRecordSize,actRightRecordSize,leftAttrList.size(),
+					// rightAttrList.size(),mergeAttrList.size());
+				void *mergeData = malloc(actLeftRecordSize+actRightRecordSize);
+				memcpy(mergeData, leftRecord, actLeftRecordSize);
+				memcpy((char*)mergeData+actLeftRecordSize, rightRecord, actRightRecordSize);
+				foundFlag = true;
+				memcpy(data, mergeData, actLeftRecordSize+actRightRecordSize);
+				// cout<<"merged Record: "<<endl;
+				// _rbfm->printRecord(mergeAttrList, mergeData);
+				free(mergeData);
+			}
+		}
+	}
+	free(rightRecord);
+	if(foundFlag == false)
+		return -1;
+	else
+		return 0;
+}
 
 void BNLJoin::getAttributes(vector<Attribute> &attrs) const{
+	attrs = this->mergeAttrList;
+}
 
-};
-*/
+BNLJoin::~BNLJoin(){
+	emptyBlockList();
+}
 
+// end of BNLJoin
 // Index nested-loop join operator
 INLJoin::INLJoin(Iterator *leftIn,       // Iterator of input R
         IndexScan *rightIn,          	// IndexScan Iterator of input S
@@ -174,6 +281,7 @@ INLJoin::INLJoin(Iterator *leftIn,       // Iterator of input R
 
 	for( Attribute rAttr: rightAttributeVector )
 	{
+		cout << "right attribute name=" << rAttr.name << endl;
 		totalAttributes.push_back ( rAttr );
 	}
 
@@ -199,10 +307,16 @@ RC INLJoin::getNextTuple(void *data){
 	RC rc;
 
 	do {
+
 		// Get next tuple from right iterator
 		rc = indexScan->getNextTuple( rightValue );
+		cout << "indexScan->getNextTuple=" << rc << endl;
 		if( rc != 0 )
 			retrieveNextLeftValue = true;
+
+//		cout<<"----------------Print right selected record--------------"<<endl;
+//		_rbfm->printRecord(rightAttributeVector, rightValue);
+//		cout<<"----------------END right selected record--------------"<<endl;
 
 		if( retrieveNextLeftValue )
 		{
@@ -213,6 +327,7 @@ RC INLJoin::getNextTuple(void *data){
 				{
 					cout << "Failed to load left input value " << endl;
 					return QE_EOF;
+//					break;
 				}
 
 //				cout<<"----------------Print left next selected record--------------"<<endl;
@@ -278,8 +393,16 @@ RC INLJoin::getNextTuple(void *data){
 		cout<<"----------------END right selected record--------------"<<endl;
 
 //	} while( !compareValue( leftCondition, rightCondition, condition.op,  attrType) );
-	} while( !compareValue( (char*)lDataAll, (char*)rDataAll, condition.op,  attrType) );
+//	} while( !compareValue( (char*)lDataAll, (char*)rDataAll, condition.op,  attrType) );
 
+		cout<<"Before Key match : "<< endl;
+		rc = _rbfm->keyCompare( lDataAll, rDataAll, selectAttr );
+		cout<<"Key match : "<< selectAttr.name << " rc=" << rc << endl;
+		// cout<<"----------Record 2---------------"<<endl;
+		// _rbfm->printRecord(rightAttrList, recordData);
+		// cout<<"------------------"<<endl;
+
+	} while( rc != 0 );
 
 	int sizeOfLeftRecord = _rbfm->getSizeOfRecord( leftAttributeVector, leftValue );
 	int sizeOfRightRecord = _rbfm->getSizeOfRecord( rightAttributeVector, rightValue );
@@ -303,6 +426,7 @@ void INLJoin::setRightIterator(char* value) {
 
 	switch( condition.op ) {
 		case EQ_OP:
+			cout << "setIterator to" << "equal w/ value:" << value << endl;
 			indexScan->setIterator(value, value, true, true);
 			break;
 		case LT_OP:
@@ -977,7 +1101,7 @@ void Aggregate::calculateSumForGroup()
 
 void Aggregate::calculateAvgForGroup()
 {
-	int matchCount = 0;
+
 
 	int fullRecordLen = _rbfm->getEstimatedRecordDataSize( attributeVector );
 	void* returnValue = malloc(fullRecordLen);
@@ -990,6 +1114,8 @@ void Aggregate::calculateAvgForGroup()
 		char aggrValue[PAGE_SIZE];
 		char groupAttrValue[PAGE_SIZE];
 
+		int matchCount = 0;
+
 		for( Attribute attr: attributeVector )
 		{
 			cout << "matchCount=" << matchCount << endl;
@@ -998,10 +1124,11 @@ void Aggregate::calculateAvgForGroup()
 
 			if( aggAttr.name == attr.name )
 			{
+				cout << "aggAttr.name=" << aggAttr.name << endl;
 				void* fieldData = malloc( attr.length );
 				short fieldSize;
 				_rbfm->getAttrFromData( attributeVector, returnValue, fieldData, attr.name, fieldSize);
-				memcpy(aggrValue, fieldData, fieldSize);
+				memcpy((char*)aggrValue, fieldData, fieldSize);
 				cout << "aggrValue" << aggrValue << endl;
 				free(fieldData);
 				matchCount += 1;
@@ -1009,10 +1136,11 @@ void Aggregate::calculateAvgForGroup()
 
 			if( groupAttr.name == attr.name )
 			{
+				cout << "groupAttr.name=" << groupAttr.name << endl;
 				void* fieldData = malloc( attr.length );
 				short fieldSize;
 				_rbfm->getAttrFromData( attributeVector, returnValue, fieldData, attr.name, fieldSize);
-				memcpy(groupAttrValue, fieldData, fieldSize);
+				memcpy((char*)groupAttrValue, fieldData, fieldSize);
 				cout << "groupAttrValue" << groupAttrValue << endl;
 				free(fieldData);
 				matchCount += 1;
@@ -1026,6 +1154,7 @@ void Aggregate::calculateAvgForGroup()
 		float aggrF = (float)aggrVal;
 
 		cout << "aggrF=" << aggrF << endl;
+		cout << "aggAttr.type =" << aggAttr.type << endl;
 
 		switch( aggAttr.type )
 		{
@@ -1033,6 +1162,7 @@ void Aggregate::calculateAvgForGroup()
 				 if( groupAttr.type == TypeInt )
 				 {
 					 int gVal = *((int *)groupAttrValue);
+					 cout << "gVal=" << gVal << endl;
 					 groupAvg( groupmap_int_float, groupmap_int_int, gVal, aggrF );
 				 }
 				break;
